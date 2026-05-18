@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>BIM-Bot Mobile</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
+
+        :root {
+            --accent:  #4DA674;
+            --danger:  #e74c3c;
+            --warn:    #e67e22;
+            --success: #2ecc71;
+            --text:    #e8f5e9;
+            --text2:   #a8d5b0;
+            --glass:   rgba(2, 31, 34, 0.72);
+            --glass2:  rgba(2, 31, 34, 0.55);
+            --border:  rgba(77, 166, 116, 0.35);
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #000;
+            color: var(--text);
+            height: 100dvh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* ── FULL SCREEN CAMERA ── */
+        #camStream {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            object-fit: cover;
+            z-index: 0;
+            display: block;
+        }
+
+        /* Camera offline placeholder */
+        #camOffline {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: radial-gradient(ellipse at center, #032b2f 0%, #010f11 100%);
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            color: rgba(255,255,255,0.3);
+            font-size: 0.85em;
+            letter-spacing: 1px;
+        }
+        #camOffline .big-icon { font-size: 3.5em; opacity: 0.35; }
+
+        /* Scanline overlay for tech feel */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(0,0,0,0.03) 2px,
+                rgba(0,0,0,0.03) 4px
+            );
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        /* ── HUD LAYER ── */
+        #hud {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 10;
+            pointer-events: none;
+        }
+        #hud .interactive { pointer-events: auto; }
+
+        /* ── GRADIENTS for readability ── */
+        .hud-top-grad {
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 160px;
+            background: linear-gradient(to bottom, rgba(1,15,17,0.82) 0%, transparent 100%);
+            pointer-events: none;
+        }
+        .hud-bottom-grad {
+            position: absolute;
+            bottom: 0; left: 0; right: 0; height: 200px;
+            background: linear-gradient(to top, rgba(1,15,17,0.85) 0%, transparent 100%);
+            pointer-events: none;
+        }
+
+        /* ── HEADER ── */
+        .hud-header {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 16px 10px;
+        }
+
+        .logo {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.7em;
+            font-weight: 700;
+            letter-spacing: 4px;
+            color: var(--accent);
+            text-shadow: 0 0 18px rgba(77,166,116,0.6);
+        }
+
+        .chip-row { display: flex; gap: 6px; }
+
+        .chip {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 4px 10px;
+            font-size: 0.65em;
+            color: var(--text2);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            white-space: nowrap;
+            font-weight: 500;
+        }
+
+        .dot {
+            width: 6px; height: 6px;
+            border-radius: 50%; flex-shrink: 0;
+        }
+        .dot.green  { background: var(--success); box-shadow: 0 0 5px var(--success); animation: blink 2s infinite; }
+        .dot.red    { background: var(--danger);  box-shadow: 0 0 5px var(--danger); }
+        .dot.gray   { background: #555; }
+
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+        /* ── CORNER BRACKETS ── */
+        .corner {
+            position: absolute;
+            width: 20px; height: 20px;
+            border-color: rgba(77,166,116,0.5);
+            border-style: solid;
+        }
+        .corner.tl { top: 62px; left: 12px; border-width: 2px 0 0 2px; }
+        .corner.tr { top: 62px; right: 12px; border-width: 2px 2px 0 0; }
+        .corner.bl { bottom: 68px; left: 12px; border-width: 0 0 2px 2px; }
+        .corner.br { bottom: 68px; right: 12px; border-width: 0 2px 2px 0; }
+
+        /* ── REC BADGE (center top) ── */
+        .rec-badge {
+            position: absolute;
+            top: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(231,76,60,0.9);
+            border: 1px solid var(--danger);
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 0.7em;
+            font-weight: 700;
+            letter-spacing: 2px;
+            display: none;
+            align-items: center;
+            gap: 5px;
+            backdrop-filter: blur(8px);
+        }
+        .rec-badge.active { display: flex; }
+        .rec-dot-anim {
+            width: 7px; height: 7px; border-radius: 50%;
+            background: #fff;
+            animation: blink 0.8s infinite;
+        }
+
+        /* ── TOP LEFT: Sensors ── */
+        .hud-tl {
+            position: absolute;
+            top: 68px; left: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+        }
+
+        /* ── TOP RIGHT: Risk ── */
+        .hud-tr {
+            position: absolute;
+            top: 68px; right: 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 7px;
+        }
+
+        /* ── BOTTOM LEFT: ML ── */
+        .hud-bl {
+            position: absolute;
+            bottom: 70px; left: 14px;
+            max-width: 158px;
+        }
+
+        /* ── BOTTOM RIGHT: Cam Controls ── */
+        .hud-br {
+            position: absolute;
+            bottom: 70px; right: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: flex-end;
+        }
+
+        /* ── BOTTOM CENTER: Timestamp ── */
+        .hud-bc {
+            position: absolute;
+            bottom: 70px;
+            left: 50%; transform: translateX(-50%);
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 5px 14px;
+            font-size: 0.62em;
+            color: var(--text2);
+            white-space: nowrap;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        /* ── GLASS TILE ── */
+        .glass-tile {
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 8px 12px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .sensor-label {
+            font-size: 0.58em;
+            color: var(--text2);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 2px;
+        }
+
+        .sensor-row {
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+        }
+
+        .sensor-val {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.75em;
+            font-weight: 700;
+            color: #fff;
+            line-height: 1;
+        }
+
+        .sensor-unit {
+            font-size: 0.72em;
+            color: var(--text2);
+        }
+
+        /* ── RISK TILE ── */
+        .risk-tile {
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 8px 14px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            text-align: right;
+            min-width: 118px;
+            transition: border-color 0.4s, background 0.4s;
+        }
+        .risk-tile.low { border-color: #27ae60; background: rgba(39,174,96,0.22); }
+        .risk-tile.mod { border-color: var(--warn); background: rgba(230,126,34,0.22); }
+        .risk-tile.sev { border-color: var(--danger); background: rgba(231,76,60,0.22); animation: flash 1s infinite; }
+
+        @keyframes flash { 0%,100%{opacity:1} 50%{opacity:0.75} }
+
+        .risk-label { font-size: 0.58em; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text2); }
+        .risk-val {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.1em; font-weight: 700; color: #fff; line-height: 1.2;
+        }
+        .risk-tile.low .risk-val { color: #2ecc71; }
+        .risk-tile.mod .risk-val { color: var(--warn); }
+        .risk-tile.sev .risk-val { color: var(--danger); }
+
+        .interp-tile {
+            background: var(--glass2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 6px 10px;
+            font-size: 0.68em;
+            color: var(--text2);
+            line-height: 1.4;
+            max-width: 175px;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            transition: opacity 0.5s;
+            text-align: right;
+        }
+
+        /* ── ML PANEL ── */
+        .ml-panel {
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 8px 12px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .ml-title { font-size: 0.58em; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent); margin-bottom: 4px; }
+        .ml-method { font-size: 0.72em; color: var(--text2); margin-bottom: 6px; font-weight: 500; }
+
+        .prob-row { display: flex; align-items: center; gap: 5px; margin-bottom: 4px; }
+        .prob-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+        .prob-dot.low { background: #27ae60; }
+        .prob-dot.mod { background: var(--warn); }
+        .prob-dot.sev { background: var(--danger); }
+        .prob-lbl { font-size: 0.6em; color: var(--text2); width: 52px; }
+        .prob-bar-bg { flex:1; height:4px; background:rgba(255,255,255,0.1); border-radius:2px; overflow:hidden; }
+        .prob-bar-fill { height:100%; border-radius:2px; transition: width 0.5s ease; }
+        .prob-bar-fill.low { background: #27ae60; }
+        .prob-bar-fill.mod { background: var(--warn); }
+        .prob-bar-fill.sev { background: var(--danger); }
+        .prob-pct { font-size: 0.6em; color: var(--text2); width: 30px; text-align: right; }
+
+        /* ── CAM BUTTONS ── */
+        .cam-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 25px;
+            font-weight: 600;
+            cursor: pointer;
+            color: white;
+            font-size: 0.82em;
+            font-family: 'Inter', sans-serif;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            transition: transform 0.15s, opacity 0.2s;
+            white-space: nowrap;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.5);
+        }
+        .cam-btn:active   { transform: scale(0.94); }
+        .cam-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none !important; }
+
+        .btn-connect    { background: rgba(77,166,116,0.85);  border: 1px solid var(--accent); }
+        .btn-disconnect { background: rgba(230,126,34,0.85);  border: 1px solid var(--warn); }
+        .btn-record     { background: rgba(231,76,60,0.85);   border: 1px solid var(--danger); }
+        .btn-stop       { background: rgba(46,204,113,0.85);  border: 1px solid var(--success); }
+        .btn-refresh    { background: rgba(77,166,116,0.6);   border: 1px solid var(--border); }
+
+        canvas { display: none; }
+    </style>
+</head>
+<body>
+<canvas id="recordCanvas"></canvas>
+
+<!-- FULLSCREEN CAMERA -->
+<img id="camStream" src="" alt="" crossOrigin="anonymous">
+
+<!-- OFFLINE PLACEHOLDER -->
+<div id="camOffline">
+    <div class="big-icon">📷</div>
+    <div>CAMERA OFFLINE</div>
+    <div style="font-size:0.8em;opacity:0.4;margin-top:4px;">Tap Connect to start feed</div>
+</div>
+
+<!-- HUD -->
+<div id="hud">
+
+    <div class="hud-top-grad"></div>
+    <div class="hud-bottom-grad"></div>
+
+    <!-- Corner brackets -->
+    <div class="corner tl"></div>
+    <div class="corner tr"></div>
+    <div class="corner bl"></div>
+    <div class="corner br"></div>
+
+    <!-- Header -->
+    <div class="hud-header">
+        <div class="logo">BIM-BOT</div>
+        <div class="chip-row">
+            <div class="chip"><span class="dot gray" id="robotDot"></span><span id="robotChip">Offline</span></div>
+            <div class="chip"><span class="dot gray" id="dbDot"></span><span id="dbChip">DB Idle</span></div>
+        </div>
+    </div>
+
+    <!-- REC badge -->
+    <div class="rec-badge" id="recBadge">
+        <div class="rec-dot-anim"></div> REC
+    </div>
+
+    <!-- TOP LEFT: Sensor tiles -->
+    <div class="hud-tl">
+        <div class="glass-tile">
+            <div class="sensor-label">🌡️ Temperature</div>
+            <div class="sensor-row">
+                <div class="sensor-val" id="tempDisplay">--</div>
+                <div class="sensor-unit">°C</div>
+            </div>
+        </div>
+        <div class="glass-tile">
+            <div class="sensor-label">💧 Humidity</div>
+            <div class="sensor-row">
+                <div class="sensor-val" id="humDisplay">--</div>
+                <div class="sensor-unit">%</div>
+            </div>
+        </div>
+        <div class="glass-tile">
+            <div class="sensor-label">🔥 Heat Index</div>
+            <div class="sensor-row">
+                <div class="sensor-val" style="font-size:1.35em;" id="hiDisplay">--</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SURVIVOR DETECTION -->
+    <div style="position:absolute; top:68px; left:50%; transform:translateX(-50%); z-index:10;">
+        <div class="glass-tile" id="survivorTile" style="text-align:center; min-width:160px;">
+            <div class="sensor-label">🧍 Survivors Detected</div>
+            <div class="sensor-row" style="justify-content:center;">
+                <div class="sensor-val" id="survivorCount" style="color:#e74c3c;">0</div>
+            </div>
+            <div style="font-size:0.62em; color:var(--text2); margin-top:4px;">
+                Conf: <span id="survivorConf" style="color:#fff;">--%</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOP RIGHT: Risk -->
+    <div class="hud-tr">
+        <div class="risk-tile" id="riskBadge">
+            <div class="risk-label">Risk Level</div>
+            <div class="risk-val" id="riskLevel">Awaiting...</div>
+        </div>
+        <div class="interp-tile" id="riskText">Initializing...</div>
+    </div>
+
+    <!-- BOTTOM LEFT: ML -->
+    <div class="hud-bl">
+        <div class="ml-panel">
+            <div class="ml-title">🤖 ML Prediction</div>
+            <div class="ml-method" id="mlMethod">--</div>
+            <div class="prob-row">
+                <div class="prob-dot low"></div>
+                <div class="prob-lbl">Low</div>
+                <div class="prob-bar-bg"><div class="prob-bar-fill low" id="barLow" style="width:0%"></div></div>
+                <div class="prob-pct" id="probLow">--%</div>
+            </div>
+            <div class="prob-row">
+                <div class="prob-dot mod"></div>
+                <div class="prob-lbl">Moderate</div>
+                <div class="prob-bar-bg"><div class="prob-bar-fill mod" id="barMod" style="width:0%"></div></div>
+                <div class="prob-pct" id="probMod">--%</div>
+            </div>
+            <div class="prob-row">
+                <div class="prob-dot sev"></div>
+                <div class="prob-lbl">Severe</div>
+                <div class="prob-bar-bg"><div class="prob-bar-fill sev" id="barSev" style="width:0%"></div></div>
+                <div class="prob-pct" id="probSev">--%</div>
+            </div>
+            <div style="font-size:0.62em;color:var(--text2);margin-top:6px;border-top:1px solid var(--border);padding-top:5px;">
+                Confidence: <span id="mlConfidence" style="color:#fff;font-weight:600;">--</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- BOTTOM CENTER: Timestamp -->
+    <div class="hud-bc">🕐 <span id="hazardTime">--</span></div>
+
+    <!-- BOTTOM RIGHT: Camera controls -->
+    <div class="hud-br interactive">
+        <button class="cam-btn btn-connect"    id="connectBtn"    onclick="connectToCamera()">📡 Connect</button>
+        <button class="cam-btn btn-disconnect" id="disconnectBtn" onclick="disconnectCamera()" style="display:none;">🔌 Disconnect</button>
+        <button class="cam-btn btn-record"     id="recordBtn"     onclick="startRecording()" disabled>⏺ Record</button>
+        <button class="cam-btn btn-stop"       id="stopBtn"       onclick="stopRecording()"  disabled>⏹ Stop</button>
+        <button class="cam-btn btn-refresh"                       onclick="manualRefresh()">🔄 Refresh</button>
+    </div>
+
+</div><!-- end hud -->
+
+<script>
+const ROBOT_IP   = "http://192.168.4.1";
+const STREAM_URL = "/video_feed";  // ← use app.py's feed instead
+
+// --- HAZARD DATA ---
+async function fetchHazardData() {
+    try {
+        const res  = await fetch("/api/sensor-data");
+        const data = await res.json();
+
+        if (!data.timestamp || data.timestamp.includes("Waiting")) throw new Error("Waiting");
+
+        document.getElementById("tempDisplay").innerText = data.temperature;
+        document.getElementById("humDisplay").innerText  = data.humidity;
+        document.getElementById("hiDisplay").innerText   = data.heat_index;
+        document.getElementById("hazardTime").innerText  = data.timestamp;
+        document.getElementById("riskLevel").innerText   = data.risk_level || "--";
+
+        // Risk badge class
+        const badge = document.getElementById("riskBadge");
+        badge.className = "risk-tile";
+        if (data.risk_level === "Low Risk")      badge.classList.add("low");
+        if (data.risk_level === "Moderate Risk") badge.classList.add("mod");
+        if (data.risk_level === "Severe Risk")   badge.classList.add("sev");
+
+        // Interpretation fade
+        const riskText = document.getElementById("riskText");
+        const newInterp = data.interpretation ?? "Analyzing...";
+        if (riskText.innerText !== newInterp) {
+            riskText.style.opacity = 0;
+            setTimeout(() => { riskText.innerText = newInterp; riskText.style.opacity = 1; }, 400);
+        } else { riskText.style.opacity = 1; }
+
+        // ML Method
+        const methodEl = document.getElementById("mlMethod");
+        const m = (data.method || "").toLowerCase();
+        if (m === "xgboost")           { methodEl.innerText = "🤖 XGBoost";   methodEl.style.color = "#2ecc71"; }
+        else if (m.startsWith("nlp_")) { methodEl.innerText = "🧠 NLP";       methodEl.style.color = "#4DA674"; }
+        else                           { methodEl.innerText = "📊 Threshold"; methodEl.style.color = "#95a5a6"; }
+
+        // Confidence & probabilities
+        function pct(x)  { const n = Number(x); return isFinite(n) ? `${(n*100).toFixed(1)}%` : "--%"; }
+        function pctN(x) { const n = Number(x); return isFinite(n) ? (n*100).toFixed(1) : 0; }
+
+        document.getElementById("mlConfidence").innerText = pct(data.confidence);
+
+        const probs = data.probabilities || {};
+        const pLow  = Array.isArray(probs) ? probs[0] : probs.low;
+        const pMod  = Array.isArray(probs) ? probs[1] : probs.moderate;
+        const pSev  = Array.isArray(probs) ? probs[2] : probs.severe;
+
+        document.getElementById("probLow").innerText   = pct(pLow);
+        document.getElementById("probMod").innerText   = pct(pMod);
+        document.getElementById("probSev").innerText   = pct(pSev);
+        document.getElementById("barLow").style.width  = pctN(pLow) + "%";
+        document.getElementById("barMod").style.width  = pctN(pMod) + "%";
+        document.getElementById("barSev").style.width  = pctN(pSev) + "%";
+
+        // Status chips
+        setChip("robotDot","robotChip","green","Active");
+        if (data.is_recording) {
+            setChip("dbDot","dbChip","red","Saving");
+        } else {
+            setChip("dbDot","dbChip","gray","DB Idle");
+        }
+
+    } catch (err) {
+        setChip("robotDot","robotChip","red","Offline");
+        document.getElementById("riskLevel").innerText  = "--";
+        document.getElementById("riskText").innerText   = "Waiting for robot...";
+        document.getElementById("riskBadge").className  = "risk-tile";
+    }
+}
+
+function setChip(dotId, chipId, color, text) {
+    if (dotId) document.getElementById(dotId).className = "dot " + color;
+    if (chipId) document.getElementById(chipId).innerText = text;
+}
+
+// --- CAMERA ---
+const camStream     = document.getElementById("camStream");
+const camOffline    = document.getElementById("camOffline");
+const connectBtn    = document.getElementById("connectBtn");
+const disconnectBtn = document.getElementById("disconnectBtn");
+const recordBtn     = document.getElementById("recordBtn");
+const stopBtn       = document.getElementById("stopBtn");
+const recBadge      = document.getElementById("recBadge");
+let mediaRecorder, recordedChunks = [], drawInterval;
+
+function connectToCamera() {
+    connectBtn.innerText = "Connecting...";
+    camStream.src = "/video_feed?t=" + Date.now();
+
+    camStream.onload = () => {
+        camOffline.style.display    = "none";
+        connectBtn.style.display    = "none";
+        disconnectBtn.style.display = "inline-flex";
+        recordBtn.disabled = false;
+    };
+    camStream.onerror = () => {
+        connectBtn.innerText = "📡 Connect";
+    };
+}
+
+function disconnectCamera() {
+    camStream.src               = "";
+    camOffline.style.display    = "flex";
+    connectBtn.style.display    = "inline-flex";
+    connectBtn.innerText        = "📡 Connect";
+    disconnectBtn.style.display = "none";
+    recordBtn.disabled = true;
+    stopBtn.disabled   = true;
+    if (mediaRecorder && mediaRecorder.state === "recording") stopRecording();
+}
+
+function startRecording() {
+    fetch('/toggle_recording', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({action:'start'})
+    });
+
+    const canvas = document.getElementById("recordCanvas");
+    const ctx    = canvas.getContext("2d");
+    canvas.width = 640; canvas.height = 480;
+
+    recBadge.classList.add("active");
+    recordBtn.disabled = true;
+    stopBtn.disabled   = false;
+
+    drawInterval = setInterval(() => {
+        try { ctx.drawImage(camStream, 0, 0, 640, 480); } catch(e){}
+    }, 33);
+
+    const stream = canvas.captureStream(30);
+    mediaRecorder = new MediaRecorder(stream, {mimeType:'video/mp4'});
+    recordedChunks = [];
+    mediaRecorder.ondataavailable = e => { if(e.data.size > 0) recordedChunks.push(e.data); };
+    mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, {type:"video/mp4"});
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement("a");
+        a.href = url; a.download = "bimbot_exploration.mp4";
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    };
+    mediaRecorder.start();
+}
+
+function stopRecording() {
+    fetch('/toggle_recording', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({action:'stop'})
+    });
+    if (mediaRecorder) { mediaRecorder.stop(); clearInterval(drawInterval); }
+    recBadge.classList.remove("active");
+    recordBtn.disabled = false;
+    stopBtn.disabled   = true;
+}
+
+async function manualRefresh() {
+    await fetchHazardData();
+}
+
+// --- SURVIVOR DETECTION ---
+async function fetchSurvivorData() {
+    try {
+        const res  = await fetch("/api/survivors");
+        const data = await res.json();
+
+        const count = data.survivors_found || 0;
+        document.getElementById("survivorCount").innerText = count;
+
+        // Show highest confidence
+        if (data.detections && data.detections.length > 0) {
+            const maxConf = Math.max(...data.detections.map(d => d.confidence));
+            document.getElementById("survivorConf").innerText = 
+                (maxConf * 100).toFixed(1) + "%";
+        } else {
+            document.getElementById("survivorConf").innerText = "--%";
+        }
+
+        // Flash red if survivor found
+        const tile = document.getElementById("survivorTile");
+        if (count > 0) {
+            tile.style.borderColor = "#e74c3c";
+            tile.style.background  = "rgba(231,76,60,0.22)";
+        } else {
+            tile.style.borderColor = "rgba(77,166,116,0.35)";
+            tile.style.background  = "var(--glass)";
+        }
+
+    } catch (err) {
+        document.getElementById("survivorCount").innerText = "--";
+    }
+}
+
+setInterval(fetchSurvivorData, 1000);
+fetchSurvivorData();
+
+setInterval(fetchHazardData, 2000);
+fetchHazardData();
+</script>
+</body>
+</html>
