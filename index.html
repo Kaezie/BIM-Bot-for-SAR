@@ -435,13 +435,12 @@
 
     <!-- SURVIVOR DETECTION -->
     <div style="position:absolute; top:68px; left:50%; transform:translateX(-50%); z-index:10;">
-        <div class="glass-tile" id="survivorTile" style="text-align:center; min-width:160px;">
+        <div class="glass-tile" id="survivorTile" style="text-align:center; min-width:200px;">
             <div class="sensor-label">🧍 Survivors Detected</div>
             <div class="sensor-row" style="justify-content:center;">
                 <div class="sensor-val" id="survivorCount" style="color:#e74c3c;">0</div>
             </div>
-            <div style="font-size:0.62em; color:var(--text2); margin-top:4px;">
-                Conf: <span id="survivorConf" style="color:#fff;">--%</span>
+            <div id="survivorDetails" style="font-size:0.62em; color:var(--text2); margin-top:4px; text-align:left;">
             </div>
         </div>
     </div>
@@ -671,13 +670,20 @@ async function fetchSurvivorData() {
         const count = data.survivors_found || 0;
         document.getElementById("survivorCount").innerText = count;
 
-        // Show highest confidence
+        // Show details for each survivor
+        const details = document.getElementById("survivorDetails");
         if (data.detections && data.detections.length > 0) {
-            const maxConf = Math.max(...data.detections.map(d => d.confidence));
-            document.getElementById("survivorConf").innerText = 
-                (maxConf * 100).toFixed(1) + "%";
+            details.innerHTML = data.detections.map((d, i) => `
+                <div style="border-top:1px solid var(--border); padding-top:4px; margin-top:4px;">
+                    <div>👤 Survivor ${i+1} (${(d.confidence*100).toFixed(1)}%)</div>
+                    <div>🧒 ${d.age || '--'}</div>
+                    <div>💭 ${d.consciousness || '--'}</div>
+                    <div>🩹 ${d.injury || '--'}</div>
+                    <div>⛓️ ${d.trapped || '--'}</div>
+                </div>
+            `).join('');
         } else {
-            document.getElementById("survivorConf").innerText = "--%";
+            details.innerHTML = '<div>No survivors detected</div>';
         }
 
         // Flash red if survivor found
