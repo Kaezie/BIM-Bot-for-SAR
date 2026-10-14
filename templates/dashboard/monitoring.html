@@ -1,0 +1,76 @@
+<section id="monitor" class="monitor-grid" data-active-feed="main" aria-label="Live monitoring">
+  <article class="card camera-card">
+    <div class="card-top">
+      <div><p class="eyebrow">LIVE MONITORING</p><h2 id="feedTitle">Main camera</h2></div>
+      <span class="pill" id="cameraStatus">Disconnected</span>
+    </div>
+    <div class="feed-stage">
+      {% include "dashboard/priority_signals.html" %}
+      <section id="panel-main" role="tabpanel" aria-labelledby="tab-main">
+        <img id="camStream" alt="Live main camera feed" hidden>
+        <div class="feed-empty" id="camOffline">
+          <span class="empty-symbol" aria-hidden="true">📷</span>
+          <h3>CAMERA OFFLINE</h3>
+          <p id="cameraHint">Tap Connect to start feed.</p>
+        </div>
+        <span class="recording-badge" id="recBadge" hidden>● Recording <span id="recordTime">00:00</span></span>
+      </section>
+      <section id="panel-nightvision" role="tabpanel" aria-labelledby="tab-nightvision" hidden>
+        <img id="nvStream" alt="Live night vision feed" hidden>
+        <div class="feed-empty" id="nvEmpty">
+          <span class="empty-symbol" aria-hidden="true">🌙</span>
+          <h3>Night Vision Camera</h3>
+          <p id="nvStatus">Checking availability…</p>
+        </div>
+      </section>
+      <section id="panel-thermal" role="tabpanel" aria-labelledby="tab-thermal" hidden>
+        <div class="feed-empty">
+          <span class="empty-symbol" aria-hidden="true">🌡️</span>
+          <h3>Thermal Camera (MLX90640)</h3>
+          <p id="thermalStatus">Checking availability…</p>
+          <div id="thermalGrid" class="thermal-grid" hidden></div>
+        </div>
+      </section>
+      <section id="panel-sound" role="tabpanel" aria-labelledby="tab-sound" hidden>
+        <div class="feed-empty">
+          <span class="empty-symbol" aria-hidden="true">🔊</span>
+          <h3>Sound Detection</h3>
+          <p id="soundStatus">Checking availability…</p>
+          <meter id="soundMeter" min="0" max="100" value="0" aria-label="Sound level in decibels, scale 0 to 100" hidden>
+          </meter>
+          <p id="soundClass" hidden></p>
+        </div>
+      </section>
+    </div>
+    <div class="camera-controls">
+      <button class="primary" id="connectBtn">📡 Connect</button>
+      <button id="disconnectBtn" hidden>Disconnect</button>
+      <button class="record-btn" id="recordBtn" disabled>● Record</button>
+      <button class="danger-btn" id="stopBtn" hidden>■ Stop</button>
+      <button id="refreshBtn">↻ Refresh</button>
+    </div>
+    <p class="control-hint" id="recordingHint">Recordings save to cloud automatically after you stop. Keep this page open until saved.</p>
+    <div class="feed-tabs" role="tablist" aria-label="Monitoring source">
+      <button role="tab" id="tab-main" aria-controls="panel-main" aria-selected="true" data-feed="main">Main camera<small id="availability-main">Disconnected</small></button>
+      <button role="tab" id="tab-nightvision" aria-controls="panel-nightvision" aria-selected="false" tabindex="-1" data-feed="nightvision">Night vision<small id="availability-nightvision">Checking</small></button>
+      <button role="tab" id="tab-thermal" aria-controls="panel-thermal" aria-selected="false" tabindex="-1" data-feed="thermal">Thermal<small id="availability-thermal">Checking</small></button>
+      <button role="tab" id="tab-sound" aria-controls="panel-sound" aria-selected="false" tabindex="-1" data-feed="sound">Sound<small id="availability-sound">Checking</small></button>
+    </div>
+  </article>
+  <aside class="card sensors-card">
+    <div class="card-top"><h2>Environment</h2><span class="pill" id="sensorState">Checking</span></div>
+    <dl class="sensor-list">
+      <div><dt>🌡️ Temperature</dt><dd><span id="tempDisplay">—</span><small>°C</small></dd></div>
+      <div><dt>💧 Humidity</dt><dd><span id="humDisplay">—</span><small>%</small></dd></div>
+      <div><dt>🔥 Heat index</dt><dd><span id="hiDisplay">—</span><small>°C</small></dd></div>
+    </dl>
+    <p class="muted" id="sensorNote">Waiting for the robot’s sensors.</p>
+    <details class="assessment" open>
+      <summary>Risk assessment</summary>
+      <p>Method: <strong id="mlMethod">—</strong></p>
+      <p id="mlAssessment">SAR threshold rules: Checking</p>
+      <p>Rule score: <strong id="mlConfidence">—</strong></p>
+      <div id="probabilities"></div>
+    </details>
+  </aside>
+</section>

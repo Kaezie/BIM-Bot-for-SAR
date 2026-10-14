@@ -1,0 +1,14 @@
+<section class="priority-grid" aria-label="Priority signals">
+  <article class="card priority-card" id="survivorCard">
+    <div class="card-top"><h2>🧍 Survivors detected</h2><span class="pill" id="detectionState">Checking</span></div>
+    <div class="metric" id="survivorCount">—</div>
+    <p id="survivorHint" role="status">Connect the camera to begin detection.</p>
+    <p class="muted">Highest confidence <strong id="survivorConf">—</strong> · Verify detections in the feed.</p>
+  </article>
+  <article class="card priority-card" id="riskCard">
+    <div class="card-top"><h2>Risk level</h2><span class="pill" id="riskState">Checking</span></div>
+    <div class="risk-value" id="riskLevel">Awaiting readings</div>
+    <p id="riskText">Risk assessment appears when fresh sensor data is available.</p>
+    <p class="muted" id="hazardTime">No readings received</p>
+  </article>
+</section>
