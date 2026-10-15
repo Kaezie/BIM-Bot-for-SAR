@@ -1,0 +1,13 @@
+<section id="mission" class="card mission-card" aria-labelledby="missionTitle">
+  <div class="card-top"><div><p class="eyebrow">ROBOT EXPLORATION</p><h2 id="missionTitle">Mission controls</h2></div><span class="pill" id="missionState">Checking</span></div>
+  <label for="missionArea">Observation area label</label>
+  <input id="missionArea" maxlength="120" placeholder="e.g. Test course A, ground floor" autocomplete="off">
+  <div class="camera-controls"><button id="missionStart" class="primary" disabled>Start mission</button><button id="missionStop" class="danger-btn" disabled>Stop mission</button><button id="downloadReport">Download situational report</button></div>
+  <p id="missionHint" class="muted" role="status">Checking robot readiness.</p>
+  <p class="muted">The area label applies to this mission. It does not provide survivor coordinates.</p>
+</section>
+<section id="survivorRecords" class="card" aria-labelledby="survivorRecordsTitle">
+  <div class="card-top"><h2 id="survivorRecordsTitle">Detection records &amp; verification</h2><span class="pill" id="survivorEventCount">Checking</span></div>
+  <p class="muted">Mission detections include environmental context and the observation area. Condition assessments remain unknown until reviewed by an operator.</p>
+  <ul class="event-list" id="survivorEventList"><li class="empty-row">Waiting for mission records.</li></ul>
+</section>

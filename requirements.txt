@@ -1,0 +1,12 @@
+# Web server and HTTP client
+Flask
+requests
+
+# Camera and detection
+ultralytics
+opencv-python
+numpy
+
+# Authentication, storage, and local configuration
+supabase==2.31.0
+python-dotenv

@@ -1,0 +1,18 @@
+<section id="communication" class="card" aria-labelledby="communicationTitle">
+  <div class="card-top">
+    <div><p class="eyebrow">PROPOSED FEATURE</p><h2 id="communicationTitle">Survivor communication</h2></div>
+    <span class="pill">Reply channel pending</span>
+  </div>
+  <p>The survivor can signal with gestures observed by the responder through the robot’s camera. To reply without a phone, the robot needs an output the survivor can perceive. A usable visible camera LED could provide simple light acknowledgements, if its presence and control are confirmed.</p>
+  <p class="muted">The team confirmed that survivors must communicate through the robot without a phone, and the robot has no speaker, buzzer, or display. Visible LED control is unconfirmed. Two-way communication is not available yet. Dashboard text stays on the responder’s laptop; it is not sent to the survivor.</p>
+  <details>
+    <summary>How this could use the existing equipment</summary>
+    <p>If your ESP32-CAM has an accessible visible LED, a firmware-controlled light acknowledgement could pair with camera-observed gestures. Light patterns need an agreed meaning that the survivor understands; they cannot explain arbitrary questions. Confirm the board and wiring before enabling this approach. Infrared illumination is not a visible message channel.</p>
+    <p>For spoken questions and replies, the planned microphone would need a robot speaker with a suitable driver or amplifier and audio firmware. That would require additional hardware. The current sound classification endpoint does not stream speech or interpret a survivor’s answer.</p>
+  </details>
+  <div class="camera-controls communication-actions">
+    <a href="#monitor">View live monitoring</a>
+    <a href="#survivorRecords">Record a survivor response</a>
+  </div>
+  <p class="muted">In a detection review, choose “Add communication note”, enter what you observed, and save the review. Record an unclear or missing response as unknown. No response does not establish unconsciousness.</p>
+</section>

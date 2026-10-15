@@ -1,0 +1,32 @@
+<section class="card" id="trends">
+  <div class="card-top">
+    <div><p class="eyebrow">LAST 60 MINUTES</p><h2>Sensor trends</h2></div>
+    <label class="select-label">
+      Reading
+      <select id="trendMetric">
+        <option value="temperature">Temperature · °C</option>
+        <option value="humidity">Humidity · %</option>
+        <option value="heat_index">Heat index · °C</option>
+      </select>
+    </label>
+  </div>
+  <p id="trendSummary" class="muted">Waiting for sensor readings.</p>
+  <svg id="trendChart" viewBox="0 0 800 180" role="img" aria-label="Sensor trend chart" hidden></svg>
+  <details>
+    <summary>View readings as a table</summary>
+    <div class="table-wrap">
+      <table>
+        <caption>Latest 60 readings from the past hour</caption>
+        <thead>
+          <tr>
+            <th scope="col">Time</th>
+            <th scope="col">Temp °C</th>
+            <th scope="col">Humidity %</th>
+            <th scope="col">Heat index °C</th>
+          </tr>
+        </thead>
+        <tbody id="sensorTable"></tbody>
+      </table>
+    </div>
+  </details>
+</section>

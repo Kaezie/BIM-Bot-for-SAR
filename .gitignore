@@ -1,6 +1,12 @@
-best.pt
+.env
+.venv*/
+.DS_Store
 __pycache__/
-*.pyc
-.venv/
-*.mp4
-*.avi
+*.py[cod]
+.pytest_cache/
+*.pt
+mission_history.sqlite3*
+# Trusted local model artifacts stay outside version control.
+*.joblib
+*.pkl
+*.onnx

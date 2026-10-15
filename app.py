@@ -1,22 +1,63 @@
-from flask import Flask, Response, jsonify, request, send_from_directory
+import os
+import sqlite3
+import math
+from uuid import uuid4
+import threading
+import time
+from datetime import datetime
+from functools import wraps
+from contextlib import contextmanager
+
+from flask import Flask, Response, jsonify, request, render_template, g
 from ultralytics import YOLO
 import cv2
 import numpy as np
-import threading
-import time
-import math
 import requests
+
+from supabase import create_client
+from features.telemetry import Telemetry
+from features.missions import Missions
+from features.routes import register as register_feature_routes
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Load a .env file if python-dotenv is installed and one exists (optional —
+# you can also just export these as real environment variables).
+try:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(BASE_DIR, '.env'))
+except ImportError:
+    pass
 
 app = Flask(__name__)
 
-# ── MODELS ──
-detection_model = YOLO('best.pt')
-pose_model = YOLO('yolo11s-pose.pt')  # ← changed from yolov12s-pose.pt
+# =========================================================
+#  SUPABASE CONFIG
+#  See docs/SUPABASE_SETUP.md for where each of these comes from.
+# =========================================================
 
-# ── URLS ──
-CAMERA_URL  = 'http://192.168.4.1:81/stream'
-SENSOR_URL  = 'http://192.168.4.1/dht'
-THERMAL_URL = 'http://192.168.4.1:82/stream'  # future
+SUPABASE_URL = os.environ['SUPABASE_URL']
+SUPABASE_ANON_KEY = os.environ['SUPABASE_ANON_KEY']
+SUPABASE_SERVICE_ROLE_KEY = os.environ['SUPABASE_SERVICE_ROLE_KEY']
+SUPABASE_STORAGE_BUCKET = os.environ.get('SUPABASE_STORAGE_BUCKET', 'recordings')
+
+# Used to verify whatever access token the browser sends us on each request.
+supabase_auth_client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+# Used server-side only, to read/write Storage regardless of the per-user
+# session — this key must never be sent to the browser.
+supabase_admin_client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+
+# SAR models and streams. The original processing functions below are authoritative.
+detection_model = YOLO(os.path.join(BASE_DIR, os.environ.get('YOLO_MODEL_PATH', 'best.pt')))
+pose_model = YOLO(os.path.join(BASE_DIR, os.environ.get('POSE_MODEL_PATH', 'yolo11s-pose.pt')))
+CAMERA_URL = os.environ.get('CAMERA_URL', 'http://192.168.4.1:81/stream')
+SENSOR_URL = os.environ.get('SENSOR_URL', 'http://192.168.4.1/dht')
+THERMAL_URL = os.environ.get('THERMAL_URL', 'http://192.168.4.1:82/stream')
+NIGHTVISION_CAMERA_URL = os.environ.get('NIGHTVISION_CAMERA_URL')
+# Temperature-grid JSON and the SAR thermal video stream are different inputs.
+telemetry = Telemetry({kind: os.environ.get('THERMAL_DATA_URL' if kind == 'thermal' else f'{kind.upper()}_URL', '')
+                       for kind in ('thermal', 'sound', 'position', 'robot')}, requests)
+last_detection_at = None
 
 # ── GLOBAL STATE ──
 cap = None
@@ -97,6 +138,7 @@ def wifi_sensor_listener():
                     "is_recording":   is_recording,
                     "interpretation": interpretation,
                 }
+                publish_sensor_reading()
                 print(f"🌡️ {temp}°C | 💧{hum}% | {risk_label}")
             else:
                 print(f"⚠️ Sensor status: {response.status_code}")
@@ -320,6 +362,8 @@ def generate_frames():
                     'thermal_injury': status['thermal_injury']
                 })
 
+            publish_survivor_reading()
+
             # Draw annotations
             annotated_frame = det_results[0].plot()
 
@@ -342,12 +386,223 @@ def generate_frames():
                b'Content-Type: image/jpeg\r\n\r\n' +
                buffer.tobytes() + b'\r\n')
 
-# ── ROUTES ──
+# Local mission history survives page reloads and server restarts.
+HISTORY_DB = os.environ.get('HISTORY_DB', os.path.join(BASE_DIR, 'mission_history.sqlite3'))
+history_lock = threading.Lock()
+previous_risk = None
+previous_detection_count = 0
+
+
+@contextmanager
+def history_database():
+    db = sqlite3.connect(HISTORY_DB)
+    try:
+        with db:
+            yield db
+    finally:
+        db.close()
+
+
+def init_history():
+    with history_database() as db:
+        db.execute("CREATE TABLE IF NOT EXISTS samples (at REAL PRIMARY KEY, temperature REAL, humidity REAL, heat_index REAL)")
+        db.execute("CREATE TABLE IF NOT EXISTS alerts (id INTEGER PRIMARY KEY, at REAL, kind TEXT, message TEXT)")
+
+
+def add_alert(kind, message):
+    with history_lock, history_database() as db:
+        db.execute("INSERT INTO alerts (at, kind, message) VALUES (?, ?, ?)", (time.time(), kind, message))
+        db.execute("DELETE FROM alerts WHERE id NOT IN (SELECT id FROM alerts ORDER BY id DESC LIMIT 10000)")
+
+
+init_history()
+missions = Missions(history_database, telemetry, requests,
+                    os.environ.get('ROBOT_COMMAND_URL', ''), os.environ.get('ROBOT_COMMAND_KEY', ''))
+
+
+# =========================================================
+#  AUTH — verifying Supabase-issued JWTs on each request
+#
+#  There's no server-side session here on purpose: the employee's browser
+#  holds the Supabase session (via supabase-js) and sends the access token
+#  with every request — as an Authorization header for normal API calls, or
+#  as an ?access_token= query param for things loaded as <img>/<video> src
+#  (which can't set custom headers). This route just checks that token is
+#  still valid for each request; Supabase itself is the source of truth.
+# =========================================================
+
+# Small cache so we're not hitting Supabase's Auth API on every single
+# 1-second poll from every employee's dashboard.
+_token_cache = {}
+TOKEN_CACHE_TTL_SECONDS = 30
+
+
+def _verify_token(token):
+    now = time.time()
+    cached = _token_cache.get(token)
+    if cached and cached[1] > now:
+        return cached[0]
+
+    try:
+        result = supabase_auth_client.auth.get_user(token)
+        user = result.user if result else None
+    except Exception:
+        user = None
+
+    if user is not None:
+        _token_cache[token] = (user, now + TOKEN_CACHE_TTL_SECONDS)
+    return user
+
+
+def _extract_token():
+    auth_header = request.headers.get('Authorization', '')
+    if auth_header.startswith('Bearer '):
+        return auth_header.split(' ', 1)[1]
+    return request.args.get('access_token')
+
+
+def require_auth(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        token = _extract_token()
+        if not token:
+            return jsonify({'error': 'Missing access token.'}), 401
+        user = _verify_token(token)
+        if user is None:
+            return jsonify({'error': 'Invalid or expired session.'}), 401
+        g.user = user
+        return f(*args, **kwargs)
+    return wrapper
+
+
+# =========================================================
+#  PAGES
+#  These render unconditionally — the pages themselves check for a valid
+#  Supabase session client-side (via supabase-js) and redirect to /login if
+#  there isn't one. The API routes below are what's actually protected.
+# =========================================================
+
+@app.route('/login')
+@app.route('/signup')
+def login_page():
+    return render_template(
+        'login.html',
+        signup=request.path == '/signup',
+        supabase_url=SUPABASE_URL,
+        supabase_anon_key=SUPABASE_ANON_KEY,
+    )
+
+
 @app.route('/')
-def index():
-    return send_from_directory('.', 'index.html')
+def dashboard():
+    return render_template(
+        'dashboard.html',
+        supabase_url=SUPABASE_URL,
+        supabase_anon_key=SUPABASE_ANON_KEY,
+    )
+
+
+# =========================================================
+#  RECORDINGS → SUPABASE STORAGE
+# =========================================================
+
+@app.route('/api/upload-to-storage', methods=['POST'])
+@require_auth
+def upload_to_storage():
+    if 'video' not in request.files:
+        return jsonify({'error': 'No video file was received.'}), 400
+
+    video_file = request.files['video']
+    filename = request.form.get('filename') or f'bimbot_{uuid4().hex}.webm'
+    if '/' in filename or '\\' in filename or not filename.endswith(('.webm', '.mp4')):
+        return jsonify({'error': 'Invalid recording filename.'}), 400
+    # One folder per employee inside the bucket, named by their Supabase user id.
+    storage_path = f"{g.user.id}/{filename}"
+
+    try:
+        file_bytes = video_file.read()
+        supabase_admin_client.storage.from_(SUPABASE_STORAGE_BUCKET).upload(
+            storage_path,
+            file_bytes,
+            {"content-type": video_file.mimetype or "video/webm", "upsert": "true"},
+        )
+        # Bucket is private, so hand back a time-limited link rather than a
+        # public URL. 7 days is plenty to review/download a recording.
+        signed = supabase_admin_client.storage.from_(SUPABASE_STORAGE_BUCKET).create_signed_url(
+            storage_path, 60 * 60 * 24 * 7
+        )
+        link = signed.get('signedURL') or signed.get('signedUrl') or signed.get('signed_url')
+
+        return jsonify({'success': True, 'path': storage_path, 'link': link})
+    except Exception as e:
+        return jsonify({'error': f'Upload failed: {e}'}), 500
+
+
+@app.route('/api/recordings')
+@require_auth
+def recordings():
+    try:
+        offset = max(0, request.args.get('offset', 0, type=int))
+        files = supabase_admin_client.storage.from_(SUPABASE_STORAGE_BUCKET).list(
+            str(g.user.id), {'limit': 50, 'offset': offset, 'sortBy': {'column': 'created_at', 'order': 'desc'}}
+        )
+        return jsonify({'recordings': [{'name': f['name'], 'created_at': f.get('created_at'),
+                         'size': (f.get('metadata') or {}).get('size', 0)} for f in files if f.get('id')],
+                        'has_more': len(files) == 50})
+    except Exception:
+        return jsonify({'error': 'Could not load recordings. Please retry.'}), 502
+
+
+@app.route('/api/recordings/link')
+@require_auth
+def recording_link():
+    name = request.args.get('name', '')
+    if not name or '/' in name or '\\' in name:
+        return jsonify({'error': 'Invalid filename.'}), 400
+    try:
+        signed = supabase_admin_client.storage.from_(SUPABASE_STORAGE_BUCKET).create_signed_url(f'{g.user.id}/{name}', 3600)
+        return jsonify({'link': signed.get('signedURL') or signed.get('signedUrl') or signed.get('signed_url')})
+    except Exception:
+        return jsonify({'error': 'Could not open this recording. Please retry.'}), 502
+
+
+@app.route('/api/history')
+@require_auth
+def history():
+    with history_database() as db:
+        db.row_factory = sqlite3.Row
+        alerts = [dict(row) for row in db.execute('SELECT * FROM alerts ORDER BY at DESC LIMIT 100')]
+        samples = [dict(row) for row in db.execute('SELECT * FROM samples WHERE at > ? ORDER BY at', (time.time() - 3600,))]
+    return jsonify({'alerts': alerts, 'samples': samples})
+
+
+# UI adapters record SAR results; they do not run a second processing pipeline.
+def publish_sensor_reading():
+    global previous_risk
+    latest_sensor_data['updated_at'] = time.time()
+    with history_lock, history_database() as db:
+        db.execute('INSERT INTO samples VALUES (?, ?, ?, ?)',
+                   (latest_sensor_data['updated_at'], latest_sensor_data['temperature'],
+                    latest_sensor_data['humidity'], latest_sensor_data['heat_index']))
+        db.execute('DELETE FROM samples WHERE at < ?', (time.time() - 86400,))
+    risk = latest_sensor_data['risk_level']
+    if risk != previous_risk and risk != 'Low Risk':
+        add_alert('risk', risk + ': ' + latest_sensor_data['interpretation'])
+    previous_risk = risk
+
+
+def publish_survivor_reading():
+    global last_detection_at, previous_detection_count
+    last_detection_at = time.time()
+    missions.observe(latest_detections, latest_sensor_data)
+    count = len(latest_detections)
+    if count > 0 and count != previous_detection_count:
+        add_alert('detection', f'{count} possible survivor(s) detected. Verify in the camera feed.')
+    previous_detection_count = count
+
 
 @app.route('/video_feed')
+@require_auth
 def video_feed():
     return Response(
         generate_frames(),
@@ -355,17 +610,17 @@ def video_feed():
     )
 
 @app.route('/api/survivors')
+@require_auth
 def survivors():
-    return jsonify({
-        'survivors_found': len(latest_detections),
-        'detections':      latest_detections
-    })
+    return jsonify(detection_snapshot())
 
 @app.route('/api/sensor-data')
+@require_auth
 def sensor_data():
-    return jsonify(latest_sensor_data)
+    return jsonify({**latest_sensor_data, 'fresh': bool(latest_sensor_data.get('updated_at') and time.time() - latest_sensor_data['updated_at'] < 10)})
 
 @app.route('/api/thermal')
+@require_auth
 def thermal_status():
     return jsonify({
         'available': thermal_available,
@@ -373,16 +628,89 @@ def thermal_status():
     })
 
 @app.route('/toggle_recording', methods=['POST'])
+@require_auth
 def toggle_recording():
     global is_recording
     data = request.get_json()
     is_recording = data.get('action') == 'start'
     return jsonify({'is_recording': is_recording})
 
-# ── START ──
+@app.route('/nightvision_feed')
+@require_auth
+def nightvision_feed():
+    if not NIGHTVISION_CAMERA_URL:
+        return jsonify({'connected': False, 'message': 'Night-vision camera is not installed yet.'}), 503
+
+    def generate_nv_frames():
+        nv_cap = cv2.VideoCapture(NIGHTVISION_CAMERA_URL)
+        try:
+            while True:
+                ret, frame = nv_cap.read()
+                if not ret:
+                    break
+                ret, buffer = cv2.imencode('.jpg', frame)
+                yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+        finally:
+            nv_cap.release()
+
+    return Response(generate_nv_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+
+@app.route('/api/device-status')
+@require_auth
+def device_status():
+    return jsonify({'nightvision': bool(NIGHTVISION_CAMERA_URL)})
+
+
+@app.route('/api/thermal-data')
+@require_auth
+def thermal_data():
+    return jsonify(telemetry.get('thermal'))
+
+
+@app.route('/api/sound-data')
+@require_auth
+def sound_data():
+    return jsonify(telemetry.get('sound'))
+
+
+def detection_snapshot():
+    fresh = bool(detection_model is not None and last_detection_at and time.time()-last_detection_at < 10)
+    return {'available': fresh, 'updated_at': last_detection_at,
+            'survivors_found': len(latest_detections) if fresh else None,
+            'detections': list(latest_detections) if fresh else []}
+
+
+register_feature_routes(app, require_auth, missions, telemetry,
+                        lambda: latest_sensor_data, detection_snapshot,
+                        lambda: {'detector_loaded': detection_model is not None, 'pose_loaded': pose_model is not None,
+                                 'person_class_id': 14,
+                                 'condition_classifier': 'sar_heuristics',
+                                 'preprocessing': False})
+
+
+def mission_listener():
+    while True:
+        try:
+            missions.reconcile()
+            missions.heartbeat()
+        except Exception as exc:
+            print(f'[Mission] {exc}')
+        time.sleep(1)
+
+
+def start_workers():
+    telemetry.start()
+    for worker in (wifi_sensor_listener, mission_listener):
+        threading.Thread(target=worker, daemon=True).start()
+
+
+# =========================================================
+#  MAIN
+# =========================================================
+
 if __name__ == '__main__':
-    sensor_thread = threading.Thread(target=wifi_sensor_listener)
-    sensor_thread.daemon = True
-    sensor_thread.start()
-    print("🚀 BIM-BOT Server Running on http://localhost:5000")
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    start_workers()
+    port = int(os.environ.get('PORT', '5000'))
+    print(f"BIM-BOT Server running on http://localhost:{port}")
+    app.run(host='0.0.0.0', port=port, debug=False)
