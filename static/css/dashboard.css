@@ -793,6 +793,14 @@ footer {
   .monitor-grid[data-active-feed=thermal] { min-height: 0; }
 }
 .notice { position: fixed; top: 75px; left: 50%; transform: translateX(-50%); z-index: 25; width: min(540px,calc(100% - 32px)); background: #2d2b1c; color: #e8d4a2; border-color: #6e6038; box-shadow: 0 8px 40px #0008; }
+.dashboard-notices { position: fixed; top: 75px; left: 50%; transform: translateX(-50%); z-index: 25; width: min(540px,calc(100% - 32px)); display: grid; gap: 8px; pointer-events: none; }
+.dashboard-notices > * { pointer-events: auto; }
+.dashboard-notices .notice { position: static; transform: none; width: auto; margin: 0; }
+.sound-alert { display: flex; align-items: flex-start; gap: 12px; padding: 14px 18px; border: 1px solid #ca7850; border-radius: 12px; background: #38251e; color: #ffdab9; box-shadow: 0 8px 40px #0008; font-size: .85rem; line-height: 1.5; }
+.sound-alert > div { flex: 1; min-width: 0; }
+.sound-alert p { margin: 5px 0; overflow-wrap: anywhere; }
+.sound-alert small { color: #e0ba9c; }
+.sound-alert button { flex-shrink: 0; padding: 6px 9px; font-size: .75rem; }
 .mission-tools { border-top: 1px solid var(--line); background: #001719; }
 .mission-tools>summary { padding: 18px 24px; font-size: .85rem; color: var(--muted); }
 .mission-tools>summary span { float: right; font-size: .75rem; font-weight: 400; }

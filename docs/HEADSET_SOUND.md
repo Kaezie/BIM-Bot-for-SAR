@@ -1,6 +1,6 @@
 # Bluetooth headset sound and recognition
 
-Updated October 27, 2026, Asia/Manila. The operator confirms an available
+Updated November 3, 2026, Asia/Manila. The operator confirms an available
 Bluetooth headset with microphone and earpiece. Its model, pairing, placement,
 range and live sound performance remain unverified. One headset is one robot
 input; the Original/Spare camera microphone cards remain unavailable.
@@ -11,6 +11,35 @@ then use Sound → Headset mounted on robot → Find microphones → select the 
 headset → confirm placement → Start microphone. Discovery releases its probe.
 No input is opened on page load or tab selection. A missing/mismatched input
 never falls back to the laptop.
+
+## Loud-sound alerts
+
+While the selected microphone is listening, a signal at or above the
+**Loud-sound alert threshold** shows a dismissible dashboard banner and saves
+a **Sound alert** under Mission tools & history → Alert history. The default is
+20% relative RMS signal; adjust it above the observed background level for the
+selected input. This threshold is separate from the 3% activity indicator. It
+is not a calibrated decibel limit or evidence of a survivor. YAMNet is optional
+and is not needed for a loud-sound alert.
+
+Continuous noise produces one alert. Another requires at least one second
+below the loud threshold and at least ten seconds since the preceding alert.
+The local history API also enforces a persistent ten-second cooldown across
+dashboard tabs. Dismissing the banner retains its history entry. A failed save
+is shown in the banner rather than reported as successful.
+
+Only the source, relative level, threshold and server timestamp are saved in
+the laptop's existing history database. Laptop demonstration and operator-
+confirmed robot headset events retain distinct source labels. Stop, leaving
+Sound, hiding the page, input loss or session expiry ends listening and prevents
+new alerts. A visible banner includes the observation time; it is a past event,
+not a continuing live measurement. Session expiry clears the banner.
+
+Verification on November 3: 277 Python tests pass, including route validation,
+authentication, same-origin checks, offline sessions and persistent cooldown.
+`python tests/sound_alerts_ui.py` passes 21 generated-signal browser checks at
+320, 390, 768 and 1440 pixels. These checks open no real microphone and do not
+establish live headset accuracy, an appropriate field threshold or robot range.
 
 Waveform and relative RMS/peak analysis stay in the browser. The optional
 **Enable local YAMNet sound recognition** control is off until selected after

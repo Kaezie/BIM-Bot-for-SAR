@@ -77,6 +77,60 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(self.client.post('/api/local-recordings').status_code,401)
         self.assertEqual(self.client.post('/api/local-recordings/sync').status_code,401)
         self.assertEqual(self.client.post('/api/nightvision/light',json={'enabled':True}).status_code,401)
+        self.assertEqual(self.client.post('/api/sound-alerts',json={}).status_code,401)
+
+    @contextmanager
+    def sound_history(self):
+        with tempfile.TemporaryDirectory() as folder, patch.object(self.module, 'HISTORY_DB', str(Path(folder) / 'sound.sqlite3')):
+            self.module.init_history()
+            yield
+
+    def test_sound_alert_requires_same_origin_and_valid_metadata(self):
+        event = {'source': 'robot_headset', 'level_percent': 42.5, 'threshold_percent': 20}
+        headers = {**self.headers, 'Origin': 'http://localhost'}
+        with self.sound_history():
+            for origin in (None, 'https://untrusted.example'):
+                supplied = {**self.headers, **({'Origin': origin} if origin else {})}
+                self.assertEqual(self.client.post('/api/sound-alerts', json=event, headers=supplied).status_code, 403)
+            invalid = [None, [], {}, {**event, 'source': 'original_camera'},
+                       {**event, 'level_percent': True}, {**event, 'level_percent': '42'},
+                       {**event, 'level_percent': float('nan')}, {**event, 'level_percent': float('inf')},
+                       {**event, 'level_percent': 10**300}, {**event, 'threshold_percent': 0},
+                       {**event, 'level_percent': 19}, {**event, 'level_percent': 101}]
+            for payload in invalid:
+                with self.subTest(payload=payload):
+                    response = self.client.post('/api/sound-alerts', data=json.dumps(payload),
+                                                content_type='application/json', headers=headers)
+                    self.assertEqual(response.status_code, 400)
+            self.assertEqual(self.client.post('/api/sound-alerts', data=b'x' * 1025,
+                                              content_type='application/json', headers=headers).status_code, 413)
+            self.assertEqual(self.client.get('/api/history', headers=self.headers).json['alerts'], [])
+
+    def test_sound_alert_persists_and_cooldown_survives_a_new_client(self):
+        event = {'source': 'robot_headset', 'level_percent': 42.5, 'threshold_percent': 20}
+        headers = {**self.headers, 'Origin': 'http://localhost'}
+        with self.sound_history():
+            self.assertEqual(self.client.post('/api/sound-alerts', json=event, headers=headers).json, {'recorded': True})
+            history = self.client.get('/api/history', headers=self.headers).json['alerts']
+            self.assertEqual(len(history), 1)
+            self.assertEqual(history[0]['kind'], 'sound')
+            self.assertIn('Robot headset (placement operator-confirmed)', history[0]['message'])
+            self.assertIn('42.5% relative signal (threshold 20%)', history[0]['message'])
+            other_tab = self.module.app.test_client()
+            self.assertEqual(other_tab.post('/api/sound-alerts', json=event, headers=headers).json, {'recorded': False})
+            with patch.object(self.module.time, 'time', return_value=history[0]['at'] + 10):
+                self.assertEqual(other_tab.post('/api/sound-alerts', json={**event, 'source': 'laptop'}, headers=headers).json, {'recorded': True})
+            self.assertEqual(len(self.client.get('/api/history', headers=self.headers).json['alerts']), 2)
+
+    def test_sound_alert_accepts_a_verified_offline_cookie_session(self):
+        user = types.SimpleNamespace(id='operator-a', email='operator@example.test', local=True)
+        with self.sound_history(), patch.object(self.module.offline_sessions, 'current_user', return_value=user):
+            event = {'source': 'laptop', 'level_percent': 20, 'threshold_percent': 20}
+            self.assertEqual(self.client.post('/api/sound-alerts', json=event, headers={'Origin': 'https://untrusted.example'}).status_code, 403)
+            response = self.client.post('/api/sound-alerts', json=event, headers={'Origin': 'http://localhost'})
+            self.assertEqual(response.status_code, 200)
+            self.assertTrue(response.json['recorded'])
+            self.assertIn('Laptop demonstration', self.client.get('/api/history').json['alerts'][0]['message'])
 
     def test_current_image_auth_rejects_url_credentials_before_touching_either_camera(self):
         with patch.object(self.module.main_camera, 'snapshot') as main, \

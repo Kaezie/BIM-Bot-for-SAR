@@ -942,6 +942,38 @@ def sound_data():
     return jsonify(telemetry.get('sound'))
 
 
+@app.post('/api/sound-alerts')
+@require_auth
+def sound_alert():
+    if not same_origin_request():
+        return jsonify({'error': 'Same-origin request required.'}), 403
+    if request.content_length is not None and request.content_length > 1024:
+        return jsonify({'error': 'Sound alerts accept only a small metadata object.'}), 413
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({'error': 'Sound alert metadata must be a JSON object.'}), 400
+    source = data.get('source')
+    level, threshold = data.get('level_percent'), data.get('threshold_percent')
+    if (source not in ('laptop', 'robot_headset') or
+            any(isinstance(value, bool) or not isinstance(value, (int, float))
+                for value in (level, threshold)) or
+            not 1 <= threshold <= level <= 100):
+        return jsonify({'error': 'A supported microphone source and a relative level at or above its 1–100% threshold are required.'}), 400
+    label = 'Robot headset (placement operator-confirmed)' if source == 'robot_headset' else 'Laptop demonstration'
+    message = (f'Loud sound reported · {label}: {level:.1f}% relative signal '
+               f'(threshold {threshold:g}%). Uncalibrated; verify the sound source.')
+    # Serialize the persistent cooldown with the insert, including across tabs.
+    # One robot's sound history receives at most one event per ten seconds.
+    with history_lock, history_database() as db:
+        now = time.time()
+        latest = db.execute("SELECT at FROM alerts WHERE kind = 'sound' ORDER BY id DESC LIMIT 1").fetchone()
+        if latest is not None and now - latest[0] < 10:
+            return jsonify({'recorded': False})
+        db.execute('INSERT INTO alerts (at, kind, message) VALUES (?, ?, ?)', (now, 'sound', message))
+        db.execute('DELETE FROM alerts WHERE id NOT IN (SELECT id FROM alerts ORDER BY id DESC LIMIT 10000)')
+    return jsonify({'recorded': True})
+
+
 def detection_snapshot():
     fresh = bool(detection_model is not None and last_detection_at and 0 <= time.time()-last_detection_at < LiveCamera.RESULT_TTL)
     return {'available': fresh, 'updated_at': last_detection_at,

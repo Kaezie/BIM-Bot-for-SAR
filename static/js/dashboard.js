@@ -29,6 +29,21 @@ function positionUnavailable(state, message) {
   $('positionMap').removeAttribute('href'); show('positionMap', false);
 }
 let laptopSound, movementPanel, duplexAudio, soundRecognition, remoteSoundAvailability = 'Checking';
+let soundAlertRevision = 0;
+async function loudSoundDetected(event) {
+  const revision = ++soundAlertRevision;
+  const source = event.source === 'robot_headset' ? 'Robot headset · operator-confirmed placement' : 'Laptop demonstration';
+  text('soundAlertText', `${source} · ${event.level_percent.toFixed(1)}% signal (threshold ${event.threshold_percent}%) · ${new Date().toLocaleTimeString()}. Relative, uncalibrated; verify the sound source.`);
+  text('soundAlertSaveState', 'Saving to alert history…');
+  show('soundAlert', true);
+  try {
+    const result = await api('/api/sound-alerts', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(event)});
+    if (revision === soundAlertRevision) text('soundAlertSaveState', result.recorded ? 'Saved in alert history.' : 'A recent sound alert is already in history.');
+    if (session && !endingSession) await fetchHistory();
+  } catch {
+    if (revision === soundAlertRevision) text('soundAlertSaveState', 'History was not saved. Check your dashboard connection and session.');
+  }
+}
 function updateSoundAvailability() {
   text('availability-sound', laptopSound?.active ? (laptopSound.robotInput ? 'Robot headset' : 'Laptop only') : remoteSoundAvailability);
   if (selectedFeed === 'sound') text('cameraStatus', $('availability-sound').textContent);
@@ -55,8 +70,10 @@ const show = (id, visible) => { $(id).toggleAttribute('hidden', !visible); };
 laptopSound = window.BIMLaptopSound && $('laptopSoundStart') ? new window.BIMLaptopSound({
   canStart: () => !!session && !endingSession && selectedFeed === 'sound' && document.visibilityState !== 'hidden',
   onState: () => {updateSoundAvailability();if(laptopSound?.state!=='listening')soundRecognition?.stop();soundRecognition?.controls();},
-  onBeforeStart: () => duplexAudio?.stop('Stopped before starting sound analysis.')
+  onBeforeStart: () => duplexAudio?.stop('Stopped before starting sound analysis.'),
+  onLoudSound: loudSoundDetected
 }) : null;
+$('dismissSoundAlert').onclick = () => show('soundAlert', false);
 soundRecognition=window.BIMSoundRecognition&&$('soundRecognitionEnabled')?new window.BIMSoundRecognition({api,getInput:()=>laptopSound,canStart:()=>!!session&&!endingSession&&selectedFeed==='sound'&&document.visibilityState!=='hidden'}):null;
 duplexAudio=window.BIMDuplexAudio&&$('duplexFind')?new window.BIMDuplexAudio({canStart:()=>!!session&&!endingSession&&document.visibilityState!=='hidden',onBeforeStart:()=>laptopSound?.stop('Stopped before starting two-way audio.')}):null;
 const number = value => typeof value === 'number' && Number.isFinite(value) ? value.toFixed(1) : '—';
@@ -118,6 +135,8 @@ async function api(path, options = {}) {
 function sessionEnded(reason = 'expired') {
   if (endingSession) return;
   endingSession = true;
+  soundAlertRevision++;
+  show('soundAlert', false);
   if (laptopSound?.active) laptopSound.stop('Stopped because your session ended.');
   soundRecognition?.stop('Stopped because your session ended.');
   duplexAudio?.stop('Stopped because your session ended.');
@@ -553,7 +572,7 @@ async function fetchHistory() {
     const signature=JSON.stringify(data.alerts);if(signature===historySignature)return;historySignature=signature;
     text('alertCount',`${data.alerts.length} ${data.alerts.length === 1 ? 'event' : 'events'}`);$('alertList').replaceChildren();
     if(!data.alerts.length)$('alertList').append(element('li','No alerts yet. New events will appear here.','empty-row'));
-    data.alerts.forEach(event=>{const row=element('li');const time=element('time',dateTime(event.at));time.dateTime=new Date(event.at*1000).toISOString();row.append(element('span',event.kind==='detection'?'Detection':'Risk alert','event-tag'),time,element('p',event.message));$('alertList').append(row);});
+    data.alerts.forEach(event=>{const row=element('li');const time=element('time',dateTime(event.at));time.dateTime=new Date(event.at*1000).toISOString();row.append(element('span',event.kind==='sound'?'Sound alert':event.kind==='detection'?'Detection':'Risk alert','event-tag'),time,element('p',event.message));$('alertList').append(row);});
   } catch { text('alertCount','Unavailable'); historySignature=''; $('alertList').replaceChildren(element('li','History could not be loaded. Use Refresh status to retry.','empty-row')); text('trendSummary','Could not refresh trends. Any chart shown contains previously received readings.'); }
 }
 async function loadRecordings(reset=true) {
