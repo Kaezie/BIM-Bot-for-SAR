@@ -1,0 +1,38 @@
+{
+  "date": "2026-10-29",
+  "operator_intent_confirmed": "Reconnect spare/Night to robot power and wires, not mounting only.",
+  "physical_completion": "NOT YET CONFIRMED",
+  "stage": "Night robot-power pair first; thermal sensor remains detached/software paused",
+  "hardware_steps": [
+    "MasterOFF,unplugUSB,removeNightfromUSBbase.",
+    "RestoreONLYtheoriginalcamera-powerpair:robotcamera5Vlead(red)toNightlabel5V; originalcameraGNDlead(white)toNightlabelGND. Traceoriginalsourceendsandlabels; do not choosebycolouralone.",
+    "Leavefourthermalcamera-endleadsdetachedandseparated; leaveMain/DHTwiring unchanged.",
+    "SecureboardinsulatedandwheelsraisedbeforemasterON; do notattachUSBtoNight.",
+    "JoinESP32_CAM,wait10s,refreshdashboard;connectMainthenNightwithoutdisconnectingMain;keepwhiteLEDoff/Safarivisible5minplus30s;reportcameraandDHTbehavior."
+  ],
+  "power_limitation": "Robot shared5Vrail capacity and regulator temperature remain unmeasured; previous USBisolation markedly improved transport. This is a controlled restoration test, not proof supply is adequate. Stop on repeated resets; no thermal addition until checked.",
+  "runtime": {
+    "pid": 15351,
+    "session": 66375,
+    "port": 5050,
+    "login_http": 200,
+    "dashboard_http": 200,
+    "unauth_sensor_http": 401,
+    "main_url": "http://192.168.4.1:81/stream",
+    "sensor_url": "http://192.168.4.1/dht",
+    "night_last_verified_url": "http://192.168.4.2:81/stream",
+    "thermal_data_url": "",
+    "motor_command_urls": "blank",
+    "passive_trace_seconds": 300
+  },
+  "main_quality_guard": {
+    "session": 93473,
+    "report": "local_data/diagnostics/main_quality_robot_power_stage_2026-10-29.json",
+    "action": "Existingboundedverify/restoreacceptedquality20whenrobotnetworkobserved; nofirmwareupload."
+  },
+  "firmware_uploaded_this_stage": false,
+  "serial_opened_this_stage": false,
+  "source_code_changed_this_stage": false,
+  "persistent_env_edited": false,
+  "motor_commands_sent": false
+}

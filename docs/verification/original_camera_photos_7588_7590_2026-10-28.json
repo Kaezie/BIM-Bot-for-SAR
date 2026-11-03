@@ -1,0 +1,53 @@
+{
+  "date": "2026-10-28",
+  "source_photos": [
+    {
+      "path": "/Users/christine/Downloads/IMG_7588.HEIC",
+      "sha256": "a307a4b91fe02fc98d8fd9885cde78a146f14ec62c6ec4f12d0e2ebc60d4253b"
+    },
+    {
+      "path": "/Users/christine/Downloads/IMG_7589.HEIC",
+      "sha256": "f7de0501de96215c6adca460048efa0a8ec98816230f394a3b9d7a7dbbe1f8fa"
+    },
+    {
+      "path": "/Users/christine/Downloads/IMG_7590.HEIC",
+      "sha256": "77a4a3db2b558763a337716a66e0a43e4020c9187a380216340e07fa4448f2c4"
+    }
+  ],
+  "method": "Originals preserved; temporary JPEG copies and analytical crops inspected, no generated or retouched hardware image.",
+  "observations": [
+    "Original small-lens camera with numbered sticker shown lifted clear of bracket.",
+    "Front image shows OV2640 ribbon, printed header labels and standard two header rows.",
+    "Side images jointly show five ordinary wired jumper housings: three on one row, two on the opposite row; two red, two dark and one yellow wire.",
+    "Both removable wired-header areas are now accessible."
+  ],
+  "not_established": [
+    "Electrical continuity, loaded rail voltage and root cause of freezing.",
+    "Exact colour-to-pin restoration mapping from obscured side projections.",
+    "USB-base fitting/alignment, original power isolation and original USB-only streaming."
+  ],
+  "operator_status": "Original isolated on USB base, all five jumpers detached; robot master OFF, spare OFF. USB-only transport test and Main dashboard test completed, still not accepted stable.",
+  "next_step": "Validate candidate2 transport recovery, then load it for same-setup Main endurance check. Preserve USB-only isolation.",
+  "firmware_uploaded": false,
+  "serial_opened": false,
+  "motor_commands_sent": false,
+  "camera_rate_change": false,
+  "fitted_photo_review": {
+    "files": [
+      {
+        "path": "/Users/christine/Downloads/IMG_7591.HEIC",
+        "sha256": "78fbed8af9820533012b3948a2f7cfb5aa0a524d2384ce15e2742bd11427ee53"
+      },
+      {
+        "path": "/Users/christine/Downloads/IMG_7592.HEIC",
+        "sha256": "fa7ec75f4f4c7be770ddb588da6b17b8059dab316d47372a95e9bd16aa7b14f1"
+      },
+      {
+        "path": "/Users/christine/Downloads/IMG_7593.HEIC",
+        "sha256": "3e2a345267e9c7f201445a209897d71c5b0090c55be608792c9f38cd1c6f9b75"
+      }
+    ],
+    "observations": "Expected original-camera orientation; both sideviews show full header rows seated without obvious offset, boards roughly parallel, USB socket at sticker end; no jumper leads attached. Visual check only, no continuity/voltage test.",
+    "operator_confirmation": "Completed original USB-only connection and three-minute robot-network exercise; master OFF, spare OFF, all original jumpers detached."
+  }
+}

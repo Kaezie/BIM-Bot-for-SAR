@@ -1,0 +1,38 @@
+{
+  "checked_at": "2026-10-27T18:03:38.961881+08:00",
+  "scope": "Software foundation only; real stationary scene and condition accuracy remain pending.",
+  "python_tests_passed": 209,
+  "generated_tracking_motion_tests": 13,
+  "new_application_generated_image_tests": 6,
+  "browser_suites_passed": [
+    "dashboard_ui.cjs",
+    "shared_monitoring_ui.cjs"
+  ],
+  "real_local_model_smoke": {
+    "input": "two generated blank 240x320 images",
+    "detection_counts": [
+      0,
+      0
+    ],
+    "weights_unchanged": true,
+    "hardware_opened": false
+  },
+  "dashboard": {
+    "port": 5050,
+    "login_status": 200,
+    "unauthenticated_survivors_status": 401,
+    "served_javascript_matches": true
+  },
+  "movement_hold": true,
+  "usb_bridge_started": false,
+  "firmware_uploaded": false,
+  "files_sha256": {
+    "app.py": "ffb67dcb61e19d495dae2d89ffd09ae07217213379d03ebd306220e93cf5ea52",
+    "features/person_tracking.py": "d4f66184b6c5a3e19a2c02e2fb38a7a58930990b86aa645c48879ec88f3a397a",
+    "features/live_camera.py": "76c357510ca9e977ae7cbf7e5f0451f33687b3494926ce6626a4d8f375980739",
+    "static/js/dashboard.js": "bcf85680359cfe2c17d1386e26710598b2f49cbe93e57272dc900ebe32522f2f"
+  },
+  "live_scene_validation": "pending",
+  "condition_accuracy": "pending",
+  "help_gesture_recognition": "pending"
+}

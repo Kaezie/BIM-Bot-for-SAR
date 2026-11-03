@@ -21,6 +21,7 @@ class Missions:
         self.database, self.telemetry, self.http = database, telemetry, http
         self.command_url, self.command_key = command_url, command_key
         self.lock = threading.RLock()
+        self.external_motion_busy = lambda: False
         self.last_event = 0
         self.last_count = 0
         with database() as db:
@@ -44,7 +45,7 @@ class Missions:
         robot = self.telemetry.get('robot')
         active = self.active()
         return {'mission': dict(row) if row else None, 'robot': robot,
-                'can_start': bool(self.command_url and robot['fresh'] and robot['navigation_ready'] and robot['state'] in ('idle', 'stopped', 'completed') and not active),
+                'can_start': bool(self.command_url and robot['fresh'] and robot['navigation_ready'] and robot['state'] in ('idle', 'stopped', 'completed') and not active and not self.external_motion_busy()),
                 'robot_busy': bool(active and active['owner'] != owner),
                 'control_configured': bool(self.command_url)}
 
@@ -123,9 +124,11 @@ class Missions:
             if count == self.last_count and now - self.last_event < 15:
                 return
             position = self.telemetry.get('position')
+            movement = self.telemetry.get('movement')
             fresh_environment = bool(environment.get('updated_at') and now - environment['updated_at'] < 10)
             evidence = {'detections': detections, 'environment': dict(environment) if fresh_environment else None,
                         'observation_position': position if position['fresh'] else None,
+                        'observation_movement': movement if movement['fresh'] else None,
                         'area_label': active['area_label'],
                         'location_note': 'Operator-entered mission area; robot position if available. Survivor coordinates are not estimated.',
                         'assessment': {key: 'unknown' for key in FIELDS}, 'verification': 'pending'}

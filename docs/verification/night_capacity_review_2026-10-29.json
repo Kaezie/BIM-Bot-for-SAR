@@ -1,0 +1,77 @@
+{
+  "date": "2026-10-29",
+  "operator_report": "Night responds but freezes a lot compared with Main; asks whether current latency suits capacity/stability.",
+  "evidence": "night_main_browser_failure_2026-10-29.json",
+  "robot_subnet_samples": 103,
+  "excluded_home_or_unknown_samples": 72,
+  "main": {
+    "frames": 234,
+    "source_error_delta": 0,
+    "fresh_active_samples": 96,
+    "active_samples": 102,
+    "max_sampled_picture_age_ms": 8620,
+    "median_received_fps": 2.446
+  },
+  "night": {
+    "frames": 77,
+    "source_error_delta": 1,
+    "source_error": "protocol_error",
+    "preexisting_errors_not_counted": 3,
+    "browser_releases": 2,
+    "fresh_active_samples": 67,
+    "active_samples": 78,
+    "max_sampled_picture_age_ms": 7981,
+    "median_received_fps": 1.394,
+    "invalid_frame_delta": 0
+  },
+  "interpretation": "Live Night is not stable enough. Installed15FPS target is not delivered throughput. Night-to-Main AP-to-Mac relaying shares radio capacity; offered-load reduction is a reasonable controlled candidate, not a proved sole cause or guaranteed fix. Main remains on operator-restored robot supply; power-change and combined-load effects are confounded. Do not call these timings optical latency.",
+  "candidate_build": {
+    "target": "esp32:esp32:esp32cam",
+    "stream_target_fps": 8,
+    "jpeg_quality_source": 12,
+    "startup_profile": "retry/2",
+    "stream_profile": "fresh/2",
+    "failure_rejoin_ms": 3000,
+    "stream_send_timeout_seconds": 5,
+    "tx_power_dbm": 8.5,
+    "thermal_enabled": true,
+    "thermal_refresh_code": 3,
+    "compile_returncode": 0,
+    "native_tests_passed": [
+      "frame_pacing",
+      "wifi_retry",
+      "stream_packet",
+      "illumination_lease",
+      "camera_startup"
+    ],
+    "binaries": {
+      "nightvision_camera.ino.bootloader.bin": {
+        "bytes": 24992,
+        "sha256": "47bbbfca119fe87190f63a67af9d85adff6433bcf3812ec92a9b9c9416a53ad1"
+      },
+      "boot_app0.bin": {
+        "bytes": 8192,
+        "sha256": "f94c5d786a7a8fab06ac5d10e33bf37711a6697636dc037559ea19cc410a17f0"
+      },
+      "nightvision_camera.ino.merged.bin": {
+        "bytes": 4194304,
+        "sha256": "5874d9963a6d9903a482e28769d653b231225d226826be258c5d6770a3684d00"
+      },
+      "nightvision_camera.ino.partitions.bin": {
+        "bytes": 3072,
+        "sha256": "aaae2888c5a6a348004b5b436f47abb25ae32e72d9003902955a998eda723edd"
+      },
+      "nightvision_camera.ino.bin": {
+        "bytes": 1049808,
+        "sha256": "9e4ac88ce366fed0096f7bb6cc01bafb410d1a5cbc393836ce77eb89bdb1727a"
+      }
+    },
+    "warning_count": 0,
+    "upload_readiness": "NOT CLEARED: identify current USB target and back up installed Night flash before considering upload."
+  },
+  "firmware_uploaded": false,
+  "serial_opened_this_stage": false,
+  "source_modified_this_stage": false,
+  "main_firmware_modified": false,
+  "sensor_stage": "DHT/thermal deliberately disabled in process; restore separately, do not report working sensor data."
+}

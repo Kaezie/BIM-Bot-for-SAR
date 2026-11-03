@@ -1,0 +1,59 @@
+{
+  "checked_at_utc": "2026-10-28T10:18:25.182934+00:00",
+  "profile": {
+    "name": "conservative-1",
+    "snapshot_lease_seconds": 8,
+    "inference_interval_seconds": 0.5,
+    "thermal_poll_seconds": 1.0,
+    "video_interval_ms": 167,
+    "background_video_interval_ms": 1000,
+    "thermal_view_poll_ms": 1000,
+    "thermal_summary_poll_ms": 2000,
+    "device_poll_ms": 3000,
+    "retry_interval_ms": 500
+  },
+  "python_tests_passed": 257,
+  "browser_suites_passed": [
+    "latest_frame_ui.cjs",
+    "camera_recovery_ui.cjs",
+    "night_light_ui.cjs",
+    "dashboard_stability_ui.cjs",
+    "shared_monitoring_ui.cjs",
+    "dashboard_ui.cjs",
+    "thermal_live_ui.cjs",
+    "headset_audio_ui.cjs"
+  ],
+  "baseline_file": "separate_usb_before_profile_2026-10-28.json",
+  "baseline_interpretation": "Spare USB-powered and thermal disconnected: zero source errors, but Main4/Night1 browser releases, Main median2.02FPS/Night1.20FPS, operator reports reconnects/slow pictures. Does not prove electrical repair.",
+  "live_profile_acceptance": "failed; see camera_transport_followup_2026-10-28.json and original_only_transport_check_2026-10-28.json",
+  "thermal_combined_live_acceptance": "pending; sensor wiring currently detached",
+  "tests_are_physical_accuracy_or_optical_latency": false,
+  "served_profile_matches": true,
+  "original_camera_firmware_changed": false,
+  "spare_firmware_uploaded": false,
+  "model_hashes": {
+    "best.pt": "61c916c01419ab6d0726d156b858b09c460a7d3c75e700bd5b5d97ee0c9d60ff",
+    "yolo11s-pose.pt": "1060bda4a27012060eca246f9b2adeea22eabb045a1e58f8d229be29b7ebc2ba"
+  },
+  "persistent_env_changed": false,
+  "permanent_rewire": false,
+  "temporary_isolation_wiring_changed": true,
+  "original_camera_wiring_unchanged": true,
+  "serial_port_opened": false,
+  "motor_commands_sent": false,
+  "movement_on_hold": true,
+  "runtime": "exec87492 on5050; thermal process override blank for disconnected sensor; motor command URLs blank.",
+  "source_sha256": {
+    "app.py": "b1453e14c092bf001c51bacc03effb56884e4b93c8265a774aa7f47b6e101f10",
+    "features/monitoring_profile.py": "20f8022118abcd7316ffaf7ead47771bd7c7292f8547fd28617440498761c4dc",
+    "features/live_camera.py": "cb59b637965e6bbbfb3ddc78c53deb09cb9cb9164686a02da7b8031929362515",
+    "features/telemetry.py": "569b5d97aef667f8d1591cf82732df82a2522cf043d78f9e3b56975cb410b074",
+    "features/system_diagnostics.py": "8c0d9fabb2a3fe3629618798b8edd462b13f5e7f6d0128179e1ab80954c5e344",
+    "static/js/live_camera_player.js": "d229be059553daeaed6766cf35186659a0920550f7f5e484f35b4be13b171f23",
+    "static/js/dashboard.js": "0814d5e5f8d9300fcf8c14eab5519ba6cd304b2b9d77ef80f76a4e9bee622abd",
+    "static/js/testing.js": "d95de6ea23196666765ed09432e27bbd7214cfe1cbf8c69aa017f53b0c4285a8",
+    "templates/base.html": "37e63e112377435ffd21e253447d1e200c354c082e727deb58fa0d173ba53914",
+    "templates/dashboard/monitoring.html": "879658d3388a07fb2d80930727c61c0168d52b7c65f0cae7ae58c5939200cca4"
+  },
+  "runtime_note": "Original verification runtime is historical. Current dashboard exec91852/PID30889; same rates, diagnostic startup hook updated/tested separately; Night and Thermal deliberately paused while spare OFF. Battery recharge and original-only retest pending."
+}

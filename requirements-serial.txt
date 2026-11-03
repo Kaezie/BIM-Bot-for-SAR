@@ -1,0 +1,2 @@
+# Optional operator-started Uno movement bridge; standard app dependencies also apply.
+pyserial==3.5

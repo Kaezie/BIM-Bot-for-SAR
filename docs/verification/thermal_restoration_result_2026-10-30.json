@@ -1,0 +1,58 @@
+{
+  "date_local": "2026-10-30",
+  "operator_report": "done! so now let's check the sound detection, what do i need to do in my end?",
+  "operator_interpretation": "Completion of requested thermal restoration/test reported; no explicit heatmap/hand response or full-duration visual details supplied.",
+  "source": "thermal_restoration_capture_2026-10-30.json",
+  "capture_started_at": "2026-10-29T16:01:15.624880+00:00",
+  "capture_partial": true,
+  "capture_seconds": 88.2937363330002,
+  "samples": 86,
+  "robot_samples": 34,
+  "other_samples_excluded": 52,
+  "robot_window_first": "2026-10-29T16:01:15.624880+00:00",
+  "robot_window_last": "2026-10-29T16:01:49.742616+00:00",
+  "thermal": {
+    "fresh_samples": 27,
+    "distinct_fresh_sequences": 21,
+    "sequence_first_last": [
+      90,
+      135
+    ],
+    "scene_temperature_range_c": [
+      23.47,
+      32.47
+    ],
+    "max_reported_fresh_frame_age_ms": 402.0
+  },
+  "dht_fresh_samples": 34,
+  "cameras": {
+    "main": {
+      "active_samples": 17,
+      "fresh_active_samples": 13,
+      "frames_at_last_robot_sample": 99,
+      "new_source_errors_robot_only": 0
+    },
+    "nightvision": {
+      "active_samples": 2,
+      "fresh_active_samples": 2,
+      "frames_at_last_robot_sample": 12,
+      "new_source_errors_robot_only": 0
+    }
+  },
+  "simultaneous_viewer_samples": 0,
+  "limits": "Short live functional thermal/DHT evidence; not five-minute simultaneous-camera or supply-capacity acceptance. Sensor acquisition age is not optical latency. Home-network timeouts excluded.",
+  "sound_next": "Existing Bluetooth headset at robot; manual exact input, waveform first, opt-in local YAMNet second. One real input; no new ESP32 wiring/firmware or motor actions.",
+  "local_model_ready": true,
+  "dashboard_before_recovery": "No listener on5050; prior PID absent. Cause not established. Restore same camera/thermal/DHT process config independently.",
+  "dashboard_recovery": {
+    "pid": 20350,
+    "exec_session": 2843,
+    "port": 5050,
+    "login_http": 200,
+    "dashboard_http": 200,
+    "anonymous_sound_model_http": 401,
+    "anonymous_thermal_http": 401,
+    "sound_javascript_http": 200,
+    "microphone_opened": false
+  }
+}

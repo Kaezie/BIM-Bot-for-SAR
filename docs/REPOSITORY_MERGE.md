@@ -1,5 +1,12 @@
 # SAR base with the integrated UI
 
+October 30 review handoff: the original UI merge is already present in shared
+`main` at `9c24366407dadb078360bf11d776e9b605103c4e` (PR #1). The subsequent
+camera, sensor, audio, tracking and movement-recorder updates are being prepared
+on `codex/robot-integration-review` for groupmate confirmation. They do not
+establish completed hardware acceptance. See [review handoff](REVIEW_HANDOFF.md).
+The source/import notes below describe the earlier integration stage.
+
 ## Sources
 
 - Main repository: `https://github.com/Kaezie/BIM-Bot-for-SAR.git`, commit
@@ -17,17 +24,35 @@ The user's confirmed direction is to keep the existing SAR camera, detection,
 classifiers, and processing, integrate the UI functions, and remove overlapping
 implementations from the UI import.
 
-The following SAR function bodies match the original repository: `calculate_heat_index`,
+At the initial merge the following SAR function bodies matched the original repository: `calculate_heat_index`,
 `calculate_risk`, `classify_age`, `classify_pose`, `classify_injury`, `classify_survivor`,
 `get_thermal_frame`, and `analyze_thermal`. `wifi_sensor_listener` and
 `generate_frames` also match after excluding their added UI publication hook.
 Those hooks only timestamp/persist the original results and notify UI history.
 They do not recalculate detections or classifications.
 
-Camera reconnection, motion threshold, every-third-frame inference, class 14,
+At that point camera reconnection, motion threshold, every-third-frame inference, class 14,
 pose-array matching, stationary timers, annotation labels, and cached annotated
 frames all retain SAR behavior. Inference remains tied to the camera stream.
 The two original model weights are unchanged.
+
+October27 follow-up, authorized as the next panel task: main-camera association
+now uses spatial pose matching and temporary tracks rather than array indices.
+Per-person image regions replace shared scene motion, and missing temporal
+evidence explicitly produces Unknown for motion-dependent estimates. The SAR
+models, detector class/confidence, risk rules and camera/thermal firmware remain.
+See [Person and pose association](PERSON_TRACKING.md) for software checks and
+pending real-scene validation. The original `classify_survivor` body therefore
+now includes an unknown-motion guard; the initial body-match statement above is
+historical, not a claim that this follow-up retained every function verbatim.
+
+The subsequent October27 continuation adds per-track visual gesture/inactivity
+observations, local opt-in YAMNet inference, manual headset two-way routing and
+a public instruction page with protected readiness APIs. Heat-index/risk and
+DHT parsing now include input validation, cool-weather screening and heat-only
+wording; original warning cutoffs and rule-score interpretation remain. These
+are authorized follow-ups, so the initial verbatim function comparison above
+is historical. Model weights and installed firmware remain unchanged.
 
 The new dashboard renders SAR fields using one shared frontend renderer for live
 and saved detections. Age/consciousness/injury/entrapment/pose/thermal output stays

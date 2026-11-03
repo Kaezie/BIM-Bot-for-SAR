@@ -1,0 +1,61 @@
+{
+  "date": "2026-10-28",
+  "profile": {
+    "name": "conservative-2",
+    "upstream_read_timeout_seconds": 10,
+    "snapshot_lease_seconds": 8,
+    "inference_interval_seconds": 0.5,
+    "thermal_poll_seconds": 1.0,
+    "video_interval_ms": 167,
+    "background_video_interval_ms": 1000,
+    "thermal_view_poll_ms": 1000,
+    "thermal_summary_poll_ms": 2000,
+    "device_poll_ms": 3000,
+    "retry_interval_ms": 500
+  },
+  "python_tests_passed": 260,
+  "new_regression": "Actual6-second localhost HTTP pause clears expired5-second image, preserves same source response/generation, no source error, then resumes a fresh JPEG.",
+  "negative_control": "Identical test fails with READ_TIMEOUT patched to old5-second VIDEO_TTL, at generation equality (1 !=0). No robot in either software test.",
+  "only_profile_differences_from_candidate1": {
+    "name": [
+      "conservative-1",
+      "conservative-2"
+    ],
+    "upstream_read_timeout_seconds": [
+      "previously VIDEO_TTL=5",
+      10
+    ]
+  },
+  "preserved": "VideoTTL5s; results2s; overlay1s; viewerlease8s; all video/inference/sensor polling rates; corruption/frame-stall guards; source quality/FPS; models/rule thresholds.",
+  "served_profile_checked": true,
+  "login_http": 200,
+  "unauthenticated_apis_http": 401,
+  "bridge5054_listener": false,
+  "model_hashes": {
+    "best.pt": "61c916c01419ab6d0726d156b858b09c460a7d3c75e700bd5b5d97ee0c9d60ff",
+    "yolo11s-pose.pt": "1060bda4a27012060eca246f9b2adeea22eabb045a1e58f8d229be29b7ebc2ba"
+  },
+  "model_hashes_match_retained": true,
+  "runtime": "PID37928/exec75718 on5050;300s passive capture armed at first authenticated robot-subnet camera GET.",
+  "physical_setup": "Original on visually checked USBbase only; masterOFF; all5original jumpersdetached. SpareOFF/all6jumpersdetached. DHT/thermal physically detached.",
+  "process_only_disabled_urls": [
+    "SENSOR_URL",
+    "NIGHTVISION_CAMERA_URL",
+    "THERMAL_DATA_URL",
+    "ROBOT_COMMAND_URL",
+    "MOVEMENT_COMMAND_URL"
+  ],
+  "serial_owner_check": "Read-only lsof found no owner on enumerated usbserial-A5069RR4 nodes. Camera-to-serial-path identity is not established; no port opened.",
+  "firmware_uploaded": false,
+  "serial_opened": false,
+  "motor_commands_sent": false,
+  "private_env_changed": false,
+  "live_acceptance": "FAILED:292robot samples291active224fresh177frames;4sourceerrors(3frame_stalled+1timeout),0browserDELETE. See original_usb_profile2_failure_2026-10-28.json. Subsequent parserfix tested separately; no live acceptance yet.",
+  "source_sha256": {
+    "app.py": "40af4bb8ccc8700f4c6ec0caa88ede4245dc2be884db5a2dbcff65e1d5622295",
+    "features/monitoring_profile.py": "eff311147a32d0b381861ea43685986d3973d4d018fcdafd400ccee49aaf94f3",
+    "features/live_camera.py": "1410d1802132e2b3b8776fd7d4e603a0d5ec52a1428c8372032ae932bb7259f2",
+    "tests/test_live_camera.py": "a36ab714010bed6d87d42f3042067b6d2bc5db66bf33e2849e57aeb13618e3ed",
+    "tests/test_dashboard.py": "3e25350cc828df347d7ab851601a708be4c36623754c4960387629473988f48d"
+  }
+}

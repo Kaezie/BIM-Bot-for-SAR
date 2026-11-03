@@ -1,6 +1,10 @@
 .env
+.camera-env-*
+local_data/
 .venv*/
 .DS_Store
+.vscode/
+node_modules/
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -10,3 +14,26 @@ mission_history.sqlite3*
 *.joblib
 *.pkl
 *.onnx
+firmware/nightvision_camera/wifi_secrets.h
+# Exact user-supplied originals may contain Wi-Fi credentials.
+firmware/source_archive/
+firmware/original_camera/wifi_secrets.h
+# Keep large raw diagnostic traces local; compact summaries and the capture
+# index in docs/verification are shared for review instead.
+docs/verification/dht_camera_live_2026-10-29.json
+docs/verification/main_only_failure_2026-10-28.json
+docs/verification/night_fresh2_short_browser_2026-10-29.json
+docs/verification/night_main_browser_failure_2026-10-29.json
+docs/verification/night_robot_power_result_2026-10-29.json
+docs/verification/night_usb_transport_2026-10-29.json
+docs/verification/normal_dashboard_failure_2026-10-28.json
+docs/verification/normal_dashboard_transport_failure_2026-10-28.json
+docs/verification/original_usb_dashboard_failure_2026-10-28.json
+docs/verification/original_usb_profile2_failure_2026-10-28.json
+docs/verification/parser_recovery_before_peer_isolation_2026-10-29.json
+docs/verification/parser_recovery_main_partial_2026-10-29.json
+docs/verification/peer_sharing_off_main_2026-10-29.json
+docs/verification/quality20_main_2026-10-29.json
+docs/verification/separate_usb_before_profile_2026-10-28.json
+docs/verification/separate_usb_conservative_failure_2026-10-28.json
+docs/verification/thermal_restoration_capture_2026-10-30.json

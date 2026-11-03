@@ -1,0 +1,22 @@
+{
+  "date": "2026-10-29",
+  "trace": "quality20_main_2026-10-29.json",
+  "operator_report": "I am good with the latency but it still reconnects.",
+  "result": "latency acceptable to operator; uninterrupted picture not accepted",
+  "robot_subnet_samples": 175,
+  "active_samples": 174,
+  "fresh_active_samples": 172,
+  "received_frames": 1265,
+  "source_error_delta": 0,
+  "source_generation_delta": 0,
+  "browser_delete_delta": 0,
+  "invalid_frame_delta": 0,
+  "max_sampled_picture_age_ms": 6054,
+  "median_sampled_picture_age_ms": 228,
+  "median_jpeg_bytes": 3448.0,
+  "interpretation": "Captured >6s lapse in fresh pictures with same upstream generation and same browser viewer. Existing5s freshness policy clears the picture then resumes on a fresh frame. No full source/browser restart recorded within this180s window. Exact upstream pause cause and any later reconnect remain unconfirmed.",
+  "next_scope": "Retain current quality20/latency rates provisionally; diagnose intermittent camera-to-Mac delivery. Do not raise image TTL or label stale frames live. Prepared firmware pacing/AP changes remain UNUPLOADED.",
+  "firmware_uploaded": false,
+  "serial_opened": false,
+  "motor_commands_sent": false
+}

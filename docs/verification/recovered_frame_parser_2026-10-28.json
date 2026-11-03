@@ -1,0 +1,25 @@
+{
+  "date": "2026-10-28",
+  "cause_proved_in_software": "A complete JPEG arriving after the10s frame deadline was rejected before parsing. Parser now recovers complete whole/split frames before the incomplete-stream stall check.",
+  "live_causation_limit": "Prior live metadata cannot establish whether each frame_stalled event contained a complete arriving JPEG. Slow physical delivery is not resolved by software tests.",
+  "changes": [
+    "2MiB limit stays before parsing",
+    "Parse recovered complete JPEG before10s incomplete-stream stall check",
+    "Keep10s transport/stall limits and5s picture expiry; all other rates unchanged"
+  ],
+  "python_tests_passed": 263,
+  "focused_regressions": "Whole/split late JPEG fail beforefix and passafter; incomplete-frame and oversized-buffer bounds stillpass.",
+  "runtime": "PID40368/exec39509 on5050; profileconservative-2 with corrected parser; login200. Five-minute opt-in capture armed; no new corrected-parser live test yet.",
+  "physical_state": "Last operator confirmation: original USB reconnected after10s, masterOFF/all5originaljumpersoff, spareOFF/all6off. Later request to leaveoriginalUSBunplugged is pending.",
+  "serial_identity": "Only FT232R0403:6001 node usbserial-A5069RR4 currently observed. Short-cycle watcher saw no device-node transition; timing/device association unverified. No serial port opened; must not infer camera identity from oldCH340/110 record.",
+  "pending": "Operator leavesoriginalUSBunplugged for immediate node comparison; avoid another timedwatcher window.",
+  "firmware_uploaded": false,
+  "serial_opened": false,
+  "motor_commands_sent": false,
+  "private_env_changed": false,
+  "source_sha256": {
+    "features/live_camera.py": "7ea586f43c087a70b84011913fedf8b0cc8d89a70d4efe081cc9962a19ebb7c1",
+    "features/monitoring_profile.py": "eff311147a32d0b381861ea43685986d3973d4d018fcdafd400ccee49aaf94f3",
+    "tests/test_live_camera.py": "0d8af48af836449adeb648efcdd09c490d06ba4fbb853de218bdd67ef2d7c68b"
+  }
+}

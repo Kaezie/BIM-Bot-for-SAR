@@ -2,7 +2,8 @@
 
 BIM-Bot now uses Supabase for two things:
 1. **Auth** — employees sign in with Google, handled by Supabase Auth
-2. **Storage** — recordings are uploaded to a private Supabase Storage bucket instead of Google Drive
+2. **Storage** — recordings save to this laptop first, then queue for a private
+   Supabase Storage bucket when internet is available
 
 You still need a Google Cloud OAuth client for the "Sign in with Google" button — Supabase hosts
 the login flow, but Google is still who actually authenticates the employee. The difference from
@@ -71,20 +72,24 @@ pip install -r requirements.txt
 python app.py
 ```
 
-Visit `http://localhost:5000` → you'll land on `/login` → click **Sign in with Google**. First
+Visit `http://localhost:5050` (the configured port on this Mac) → you'll land on `/login` → click **Sign in with Google**. First
 time any employee does that, Supabase creates their account automatically. Recordings saved
-afterward go straight into the `recordings` bucket, organized as `recordings/<employee-id>/...`.
+afterward save locally and queue for the `recordings` bucket, organized as
+`recordings/<employee-id>/...`. Add `http://localhost:5050/` to your allowed
+Supabase redirect URLs if you use this port. See [Offline recording](OFFLINE_RECORDING.md).
 
 ## Notes / things to know
 
 - Because the service role key can read and write *anything* in your Supabase project, keep
   `.env` out of version control (add it to `.gitignore`) and never send that key to the browser.
-- The Flask backend verifies each employee's session by asking Supabase's Auth API "is this
-  token still valid?" — it's cached for 30 seconds per token to avoid hammering that API on
-  every 1–2 second dashboard poll. If you revoke someone's access in Supabase, it takes effect
-  within that window.
+- Google sign-in is freshly verified online before issuing a fixed local session
+  of up to 12 hours. Offline API access uses that opaque cookie without contacting
+  Supabase. Cloud account revocation takes effect for that local session when it
+  expires or is signed out locally. Legacy Bearer verification still has a
+  30-second cache and requires a verified Google-linked user.
 - To restrict who's allowed to sign in at all (beyond Google's own test-user list while
   unverified), you'd check `g.user.email` against an allow-list inside `require_auth` in
   `app.py` and reject anyone not on it.
-- Links returned immediately after uploading expire after 7 days. Links opened from
-  the recordings library expire after 1 hour. Both durations are set in `app.py`.
+- The local recording library downloads files from this laptop and works offline.
+  Earlier cloud-only clips use signed links that expire after 1 hour. The legacy
+  direct-upload API returns a 7-day link. These links require internet.

@@ -1,0 +1,64 @@
+{
+  "operator_report": "Saved; both videos are responsive",
+  "snapshot": {
+    "checked_at": "2026-10-28T06:14:08.829337+00:00",
+    "network": {
+      "ipv4": "192.168.4.3",
+      "robot_subnet": true
+    },
+    "cameras": {
+      "main": {
+        "connected": false,
+        "configured": true,
+        "updated_at": null,
+        "detected_at": null,
+        "received_fps": null,
+        "inference_ms": 159.65820800010988,
+        "video_processing_ms": null,
+        "skipped_video_frames": 0,
+        "analysis_error": null,
+        "viewers": 0,
+        "generation": 3,
+        "detections_available": false
+      },
+      "nightvision": {
+        "connected": false,
+        "configured": true,
+        "updated_at": null,
+        "detected_at": null,
+        "received_fps": null,
+        "inference_ms": 158.8570419999087,
+        "video_processing_ms": null,
+        "skipped_video_frames": 0,
+        "analysis_error": null,
+        "viewers": 0,
+        "generation": 3,
+        "detections_available": false
+      }
+    },
+    "sensor": {
+      "temperature": 27.4,
+      "humidity": 68.0,
+      "updated_at": 1793168047.935245,
+      "error_code": null,
+      "last_attempt_at": 1793168047.355964,
+      "fresh": true
+    },
+    "thermal": {
+      "configured": true,
+      "connected": true,
+      "fresh": true,
+      "sequence": 11337,
+      "frame_age_ms": 236.0,
+      "transport_ms": 1111.187708000216,
+      "updated_at": 1793168046.5988772,
+      "min_temp": 22.02,
+      "max_temp": 32.61,
+      "error_code": null,
+      "http_status": null
+    },
+    "note": "Current cached state only. No camera, microphone, motor or firmware action. No images, identities or credentials saved."
+  },
+  "scope": "Operator-confirmed brief live responsiveness. Saved snapshot has zero camera viewers after release; it does not establish sustained dual-feed FPS or sensor continuity during simultaneous active video.",
+  "interpretation": "Real DHT and thermal readings are fresh after the camera exercise. Last model-analysis durations were about159ms on each camera. Long-run stability/calibration/recognition accuracy remain pending."
+}

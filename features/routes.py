@@ -4,10 +4,41 @@ from flask import g, jsonify, request
 from .missions import MissionError
 
 
-def register(app, auth, missions, telemetry, environment, detections, vision_status):
+def register(app, auth, missions, telemetry, environment, detections, vision_status, movement=None):
     @app.errorhandler(MissionError)
     def mission_error(error):
         return jsonify({'error': str(error)}), error.status
+
+    @app.get('/api/position-data')
+    @auth
+    def position_data():
+        response = jsonify(telemetry.get('position'))
+        response.headers['Cache-Control'] = 'no-store'
+        return response
+
+    @app.get('/api/movement-data')
+    @auth
+    def movement_data():
+        response = jsonify(movement.status(str(g.user.id)) if movement else telemetry.get('movement'))
+        response.headers['Cache-Control'] = 'no-store'
+        return response
+
+    @app.post('/api/return_to_base')
+    @auth
+    def return_to_base():
+        if movement is None:
+            return jsonify({'error': 'Movement bridge is not configured.'}), 503
+        return jsonify(movement.start(str(g.user.id), request.get_json(silent=True)))
+
+    @app.post('/api/movement/<action>')
+    @auth
+    def movement_action(action):
+        payload = request.get_json(silent=True)
+        if movement is None:
+            return jsonify({'error': 'Movement bridge is not configured.'}), 503
+        if action not in ('stop', 'heartbeat') or not isinstance(payload, dict):
+            return jsonify({'error': 'Expected a Stop or heartbeat with command_id.'}), 400
+        return jsonify(movement.action(str(g.user.id), action, payload.get('command_id')))
 
     @app.get('/api/mission')
     @auth
@@ -43,6 +74,6 @@ def register(app, auth, missions, telemetry, environment, detections, vision_sta
         fresh = bool(data.get('updated_at') and time.time()-data['updated_at'] < 10)
         return jsonify({'generated_at': time.time(), 'mission': missions.status(str(g.user.id)),
                         'environment': {**data, 'fresh': fresh}, 'survivors': detections(),
-                        'position': telemetry.get('position'), 'thermal': telemetry.get('thermal'),
+                        'position': telemetry.get('position'), 'movement': telemetry.get('movement'), 'thermal': telemetry.get('thermal'),
                         'sound': telemetry.get('sound'), 'vision': vision_status(),
                         'events': missions.events(str(g.user.id)), 'requires_human_verification': True})

@@ -1,0 +1,91 @@
+{
+  "date_local": "2026-10-30",
+  "scope": "Local diagnostic capture metadata only. Raw files are preserved locally, ignored by Git and absent from a fresh checkout. No images, audio or credential contents are included.",
+  "captures": [
+    {
+      "path": "docs/verification/dht_camera_live_2026-10-29.json",
+      "bytes": 666502,
+      "sha256": "d562581e01e3a4310666d002e6967ecb8d75b087cd037103fd2cac1e9f7946db"
+    },
+    {
+      "path": "docs/verification/main_only_failure_2026-10-28.json",
+      "bytes": 256918,
+      "sha256": "3cbaecf5a8ac07687778869752827302a3b3d75ecc4636317556809b07269a36"
+    },
+    {
+      "path": "docs/verification/night_fresh2_short_browser_2026-10-29.json",
+      "bytes": 1030205,
+      "sha256": "07c19a3beb22744fc381bcb60df32735bb644fffb29e903236968583cbe7225f"
+    },
+    {
+      "path": "docs/verification/night_main_browser_failure_2026-10-29.json",
+      "bytes": 636336,
+      "sha256": "73a8e8d15985e56653997d54acbe9b1b13de68ae36b3ecd5f10eb479d7ebc85d"
+    },
+    {
+      "path": "docs/verification/night_robot_power_result_2026-10-29.json",
+      "bytes": 1103054,
+      "sha256": "6cb61c871e7919ee6258aa1fbbd2ede8fb47ffef606b5e723153bb6ad2bf58f5"
+    },
+    {
+      "path": "docs/verification/night_usb_transport_2026-10-29.json",
+      "bytes": 78195,
+      "sha256": "7c5612d2615c601e9ac99986aaf744eadbe4b04ed9e0f3e6f77b871e1e67486d"
+    },
+    {
+      "path": "docs/verification/normal_dashboard_failure_2026-10-28.json",
+      "bytes": 142735,
+      "sha256": "24b743b6307c73cb680f622936329bcf957bf2324ebd8d38d55e0c1245ad962f"
+    },
+    {
+      "path": "docs/verification/normal_dashboard_transport_failure_2026-10-28.json",
+      "bytes": 540982,
+      "sha256": "a5ea2b7478b3697a95b4ec88c3b2e5f2220f400d4733a3e921b212bb98b5c595"
+    },
+    {
+      "path": "docs/verification/original_usb_dashboard_failure_2026-10-28.json",
+      "bytes": 391854,
+      "sha256": "0f5ed347f34a523b3946acb6571ba377f71c9c8304c1df2ad49dff391cef4263"
+    },
+    {
+      "path": "docs/verification/original_usb_profile2_failure_2026-10-28.json",
+      "bytes": 979951,
+      "sha256": "4463d49ea0f9b88ea2aa8f4d241b4413e4266e111e63aa010de73726889e402c"
+    },
+    {
+      "path": "docs/verification/parser_recovery_before_peer_isolation_2026-10-29.json",
+      "bytes": 983210,
+      "sha256": "d6265995e5368d8fb262fafc538c45ecb270c77eddcc6687683a4354a6959abe"
+    },
+    {
+      "path": "docs/verification/parser_recovery_main_partial_2026-10-29.json",
+      "bytes": 862810,
+      "sha256": "38481e794f034295785f7e82f44f79c99f6003301f4bc09f24215955cc7025db"
+    },
+    {
+      "path": "docs/verification/peer_sharing_off_main_2026-10-29.json",
+      "bytes": 990212,
+      "sha256": "23591076c57ef1861f62549d98354553fac076f067c5f61af0fd8916ef0be44b"
+    },
+    {
+      "path": "docs/verification/quality20_main_2026-10-29.json",
+      "bytes": 579560,
+      "sha256": "8f9fda87eba1b5b68ab207de91ae1dab8180eed64d6dcca43ad2c1698703fb28"
+    },
+    {
+      "path": "docs/verification/separate_usb_before_profile_2026-10-28.json",
+      "bytes": 353920,
+      "sha256": "9a7715a806672930c0523817a0fc6bcc8b12d18e0643bc9723b2b250b8fa3c9f"
+    },
+    {
+      "path": "docs/verification/separate_usb_conservative_failure_2026-10-28.json",
+      "bytes": 405077,
+      "sha256": "2d9456ba1f025baef427d146278ebf104222a51756a8a89f64e19147b05b4867"
+    },
+    {
+      "path": "docs/verification/thermal_restoration_capture_2026-10-30.json",
+      "bytes": 327867,
+      "sha256": "dc93b61e4da65216806ec927df914c5549515497566e6585946bab1001523057"
+    }
+  ]
+}

@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}BIM-Bot | Guided stationary tests{% endblock %}
+{% block styles %}<link rel="stylesheet" href="{{ url_for('static', filename='css/testing.css') }}">{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/live_camera_player.js') }}" defer></script><script src="{{ url_for('static', filename='js/testing.js') }}" defer></script>{% endblock %}
+{% block content %}
+<main class="testing-page">
+  <nav><a href="/">← Dashboard</a><a href="/login">Sign in</a></nav>
+  <p class="eyebrow">GUIDED STATIONARY TESTS</p><h1>Test one feature at a time.</h1>
+  <p>Software is prepared for the checks below. Actual accuracy, headset range and audibility remain to be tested. Movement is on hold: leave the USB bridge and return control off. Devices do not start automatically. The internal camera test below starts video only when you press its Start button.</p>
+  <section class="card"><h2>Before you begin</h2><ol>
+    <li>Keep the robot stationary. Use the existing verified camera power arrangement; do not change wiring or upload firmware for these tests.</li>
+    <li>While online, sign in with Google on the dashboard. This creates the local session needed when switching to the robot network.</li>
+    <li>For camera tests, join <strong>ESP32_CAM</strong> on the laptop. Keep the dashboard running at <strong>localhost:5050</strong>. Loss of internet is expected on a robot-only network; local viewing, sound recognition and recording can still work.</li>
+    <li>Your available headset is Bluetooth. Put it in pairing mode, then open <strong>Mac System Settings → Bluetooth</strong> and connect it. Check that its microphone appears under <strong>Sound → Input</strong>. Keep its microphone uncovered, output volume low and confirm that it stays active when placed on the robot.</li>
+    <li>Use <strong>Google Chrome</strong> at localhost:5050 if the in-app browser cannot select separate audio outputs. Devices do not start automatically.</li>
+  </ol><button id="testingReadiness" type="button">Check readiness without starting devices</button><p id="testingSession" role="status">Read the steps below, then sign in before checking live readiness.</p><ul id="testingReadings"><li>Not checked.</li></ul></section>
+
+  <section class="card" id="diagnostics"><h2>Internal connection diagnosis</h2>
+    <p>If cameras lag or sensors stop, keep the dashboard open in another tab. While this Mac is connected to <strong>ESP32_CAM</strong>, press the button below. It saves the current camera timing, sensor freshness and Mac IP locally, so the result remains available after you reconnect to internet for chat.</p>
+    <div class="diagnostic-actions"><button id="testingStartCameras" type="button">Start both camera test feeds</button><button id="testingStopCameras" type="button" disabled>Stop test feeds</button></div>
+    <p>For camera-delay checks, keep this page visible. Press Start, wait for both changing images, move a hand for about ten seconds, then save the snapshot while the feeds remain open. Use normal room lighting; this test does not change the camera light. Stop the test feeds afterward.</p>
+    <div class="diagnostic-feeds"><div><h3>Main camera</h3><p id="testingMainCameraState">Off</p><canvas id="testingMainCamera" width="320" height="240" aria-label="Internal main-camera test feed"></canvas></div><div><h3>Night camera</h3><p id="testingNightCameraState">Off</p><canvas id="testingNightCamera" width="320" height="240" aria-label="Internal night-camera test feed"></canvas></div></div>
+    <button id="testingSaveDiagnostics" type="button">Save system diagnostic snapshot</button>
+    <p id="testingDiagnosticResult" role="status">Not captured. This does not start cameras or change any hardware.</p>
+    <h3>Record the normal dashboard</h3>
+    <p>For section-switching faults, use the button below while connected to ESP32_CAM. It records cached connection health for 60 seconds and opens the normal dashboard. Connect Main, view it for about 15 seconds, select Night for 15 seconds, then Thermal for 20 seconds. Keep the dashboard visible. Return here afterward to check completion.</p>
+    <button id="testingRecordDashboard" type="button">Record 60-second dashboard check</button>
+    <p id="testingRecordingState" role="status">No normal-dashboard recording checked.</p>
+  </section>
+
+  <section class="card test-step" id="people" data-step="people"><p class="eyebrow">TEST 1 · CAMERA AND POSE</p><h2>People and temporary tracks</h2><ol>
+    <li><a href="/?view=main#survivorDetails">Open Main camera and survivor details</a>. Press <strong>Connect</strong> in the camera controls.</li>
+    <li>Show one consenting person clearly. In <strong>Mission tools &amp; history → SAR survivor classifications</strong>, find the Track number, pose and image-motion evidence.</li>
+    <li>Show two people separated in the image. Have one move while the other stays still. Compare each track's pose and motion line against the video.</li>
+    <li>Change relative positions while remaining separated. Briefly obscure one person, then disconnect/reconnect Main. IDs may change after loss or ambiguity; old inactivity evidence must clear.</li>
+  </ol><p><strong>Look for:</strong> correct person-to-pose pairing and separate motion evidence. A first or uncertain observation can be Unknown. Track numbers are temporary, not a count of unique survivors.</p></section>
+
+  <section class="card test-step" id="gestures" data-step="gestures"><p class="eyebrow">TEST 2 · TEMPORAL GESTURE</p><h2>Waving and image inactivity</h2><ol>
+    <li>Keep the camera still and shoulders/wrists clearly visible. Wave one raised hand side to side repeatedly for about three seconds.</li>
+    <li>Look for <strong>Possible waving/help gesture</strong> on that person's track. This is a visual candidate; verify the person's intent yourself.</li>
+    <li>Hold a raised hand still. It may say <strong>Raised hand observed</strong>, but should not continue to call a wave. Lower it and wait for the old gesture to clear.</li>
+    <li>Remain still for five seconds, then move. <strong>Image inactivity</strong> should increase only with continuous usable observations and reset on movement, lost tracking or reconnect.</li>
+  </ol><p><strong>Keep separate:</strong> age, injury, consciousness and entrapment labels remain unvalidated estimates. Stillness does not establish unconsciousness. These exercises do not supply clinical ground truth or completed accuracy measurements.</p><a href="/?view=main#survivorDetails">Open gesture observations</a></section>
+
+  <section class="card test-step" id="sound" data-step="sound"><p class="eyebrow">TEST 3 · ROBOT AUDIO INPUT</p><h2>Headset input and local sound recognition</h2><ol>
+    <li><a href="/?view=sound#monitor">Open Sound</a>. Choose <strong>Headset mounted on robot</strong>.</li>
+    <li>Press <strong>Find microphones</strong>, allow permission, select the named headset and confirm robot mounting. Discovery releases its temporary input.</li>
+    <li>Press <strong>Start microphone</strong>. Speak near the robot with the laptop farther away; compare with sounds near the laptop. Check that the active device is the headset.</li>
+    <li>Check <strong>Enable local YAMNet sound recognition</strong>. Try ordinary speech, a firm spoken call, gentle knocking and quiet/background sound separately. Allow a few seconds for each.</li>
+    <li>Record missed sounds and false positives alongside the event label/model score. The model classifies sound events; it does not transcribe “help” or confirm a survivor.</li>
+    <li>Press <strong>Stop microphone</strong>. Waveform and recognition must clear. Repeat with a headset disconnect; no laptop fallback should occur.</li>
+  </ol><p>Short recognition frames go only to this laptop's local server and are not saved. Saved video clips still contain no audio.</p></section>
+
+  <section class="card test-step" id="communication" data-step="communication"><p class="eyebrow">TEST 4 · TWO AUDIO DIRECTIONS</p><h2>Two-way headset communication</h2><ol>
+    <li>Stop sound analysis, then <a href="/?view=main#communication">open Survivor communication</a>. Press <strong>Find audio devices</strong> and allow the brief discovery permission.</li>
+    <li>Set <strong>Robot microphone</strong> to the headset and <strong>Operator microphone</strong> to the laptop's microphone.</li>
+    <li>Set <strong>Robot earpiece/output</strong> to the headset and <strong>Operator output</strong> to the laptop speaker or separate operator headphones. Pick specific devices, not default aliases.</li>
+    <li>Confirm placement and low volume, then press <strong>Start two-way audio</strong>. Speak near the robot microphone: the operator should hear it. Speak near the operator microphone: someone near the robot should hear the earpiece.</li>
+    <li>Check both directions at the intended distance. If the earpiece is too quiet, the browser cannot open both microphones, or the headset sleeps off-ear, mark the check unclear/failed.</li>
+    <li>Press <strong>Stop two-way audio</strong>, then test disconnection. Both routes must stop. Hiding or closing the dashboard stops audio; keep it visible during the test.</li>
+  </ol><p>Live local routing does not save audio, interpret an answer or prove operation through walls/debris.</p></section>
+
+  <section class="card test-step" id="sensors" data-step="sensors"><p class="eyebrow">TEST 5 · STATIONARY SENSORS</p><h2>Night view, thermal and environmental readings</h2><ol>
+    <li>Keep Main available and select <strong>Night vision</strong>. Confirm changing video and normal reconnection. Click <strong>View person details</strong> above the night feed to open <strong>Night-camera person details</strong>.</li>
+    <li>Repeat Tests 1 and 2 in the night-camera view: one/two people, pose, movement/stillness, static raised hand and repeated waving. Check its own Track numbers, estimated adult/child group, consciousness-rule label and help-gesture observation. The main count must stay separate. No numerical age is estimated.</li>
+    <li>Repeat at the intended low-light level using the existing lighting controls. Record misses and false alarms; there is no confirmed infrared accuracy. Disconnect/reconnect Night: its old details and timers must clear. Stillness does not establish unconsciousness.</li>
+    <li><a href="/?view=thermal#monitor">Select Thermal</a>. Verify changing cells/range using an ordinary warm hand in view. A heatmap does not establish hidden-victim detection or aligned RGB evidence.</li>
+    <li>Check DHT temperature/humidity and the heat-risk label. A disconnected source must become unavailable rather than retaining a fresh status.</li>
+    <li>Record sustained operation and dropouts. Accurate calibration needs a reference instrument; do not heat the robot or create hazards to force a risk label.</li>
+  </ol><p>Existing Night/thermal acceptance is retained. Driving endurance remains on hold.</p></section>
+
+  <section class="card test-step" id="recordings" data-step="recordings"><p class="eyebrow">TEST 6 · EVIDENCE AND RETRIEVAL</p><h2>Local recordings and later synchronization</h2><ol>
+    <li>With a real feed connected, press <strong>Record</strong>, capture five to ten seconds, then <strong>Stop</strong>. Stay on the page until local save succeeds.</li>
+    <li><a href="/#recordings">Open Recordings</a>. Download/play the clip and verify its source and changing frames. Clips are video-only.</li>
+    <li>Without internet on robot Wi-Fi, reload the dashboard and download the saved clip again. It should remain accessible within the valid local session.</li>
+    <li>Reconnect to the internet. Keep the app running, use <strong>Sync queued recordings</strong> if needed, and verify synced status plus retrieval. The local copy should remain. Camera loss while leaving robot Wi-Fi is expected.</li>
+    <li>Download the situational report. It must distinguish operator reviews, estimates and unavailable location. Do not start a motor mission for this stationary test.</li>
+  </ol><p>Cloud acceptance needs a real sign-in and user-created clip; generated fixtures do not complete it.</p></section>
+
+  <section class="card"><h2>Record what you actually observed</h2><p>Mark only checks you performed. Entries stay in page memory until downloaded; refreshing clears unsaved entries. Do not enter personal names.</p><div id="testingOutcomes"></div><button id="testingDownload" type="button">Download my test observations</button></section>
+  <section class="card"><h2>Still separate and pending</h2><p>Movement/obstacle/return stays on hold. GPS replacement, panel YOLOv8 wording versus the current YOLOv12 model, unclear handwritten Route/body wording, and disaster-scenario scope need clarification. Detection and condition accuracy need labeled evaluation.</p></section>
+  <p><small>Technical references: <a href="https://www.tensorflow.org/hub/tutorials/yamnet" target="_blank" rel="noopener noreferrer">Official YAMNet sound-event model</a> · <a href="https://www.weather.gov/ctp/heat" target="_blank" rel="noopener noreferrer">NWS heat-index calculation</a>. These do not establish the robot's live accuracy.</small></p>
+</main>
+{% endblock %}

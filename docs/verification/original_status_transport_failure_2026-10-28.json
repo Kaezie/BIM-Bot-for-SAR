@@ -1,0 +1,130 @@
+{
+  "phase": "finished",
+  "samples": [
+    {
+      "at": 1793175193.807437,
+      "mac_ip": "192.168.4.4",
+      "error_code": "timeout",
+      "transport_ms": 3081.8
+    },
+    {
+      "at": 1793175204.9179,
+      "mac_ip": "192.168.4.4",
+      "http_status": 200,
+      "settings": {
+        "framesize": 6,
+        "quality": 10,
+        "pixformat": 4,
+        "aec": 1,
+        "aec2": 0,
+        "ae_level": 0,
+        "agc": 1,
+        "agc_gain": 0,
+        "aec_value": 168,
+        "gainceiling": 0,
+        "xclk": 20
+      },
+      "transport_ms": 144.8
+    },
+    {
+      "at": 1793175213.072743,
+      "mac_ip": "192.168.4.4",
+      "http_status": 200,
+      "settings": {
+        "framesize": 6,
+        "quality": 10,
+        "pixformat": 4,
+        "aec": 1,
+        "aec2": 0,
+        "ae_level": 0,
+        "agc": 1,
+        "agc_gain": 0,
+        "aec_value": 168,
+        "gainceiling": 0,
+        "xclk": 20
+      },
+      "transport_ms": 741.9
+    },
+    {
+      "at": 1793175221.829694,
+      "mac_ip": "192.168.4.4",
+      "error_code": "timeout",
+      "transport_ms": 2002.4
+    },
+    {
+      "at": 1793175231.8484821,
+      "mac_ip": "192.168.4.4",
+      "error_code": "timeout",
+      "transport_ms": 1002.5
+    },
+    {
+      "at": 1793175240.864392,
+      "mac_ip": "192.168.4.4",
+      "error_code": "timeout",
+      "transport_ms": 1002.2
+    },
+    {
+      "at": 1793175249.8798752,
+      "mac_ip": "192.168.4.4",
+      "http_status": 200,
+      "settings": {
+        "framesize": 6,
+        "quality": 10,
+        "pixformat": 4,
+        "aec": 1,
+        "aec2": 0,
+        "ae_level": 0,
+        "agc": 1,
+        "agc_gain": 0,
+        "aec_value": 168,
+        "gainceiling": 0,
+        "xclk": 20
+      },
+      "transport_ms": 211.5
+    },
+    {
+      "at": 1793175258.1054678,
+      "mac_ip": "192.168.4.4",
+      "http_status": 200,
+      "settings": {
+        "framesize": 6,
+        "quality": 10,
+        "pixformat": 4,
+        "aec": 1,
+        "aec2": 0,
+        "ae_level": 0,
+        "agc": 1,
+        "agc_gain": 0,
+        "aec_value": 168,
+        "gainceiling": 0,
+        "xclk": 20
+      },
+      "transport_ms": 80.0
+    },
+    {
+      "at": 1793175266.2005482,
+      "mac_ip": "192.168.4.4",
+      "error_code": "timeout",
+      "transport_ms": 2002.2
+    },
+    {
+      "at": 1793175276.214239,
+      "mac_ip": "192.168.4.4",
+      "error_code": "timeout",
+      "transport_ms": 1002.0
+    },
+    {
+      "at": 1793175285.225013,
+      "mac_ip": "192.168.4.4",
+      "error_code": "timeout",
+      "transport_ms": 1002.3
+    },
+    {
+      "at": 1793175294.2415922,
+      "mac_ip": "192.168.4.4",
+      "error_code": "timeout",
+      "transport_ms": 1002.0
+    }
+  ],
+  "scope": "Read-only original /status; no video, commands or firmware."
+}

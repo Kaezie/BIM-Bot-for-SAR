@@ -1,0 +1,48 @@
+{
+  "checked_at": "2026-10-29T12:56:39.424318+00:00",
+  "quality": {
+    "target": "original_camera_192.168.4.1",
+    "requested_quality": 20,
+    "control_attempted": true,
+    "verified": true,
+    "checked_at": "2026-10-29T12:49:40.985144+00:00",
+    "before": {
+      "framesize": 6,
+      "pixformat": 4,
+      "xclk": 20,
+      "quality": 10
+    },
+    "control_http_status": 200,
+    "after": {
+      "framesize": 6,
+      "pixformat": 4,
+      "xclk": 20,
+      "quality": 20
+    }
+  },
+  "localhost_health": [
+    {
+      "path": "/login",
+      "status": 200
+    },
+    {
+      "path": "/",
+      "status": 200
+    },
+    {
+      "path": "/api/camera-frame/main",
+      "status": 401
+    },
+    {
+      "path": "/api/system-check/recording",
+      "status": 401
+    }
+  ],
+  "runtime": {
+    "pid": 3095,
+    "port": 5050,
+    "checkout": "/Users/christine/Documents/ChatGPT/BIM-BOT/BIM-Bot-for-SAR"
+  },
+  "temporary_gated_launcher": "retired and deleted; existing app process kept running",
+  "scope": "Camera quality readback confirmed; localhost HTTP readiness confirmed. No new video acceptance yet. No firmware upload, serial or motor action."
+}

@@ -1,13 +1,24 @@
 <section id="monitor" class="monitor-grid" data-active-feed="main" aria-label="Live monitoring">
   <article class="card camera-card">
-    <div class="card-top">
-      <div><p class="eyebrow">LIVE MONITORING</p><h2 id="feedTitle">Main camera</h2></div>
+    {% include "dashboard/survivor_summary.html" %}
+    <div class="card-top view-channel">
+      <div><p class="eyebrow">VIEW CHANNEL</p><h2 id="feedTitle">Main camera</h2></div>
       <span class="pill" id="cameraStatus">Disconnected</span>
     </div>
+    <div class="night-camera-status" id="nightCameraControls" hidden>
+      <p class="night-detection-summary control-hint"><span id="nvDetectionStatus">Night-camera detections require verification.</span> <a href="#nightSurvivorDetails" id="nvDetailsLink">View person details</a></p>
+      <div class="night-light-controls" aria-label="Spare camera white light">
+        <div class="night-light-buttons">
+          <button id="nvLightOnBtn" aria-pressed="false" disabled>White light on</button>
+          <button id="nvLightOffBtn" aria-pressed="false" disabled>White light off</button>
+        </div>
+        <p id="nvLightStatus" role="status" data-state="idle">White light is not requested. Select On when needed.</p>
+        <small>Visible white light · enable when needed; turns off when leaving unless this camera is recording.</small>
+      </div>
+    </div>
     <div class="feed-stage">
-      {% include "dashboard/priority_signals.html" %}
       <section id="panel-main" role="tabpanel" aria-labelledby="tab-main">
-        <img id="camStream" alt="Live main camera feed" hidden>
+        <canvas id="camStream" role="img" aria-label="Live main camera feed" hidden></canvas>
         <div class="feed-empty" id="camOffline">
           <span class="empty-symbol" aria-hidden="true">📷</span>
           <h3>CAMERA OFFLINE</h3>
@@ -16,7 +27,8 @@
         <span class="recording-badge" id="recBadge" hidden>● Recording <span id="recordTime">00:00</span></span>
       </section>
       <section id="panel-nightvision" role="tabpanel" aria-labelledby="tab-nightvision" hidden>
-        <img id="nvStream" alt="Live night vision feed" hidden>
+        <canvas id="nvStream" role="img" aria-label="Live night vision feed" hidden></canvas>
+        <span id="nvRecordBadge" class="recording-badge" hidden>● Recording night vision</span>
         <div class="feed-empty" id="nvEmpty">
           <span class="empty-symbol" aria-hidden="true">🌙</span>
           <h3>Night Vision Camera</h3>
@@ -24,21 +36,48 @@
         </div>
       </section>
       <section id="panel-thermal" role="tabpanel" aria-labelledby="tab-thermal" hidden>
-        <div class="feed-empty">
-          <span class="empty-symbol" aria-hidden="true">🌡️</span>
-          <h3>Thermal Camera (MLX90640)</h3>
-          <p id="thermalStatus">Checking availability…</p>
-          <div id="thermalGrid" class="thermal-grid" hidden></div>
+        <div class="feed-empty thermal-view">
+          <div class="thermal-caption">
+            <span class="empty-symbol" aria-hidden="true">🌡️</span>
+            <h3>Thermal Camera (MLX90640)</h3>
+            <p id="thermalStatus">Checking availability…</p>
+          </div>
+          <div class="thermal-viewport">
+            <canvas id="thermalGrid" class="thermal-grid" width="32" height="24" role="img" aria-label="Thermal sensor heatmap, 32 columns by 24 rows" hidden></canvas>
+          </div>
         </div>
       </section>
       <section id="panel-sound" role="tabpanel" aria-labelledby="tab-sound" hidden>
-        <div class="feed-empty">
-          <span class="empty-symbol" aria-hidden="true">🔊</span>
-          <h3>Sound Detection</h3>
-          <p id="soundStatus">Checking availability…</p>
-          <meter id="soundMeter" min="0" max="100" value="0" aria-label="Sound level in decibels, scale 0 to 100" hidden>
-          </meter>
-          <p id="soundClass" hidden></p>
+        <div class="sound-view">
+          <h3>Sound detection</h3>
+          <div class="camera-sound-sources" aria-label="Camera microphone availability">
+            <section class="camera-sound-source"><h4>Original camera microphone</h4><p>Unavailable · No microphone installed</p></section>
+            <section class="camera-sound-source"><h4>Spare camera microphone</h4><p>Unavailable · No microphone installed</p></section>
+          </div>
+          <section class="laptop-sound" aria-labelledby="laptopSoundTitle">
+            <div class="laptop-sound-heading"><h4 id="laptopSoundTitle">Microphone input</h4><span class="pill" id="soundInputLocation">Laptop demonstration</span></div>
+            <p class="sound-source-note">Laptop mode hears sound near the laptop. A borrowed headset can supply one robot-mounted input after you select and test it.</p>
+            <div class="sound-input-controls">
+              <label for="soundSourceMode">Input location<select id="soundSourceMode"><option value="laptop">Laptop demonstration</option><option value="robot_headset">Headset mounted on robot</option></select></label>
+              <button type="button" id="soundListInputs">Find microphones</button>
+              <label for="soundInputDevice">Microphone<select id="soundInputDevice"><option value="">Default input (laptop demonstration only)</option></select></label>
+              <label id="soundMountLabel" class="sound-mount" hidden><input type="checkbox" id="soundMountConfirmed">I confirm the selected headset is secured on the robot.</label>
+            </div>
+            <p id="soundDeviceStatus" class="sound-source-note">Find microphones requests permission briefly, then releases the input. Robot mode requires a specific device; it never uses the default input.</p>
+            <p id="soundActualDevice" class="sound-source-note">No active microphone.</p>
+            <p id="laptopSoundState" role="status" data-state="idle">Off · Press Start to allow this browser's microphone input.</p>
+            <div class="laptop-sound-readings"><strong id="laptopSoundLevel">—</strong><span id="laptopSoundPeak">—</span><span id="laptopSoundActivity" data-active="false">No active input</span></div>
+            <meter id="laptopSoundMeter" min="0" max="100" value="0" aria-label="Selected microphone relative signal level, percent"></meter>
+            <canvas id="laptopSoundWave" width="720" height="120" role="img" aria-label="Live waveform from the selected microphone" data-live="false"></canvas>
+            <label class="sound-threshold" for="laptopSoundThreshold">Activity threshold <output id="laptopSoundThresholdValue" for="laptopSoundThreshold">3%</output><input id="laptopSoundThreshold" type="range" min="1" max="100" value="3" step="1"></label>
+            <div class="laptop-sound-buttons"><button id="laptopSoundStart" class="primary" type="button" disabled>Start microphone</button><button id="laptopSoundStop" type="button" disabled>Stop microphone</button></div>
+            <label class="sound-mount"><input id="soundRecognitionEnabled" type="checkbox" disabled>Enable local YAMNet sound recognition after starting the microphone</label>
+            <p id="soundRecognitionState" role="status">Sound recognition off.</p><p id="soundRecognitionResult">No current sound classification.</p>
+            <p class="sound-privacy">Waveform analysis stays in the browser. Optional recognition sends short audio frames only to this laptop's local server; audio is not saved or sent to a cloud service. No sound playback here. Stops when you leave Sound or hide this page. Headset location is operator-confirmed.</p>
+            <small>Recognition suggests sound events, not words or confirmed survivors. Scores and live accuracy require evaluation.</small>
+            <small>Relative signal level, uncalibrated. Activity does not identify voices or people.</small>
+          </section>
+          <details class="external-sound"><summary>External sound sensor</summary><p id="soundStatus">Checking availability…</p><meter id="soundMeter" min="0" max="100" value="0" aria-label="External sound sensor reported decibels, scale 0 to 100" hidden></meter><p id="soundClass" hidden></p></details>
         </div>
       </section>
     </div>
@@ -49,7 +88,7 @@
       <button class="danger-btn" id="stopBtn" hidden>■ Stop</button>
       <button id="refreshBtn">↻ Refresh</button>
     </div>
-    <p class="control-hint" id="recordingHint">Recordings save to cloud automatically after you stop. Keep this page open until saved.</p>
+    <p class="control-hint" id="recordingHint">Recordings save on this laptop first and sync when internet returns. Keep this page open until saved.</p>
     <div class="feed-tabs" role="tablist" aria-label="Monitoring source">
       <button role="tab" id="tab-main" aria-controls="panel-main" aria-selected="true" data-feed="main">Main camera<small id="availability-main">Disconnected</small></button>
       <button role="tab" id="tab-nightvision" aria-controls="panel-nightvision" aria-selected="false" tabindex="-1" data-feed="nightvision">Night vision<small id="availability-nightvision">Checking</small></button>
@@ -57,20 +96,37 @@
       <button role="tab" id="tab-sound" aria-controls="panel-sound" aria-selected="false" tabindex="-1" data-feed="sound">Sound<small id="availability-sound">Checking</small></button>
     </div>
   </article>
-  <aside class="card sensors-card">
+  <aside class="telemetry-rail" aria-label="Robot sensors across all monitoring views">
+   <section class="card sensors-card">
     <div class="card-top"><h2>Environment</h2><span class="pill" id="sensorState">Checking</span></div>
+    <p class="sensor-source">Ambient readings · Original camera DHT</p>
     <dl class="sensor-list">
       <div><dt>🌡️ Temperature</dt><dd><span id="tempDisplay">—</span><small>°C</small></dd></div>
       <div><dt>💧 Humidity</dt><dd><span id="humDisplay">—</span><small>%</small></dd></div>
       <div><dt>🔥 Heat index</dt><dd><span id="hiDisplay">—</span><small>°C</small></dd></div>
     </dl>
     <p class="muted" id="sensorNote">Waiting for the robot’s sensors.</p>
-    <details class="assessment" open>
+    <details class="assessment">
       <summary>Risk assessment</summary>
       <p>Method: <strong id="mlMethod">—</strong></p>
       <p id="mlAssessment">SAR threshold rules: Checking</p>
       <p>Rule score: <strong id="mlConfidence">—</strong></p>
       <div id="probabilities"></div>
     </details>
+   </section>
+   <div class="instrument-panel" aria-label="Shared risk, thermal and sound signals">
+   {% include "dashboard/priority_signals.html" %}
+   <section class="card shared-reading" id="mainThermalReading" aria-label="Thermal sensor readings" aria-live="polite">
+     <h2>Thermal scene · MLX90640</h2>
+     <strong id="mainThermalRange">—</strong>
+     <p id="mainThermalState">Not configured</p>
+     <small>Separate sensor view · Not aligned to camera pixels</small>
+   </section>
+   <section class="card shared-reading" id="soundSummary" aria-label="Sound sensor readings" aria-live="polite">
+     <h2>External sound sensor</h2>
+     <strong id="soundSummaryLevel">—</strong>
+     <p id="soundSummaryState">Checking availability</p>
+   </section>
+   </div>
   </aside>
 </section>

@@ -1,0 +1,114 @@
+{
+  "inspected_at": "2026-10-27T17:37:43.184630+08:00",
+  "scope": "Local checkpoint identity only; no accuracy measurement or training.",
+  "runtime": {
+    "ultralytics": "8.4.165",
+    "torch": "2.14.0"
+  },
+  "models": {
+    "detector": {
+      "file": "/Users/christine/Documents/ChatGPT/BIM-BOT/BIM-Bot-for-SAR/best.pt",
+      "sha256": "61c916c01419ab6d0726d156b858b09c460a7d3c75e700bd5b5d97ee0c9d60ff",
+      "weights_unchanged": true,
+      "task": "detect",
+      "class_count": 20,
+      "class_names": {
+        "0": "aeroplane",
+        "1": "bicycle",
+        "2": "bird",
+        "3": "boat",
+        "4": "bottle",
+        "5": "bus",
+        "6": "car",
+        "7": "cat",
+        "8": "chair",
+        "9": "cow",
+        "10": "diningtable",
+        "11": "dog",
+        "12": "horse",
+        "13": "motorbike",
+        "14": "person",
+        "15": "pottedplant",
+        "16": "sheep",
+        "17": "sofa",
+        "18": "train",
+        "19": "tvmonitor"
+      },
+      "architecture_config": "yolov12s.yaml",
+      "training_model_name": "yolov12s.pt",
+      "checkpoint_ultralytics_version": "8.4.41",
+      "module_types": [
+        "A2C2f",
+        "AAttn",
+        "ABlock",
+        "BatchNorm2d",
+        "Bottleneck",
+        "C3k",
+        "C3k2",
+        "Concat",
+        "Conv",
+        "Conv2d",
+        "DFL",
+        "DWConv",
+        "Detect",
+        "DetectionModel",
+        "Identity",
+        "ModuleList",
+        "Sequential",
+        "SiLU",
+        "Upsample"
+      ],
+      "keypoint_shape": null
+    },
+    "pose": {
+      "file": "/Users/christine/Documents/ChatGPT/BIM-BOT/BIM-Bot-for-SAR/yolo11s-pose.pt",
+      "sha256": "1060bda4a27012060eca246f9b2adeea22eabb045a1e58f8d229be29b7ebc2ba",
+      "weights_unchanged": true,
+      "task": "pose",
+      "class_count": 1,
+      "class_names": {
+        "0": "person"
+      },
+      "architecture_config": "yolo11s-pose.yaml",
+      "training_model_name": "yolo11s-pose.yaml",
+      "checkpoint_ultralytics_version": "8.2.100",
+      "module_types": [
+        "Attention",
+        "BatchNorm2d",
+        "Bottleneck",
+        "C2PSA",
+        "C3k",
+        "C3k2",
+        "Concat",
+        "Conv",
+        "Conv2d",
+        "DFL",
+        "DWConv",
+        "Identity",
+        "MaxPool2d",
+        "ModuleList",
+        "PSABlock",
+        "Pose",
+        "PoseModel",
+        "SPPF",
+        "Sequential",
+        "SiLU",
+        "Upsample"
+      ],
+      "keypoint_shape": [
+        17,
+        3
+      ]
+    }
+  },
+  "accuracy_evaluation": "pending",
+  "panel_model_version_alignment": "pending",
+  "identity_checks": {
+    "detector_task_is_detect": true,
+    "detector_person_class_14_matches_app": true,
+    "pose_task_is_pose": true,
+    "pose_person_class_is_0": true,
+    "pose_has_17_keypoints": true
+  },
+  "identity_checks_passed": true
+}

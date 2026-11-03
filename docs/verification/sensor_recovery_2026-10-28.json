@@ -1,0 +1,59 @@
+{
+  "checked_at": "2026-10-28T06:01:57.903241+00:00",
+  "network": {
+    "ipv4": "192.168.4.3",
+    "robot_subnet": true
+  },
+  "cameras": {
+    "main": {
+      "connected": false,
+      "configured": true,
+      "updated_at": null,
+      "detected_at": null,
+      "received_fps": null,
+      "inference_ms": null,
+      "video_processing_ms": null,
+      "skipped_video_frames": 0,
+      "analysis_error": null,
+      "viewers": 0,
+      "generation": 0,
+      "detections_available": false
+    },
+    "nightvision": {
+      "connected": false,
+      "configured": true,
+      "updated_at": null,
+      "detected_at": null,
+      "received_fps": null,
+      "inference_ms": null,
+      "video_processing_ms": null,
+      "skipped_video_frames": 0,
+      "analysis_error": null,
+      "viewers": 0,
+      "generation": 0,
+      "detections_available": false
+    }
+  },
+  "sensor": {
+    "temperature": 27.2,
+    "humidity": 69.0,
+    "updated_at": 1793167316.8256588,
+    "error_code": null,
+    "last_attempt_at": 1793167316.6919181,
+    "fresh": true
+  },
+  "thermal": {
+    "configured": true,
+    "connected": true,
+    "fresh": true,
+    "sequence": 8483,
+    "frame_age_ms": 74.0,
+    "transport_ms": 458.27441700021154,
+    "updated_at": 1793167316.6091926,
+    "min_temp": 20.38,
+    "max_temp": 32.9,
+    "error_code": null,
+    "http_status": null
+  },
+  "note": "Current cached state only. No camera, microphone, motor or firmware action. No images, identities or credentials saved."
+}

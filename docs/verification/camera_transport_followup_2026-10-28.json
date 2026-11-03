@@ -1,0 +1,204 @@
+{
+  "date": "2026-10-28",
+  "checkout": "/Users/christine/Documents/ChatGPT/BIM-BOT/BIM-Bot-for-SAR",
+  "trace": "separate_usb_conservative_failure_2026-10-28.json",
+  "trace_started_at_utc": "2026-10-28T10:28:08.581748+00:00",
+  "profile": "conservative-1",
+  "profile_rate_settings_changed": false,
+  "robot_subnet_samples": 44,
+  "excluded_home_or_unknown_samples": 74,
+  "main": {
+    "active_samples": 44,
+    "fresh_samples": 27,
+    "upstream_timeout_delta": 3,
+    "invalid_frame_delta": 0,
+    "viewer_count_first": 1,
+    "viewer_count_last": 1,
+    "browser_delete_delta": 0,
+    "generation_first": 1,
+    "generation_last": 4,
+    "received_frame_delta": 18
+  },
+  "night": {
+    "active_samples": 0,
+    "received_frames": 0,
+    "live_acceptance": "not assessed in this trace"
+  },
+  "dht_fresh_samples": 38,
+  "thermal": "physically disconnected and intentionally unconfigured",
+  "operator_profile_result": "Still disconnects and reconnects",
+  "operator_direct_browser_result": "Operator reports direct original stream freezes, supported by supplied screenshot showing Safari direct-stream page. A still screenshot does not itself measure a freeze duration.",
+  "phone_check": "unavailable / not completed",
+  "interpretation": "Freeze reproduced in Safari outside the stopped dashboard, then with spare powered OFF. Dashboard and a powered spare are not necessary for this original-feed failure. Original-camera power, firmware/server, radio and Mac path remain possible; electrical or firmware cause is not proven.",
+  "software_change": "Opt-in passive recording starts at first authenticated, validated GET on robot subnet, including pre-frame startup failures. It no longer waits for a valid picture. Rates unchanged.",
+  "software_validation": "48 dashboard and diagnostic Python tests pass, including new startup-failure recording/auth/network guards.",
+  "runtime": "PID40368/exec39509 on5050; profileconservative-2 with corrected parser; login200. Five-minute opt-in capture armed; no new corrected-parser live test yet.",
+  "firmware_uploaded": false,
+  "serial_opened": false,
+  "motor_commands_sent": false,
+  "movement": "ON HOLD",
+  "pending": [
+    "Read Main-only quality20 live trace and operator assessment; setting readback alone is not camera acceptance.",
+    "Restore prior Mac sharing preferences; sharing-off failed acceptance.",
+    "Accept original baseline before separate Night/DHT/Thermal restoration."
+  ],
+  "operator_original_only_browser_result": "Original video still freezes; tab closed. Operator confirms spare USB unplugged, six spare jumpers detached, original wiring unchanged and raised wheels through the requested setup.",
+  "direct_stream_screenshot": "/var/folders/78/3hjs6hvs0yj2vsf_jf27bqyc0000gn/T/codex-clipboard-de71ff0f-dbe9-4c93-8166-77301ccad200.png",
+  "transport_probe": {
+    "source": "/private/tmp/bimbot_original_transport_probe.py",
+    "sha256": "5fcad1fb9e271808e0e874e5adf1405e75af6f970463191f17fa56d5afbe5216",
+    "scope": "Fixed read-only GET /status on original80 and GET /stream on original81, sequential; timing/error stages and decoded-frame counts only. No images saved. 40s stream, 240s bounded network wait. Dashboard remains stopped.",
+    "software_validation": "Generated JPEG/mock-socket check passes fixed GET targets, allowlisted status output, body-timeout classification, frame counting and closure; no robot accessed in this check.",
+    "live_result": "FAILED: 4 decoded JPEGs in42.88s;33.999s maximum no-decoded-frame gap; network retained.",
+    "evidence": "original_only_transport_check_2026-10-28.json",
+    "error_counts": {
+      "stream_body:timeout": 2,
+      "stream_headers:timeout": 4,
+      "stream_tcp_connect:timeout": 2,
+      "status_tcp_connect:timeout": 1
+    }
+  },
+  "battery_operator_report": "New full set installed, user-confirmed. Unchanged-settings original-only comparison still fails. Battery depletion alone is not an adequate explanation; robot regulator/loaded rail remains unmeasured.",
+  "charge_status": "Superseded by newly installed full set; do not ask for another routine recharge.",
+  "fresh_battery_comparison": {
+    "operator_confirmation": "New set of full batteries installed; voltage and loaded camera rail not measured.",
+    "evidence": "fresh_battery_original_check_2026-10-28.json",
+    "result": "FAILED",
+    "stream_summary": {
+      "attempts": 6,
+      "bytes": 90141,
+      "decoded_frames": 6,
+      "invalid_frames": 0,
+      "max_no_decoded_frame_seconds": 13.55,
+      "network_retained": true,
+      "note": "Reception timing only; no optical latency or identity analysis."
+    },
+    "error_counts": {
+      "stream_tcp_connect:timeout": 2,
+      "stream_body:timeout": 3,
+      "stream_headers:timeout": 1,
+      "status_tcp_connect:timeout": 1
+    },
+    "network_metric_scope": "network_retained checks unchanged en0 IPv4, not uninterrupted Wi-Fi association or reachability."
+  },
+  "source_audit": "Independent read-only audit finds no proven app/parser cause. Separate original HTTP server tasks; stream capture/send synchronous. Short retry cadence could worsen recovery but does not explain initial failure or Safari freeze. Misleading source FPS log and LED22/PCLK22 path are source caveats, not proven runtime faults; no firmware change.",
+  "original_usb_preparation": {
+    "new_photo_review": "original_camera_photos_7588_7590_2026-10-28.json",
+    "existing_images_sufficient_for_unpowered_plug_removal": true,
+    "observed_wired_plugs": 5,
+    "operator_status": "All five original-camera jumpers removed; power OFF, user confirmed.",
+    "usb_base_alignment": "pending, do not energize",
+    "test_status": "not performed"
+  },
+  "original_usb_comparison": {
+    "evidence": "original_usb_transport_check_2026-10-28.json",
+    "decoded_frames": 647,
+    "duration_seconds": 120,
+    "attempts": 3,
+    "body_timeouts": 3,
+    "max_no_complete_frame_seconds": 5.234,
+    "invalid_frames": 0,
+    "status_before_ms": 37.4,
+    "status_after_ms": 120.3,
+    "settings_unchanged": true,
+    "interpretation": "Large improvement compared with new-battery robot-power run, but three3-second probe read timeouts remain. Supply/contact/sensor-load effects are not distinguished; not a complete supply repair."
+  },
+  "original_usb_dashboard": {
+    "evidence": "original_usb_dashboard_failure_2026-10-28.json",
+    "robot_subnet_samples": 119,
+    "active_samples": 118,
+    "fresh_active_samples": 115,
+    "received_frames": 170,
+    "browser_delete_delta": 0,
+    "upstream_timeout_delta": 1,
+    "generation_delta": 1,
+    "operator_result": "Main still freezes or reconnects",
+    "interpretation": "Same browser viewer retained. A five-second upstream socket timeout causes reader reset during one picture gap."
+  },
+  "candidate2": {
+    "change": "Source read timeout10s independent of pictureTTL5s; all rates/quality/models unchanged. Profileversionconservative-2.",
+    "software_validation": "260Python checks pass;6s realHTTP pause test passes; old5s negativecontrol fails as expected.",
+    "live_validation": "Failed5min;292robot samples291active224fresh177frames,3frame_stalled+1timeout,0DELETE. Actual medianinference147ms/video1ms.",
+    "firmware_uploaded": false,
+    "serial_opened": false,
+    "evidence": "conservative_profile_2_2026-10-28.json",
+    "live_failure_evidence": "original_usb_profile2_failure_2026-10-28.json"
+  },
+  "parser_recovery_fix": {
+    "date": "2026-10-28",
+    "cause_proved_in_software": "A complete JPEG arriving after the10s frame deadline was rejected before parsing. Parser now recovers complete whole/split frames before the incomplete-stream stall check.",
+    "live_causation_limit": "Prior live metadata cannot establish whether each frame_stalled event contained a complete arriving JPEG. Slow physical delivery is not resolved by software tests.",
+    "changes": [
+      "2MiB limit stays before parsing",
+      "Parse recovered complete JPEG before10s incomplete-stream stall check",
+      "Keep10s transport/stall limits and5s picture expiry; all other rates unchanged"
+    ],
+    "python_tests_passed": 263,
+    "focused_regressions": "Whole/split late JPEG fail beforefix and passafter; incomplete-frame and oversized-buffer bounds stillpass.",
+    "runtime": "PID40368/exec39509 on5050; profileconservative-2 with corrected parser; login200. Five-minute opt-in capture armed; no new corrected-parser live test yet.",
+    "physical_state": "Last operator confirmation: original USB reconnected after10s, masterOFF/all5originaljumpersoff, spareOFF/all6off. Later request to leaveoriginalUSBunplugged is pending.",
+    "serial_identity": "Only FT232R0403:6001 node usbserial-A5069RR4 currently observed. Short-cycle watcher saw no device-node transition; timing/device association unverified. No serial port opened; must not infer camera identity from oldCH340/110 record.",
+    "pending": "Operator leavesoriginalUSBunplugged for immediate node comparison; avoid another timedwatcher window.",
+    "firmware_uploaded": false,
+    "serial_opened": false,
+    "motor_commands_sent": false,
+    "private_env_changed": false,
+    "source_sha256": {
+      "features/live_camera.py": "7ea586f43c087a70b84011913fedf8b0cc8d89a70d4efe081cc9962a19ebb7c1",
+      "features/monitoring_profile.py": "eff311147a32d0b381861ea43685986d3973d4d018fcdafd400ccee49aaf94f3",
+      "tests/test_live_camera.py": "0d8af48af836449adeb648efcdd09c490d06ba4fbb853de218bdd67ef2d7c68b"
+    }
+  },
+  "parser_recovery_live_partial": {
+    "date": "2026-10-29",
+    "parser_fixed_operator_report": "After one disconnect latency became smoother, but faster gestures still freeze from time to time.",
+    "baseline_video": "parser_recovery_before_peer_isolation_2026-10-29.json",
+    "baseline_reachability": "reachability_before_peer_isolation_2026-10-29.json",
+    "steady_result": {
+      "window_utc": [
+        "2026-10-28T15:58:25.926+00:00",
+        "2026-10-28T16:00:46.337+00:00"
+      ],
+      "new_source_errors": 0,
+      "additional_frames": 613,
+      "additional_bytes": 4058828,
+      "max_sampled_picture_age_ms": 4879,
+      "ping_median_ms": 162,
+      "ping_max_ms": 2144,
+      "ping_above_500ms": 29,
+      "ping_samples": 139
+    },
+    "loss_correction": "Allfourtimeout messages(2,9,14,86) eventually received replies. Missing8/10occurredstartup;174atnetworkexit. Do not equate timeout-messagecount with lostpacketcount.",
+    "interpretation": "Parser recovery and steady delivery improved, but long image gaps and high local RTT remain. This supports transport jitter without identifying RF/firmware/supply/Mac cause.",
+    "current_setup": "OriginalUSBonly/masterOFF/all5jumpersdetached; spareOFF/all6detached; serialclosed. CameraQVGA/quality10, all rates/read10/image5unchanged.",
+    "mac": "macOS27.0.1; AirDrop wasEveryone. User confirms AirDrop/Handoff/AirPlayReceiver off for temporary comparison; AirDropOff verified. Previous Handoff/Receiver values not available via queried keys.",
+    "test": "Same checked parser,300sMaincapture and1Hzping rearmed; userasked5minsamequickgestures withsharingoff. No new firmware, quality, model or wiring change.",
+    "live_sharing_off_result": "pending",
+    "restoration": "Restore previously enabled sharing options after the temporary comparison if no benefit; do not infer that turning these options off completely disablesAWDL."
+  },
+  "serial_identity_review": {
+    "reviewed_at_utc": "2026-10-28T16:19:11.129111+00:00",
+    "method": "Held-state snapshots with operator confirmation, not the expired short-cycle watcher.",
+    "original_usb_unplugged": "No cu.usbserial nodes and no FTDI/CH340/CP210x matching USB device enumerated.",
+    "original_usb_reconnected": "Only cu.usbserial-A5069RR4 returned; FT232R0403:6001, no open owner before monitoring.",
+    "identity_verified_for_this_setup": true,
+    "short_cycle_watcher": "Saw no event; not used as proof.",
+    "serial_scope": "115200, DTR/RTSfalse beforeopen; read-only payload, whitelisted event labels only. Opening/closing can affect camera reset.",
+    "serial_observation": "Firstpoweroncode1, then two watchdogresetcode8 and three camera_boot messages in first8.1s. No activeMainstream duringUARTcapture. Later closed at15:49:50UTC. No rawtext saved.",
+    "causation_limit": "Startup observation can be influenced by opening port and is not proof resets caused earlier video freezes.",
+    "reset_code_reference": "https://github.com/espressif/esp-idf/blob/master/components/soc/esp32/include/soc/reset_reasons.h"
+  },
+  "latest_continuation_2026_10_29": {
+    "sharing_off_result": "no improvement at all; 6 new source errors",
+    "quality_trial": "quality20 applied and verified; framesize6/pixformat4/xclk20 unchanged; video acceptance pending",
+    "setup": "original USB only; master OFF; original5leads detached; spare OFF",
+    "helper": "scripts/set_original_camera_quality.py",
+    "software_validation": "272 tests pass; 9 focused tests pass after metadata adjustment",
+    "runtime": "PID3095 independently serving5050; login/main200;180s trace armed; temporary gated launcher retired/deleted",
+    "report": "local_data/diagnostics/original_quality_20_check.json",
+    "firmware_uploaded": false,
+    "serial_opened_this_continuation": false,
+    "motor_commands_sent": false,
+    "readiness_evidence": "original_quality20_and_dashboard_readiness_2026-10-29.json"
+  }
+}

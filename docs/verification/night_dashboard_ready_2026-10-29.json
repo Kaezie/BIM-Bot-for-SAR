@@ -1,0 +1,52 @@
+{
+  "date": "2026-10-29",
+  "transport_evidence": "night_usb_transport_2026-10-29.json",
+  "spare_identity": "bimbot-nightvision/2",
+  "installed_startup_profile": "retry/1",
+  "installed_stream_profile": "fresh/1",
+  "installed_stream_target_fps": 15,
+  "verified_spare_ip": "192.168.4.3",
+  "observed_mac_ip": "192.168.4.2",
+  "transport_summary": {
+    "received_frames": 135,
+    "received_bytes": 923243,
+    "source_errors": 0,
+    "invalid_frames": 0,
+    "generation": 0,
+    "samples": 153,
+    "fresh_samples": 150,
+    "max_sampled_picture_age_ms": 5308.007001876831,
+    "median_jpeg_bytes": 6700.5
+  },
+  "limitations": [
+    "No inference in standalone transport probe.",
+    "Pause exceeded5s; uninterrupted/stable video is not accepted.",
+    "Post-probe status read did not succeed; no post-test status assertion.",
+    "Thermal enabled in installed firmware but sensor_unavailable during detached-lead isolation; thermal integration not tested."
+  ],
+  "main_quality": "After powercycle found10; restored and readbackverified20 withframesize6/pixformat4/xclk20 unchanged.",
+  "runtime": {
+    "pid": 6959,
+    "session": 46542,
+    "port": 5050,
+    "main_url": "http://192.168.4.1:81/stream",
+    "night_url": "http://192.168.4.3:81/stream",
+    "night_detection_enabled": true,
+    "sensor_url": "",
+    "thermal_data_url": "",
+    "robot_command_url": "",
+    "movement_command_url": "",
+    "auto_trace_seconds": 180
+  },
+  "http_health": {
+    "login": 200,
+    "dashboard": 200,
+    "unauth_night_frame": 401,
+    "unauth_device_status": 401
+  },
+  "next_test": "OnESP32_CAM:90sNightalone withMainvideo disconnected; then90sboth requested, switchingMain/Night; keepnetwork30sextra. WhiteLEDoff. ReportNightpicture/pauses/personbox and combined-load behavior.",
+  "firmware_uploaded": false,
+  "persistent_env_edited": false,
+  "serial_opened": false,
+  "motor_commands_sent": false
+}

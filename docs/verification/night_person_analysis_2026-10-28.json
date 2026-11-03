@@ -1,0 +1,61 @@
+{
+  "checked_at": "2026-10-28T13:18:32.293718+08:00",
+  "scope": "Generated software and browser checks only; no live people, low-light performance or clinical acceptance.",
+  "python_tests_passed": 233,
+  "browser_suites_passed": [
+    "dashboard_ui.cjs",
+    "shared_monitoring_ui.cjs",
+    "night_light_ui.cjs"
+  ],
+  "runtime_smoke": {
+    "main_blank_counts": [
+      0,
+      0
+    ],
+    "night_blank_counts": [
+      0,
+      0
+    ],
+    "night_analysis_enabled": true,
+    "separate_detectors": true,
+    "separate_pose_models": true,
+    "hardware_opened": false,
+    "weights_sha256": {
+      "best.pt": "61c916c01419ab6d0726d156b858b09c460a7d3c75e700bd5b5d97ee0c9d60ff",
+      "yolo11s-pose.pt": "1060bda4a27012060eca246f9b2adeea22eabb045a1e58f8d229be29b7ebc2ba"
+    }
+  },
+  "local_configuration": "NIGHTVISION_DETECTION_ENABLED=true; credentials retained.",
+  "independent_state": "Main and Night use separate model instances, tracks, pose association, image-motion history, gesture observations and injury/inactivity timers.",
+  "night_details": "Night API and overlay plus separate Night-camera person details; never merged into Main counts or mission evidence.",
+  "age_years_available": false,
+  "adult_child_method": "Existing bounding-box/frame-height ratio; unvalidated.",
+  "consciousness_method": "Existing image-motion rule; unvalidated and not clinical confirmation.",
+  "gestures": "Temporal raised hand/waving candidates; operator verification required.",
+  "live_accuracy": "pending",
+  "firmware_uploaded": false,
+  "wiring_changed": false,
+  "movement_on_hold": true,
+  "usb_bridge_started": false,
+  "source_sha256": {
+    "app.py": "6a806bcc3117f15e06c2e72b5f20fdc9df1c910b1208eebab4174becec7aea36",
+    "features/person_analysis.py": "2c05030be478ef90cf90403589787e7f4be736c4375498212c494ec0378eecdd",
+    "features/nightvision.py": "f30fd412cb972ee37502532b6ba410daf101eaa2517a67163a9c28efd1c06f63",
+    "static/js/dashboard.js": "78acc3aa413bdf30e78e98f472e237173285763e79a93916002ca26a8a867aed",
+    "static/css/dashboard.css": "045215f2cba88d5f930ca943c67cef202648400b137caf8cc35124de4d2150d6",
+    "templates/dashboard/survivors.html": "ab939d0cfa789763b800001c9432e22992c8021c7280f9f9248adbfc3d2816fd",
+    "templates/dashboard/monitoring.html": "312174e74ec1e1ebcf67ea0a9e2caaa8a85923e435106e23bc581304d43c9c02",
+    "templates/testing.html": "713466fb708f935b274c13a19183d331a435cb92d3a0b20098eff0f39563f363"
+  },
+  "served_routes_and_assets": {
+    "/login": 200,
+    "/testing": 200,
+    "guide_has_night_steps": true,
+    "/api/nightvision": 401,
+    "/api/device-status": 401,
+    "/api/survivors": 401,
+    "static/js/dashboard.js_current": true,
+    "static/css/dashboard.css_current": true,
+    "usb_bridge_listening": false
+  }
+}

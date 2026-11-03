@@ -1,0 +1,863 @@
+{
+  "phase": "finished",
+  "events": [
+    {
+      "at_utc": "2026-10-28T14:25:23.288372+00:00",
+      "stage": "status_tcp_connect",
+      "elapsed_ms": 13.1,
+      "connected": true
+    },
+    {
+      "at_utc": "2026-10-28T14:25:23.312251+00:00",
+      "stage": "status_headers",
+      "elapsed_ms": 37.0,
+      "http_status": 200
+    },
+    {
+      "at_utc": "2026-10-28T14:25:23.312657+00:00",
+      "stage": "status_body",
+      "elapsed_ms": 37.4,
+      "settings": {
+        "framesize": 6,
+        "quality": 10,
+        "pixformat": 4,
+        "xclk": 20
+      }
+    },
+    {
+      "at_utc": "2026-10-28T14:25:23.593583+00:00",
+      "stage": "stream_tcp_connect",
+      "elapsed_ms": 276.8,
+      "attempt": 1,
+      "connected": true
+    },
+    {
+      "at_utc": "2026-10-28T14:25:23.607808+00:00",
+      "stage": "stream_headers",
+      "elapsed_ms": 291.0,
+      "attempt": 1,
+      "http_status": 200
+    },
+    {
+      "at_utc": "2026-10-28T14:25:23.611829+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 295.1,
+      "attempt": 1,
+      "bytes": 36,
+      "decoded_frames": 0,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:25:25.347639+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 2030.9,
+      "attempt": 1,
+      "bytes": 50307,
+      "decoded_frames": 7,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:25:26.372978+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 3056.2,
+      "attempt": 1,
+      "bytes": 96401,
+      "decoded_frames": 15,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:25:27.383243+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 4066.5,
+      "attempt": 1,
+      "bytes": 162671,
+      "decoded_frames": 25,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:25:28.395988+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 5079.2,
+      "attempt": 1,
+      "bytes": 287058,
+      "decoded_frames": 43,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:25:29.574483+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 6257.7,
+      "attempt": 1,
+      "bytes": 377427,
+      "decoded_frames": 57,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:25:30.711500+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 7394.8,
+      "attempt": 1,
+      "bytes": 461169,
+      "decoded_frames": 70,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:25:31.836635+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 8519.8,
+      "attempt": 1,
+      "bytes": 589213,
+      "decoded_frames": 89,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:25:32.843676+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 9526.9,
+      "attempt": 1,
+      "bytes": 695884,
+      "decoded_frames": 105,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:25:33.975384+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 10658.6,
+      "attempt": 1,
+      "bytes": 813630,
+      "decoded_frames": 123,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:25:35.095691+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 11778.9,
+      "attempt": 1,
+      "bytes": 901025,
+      "decoded_frames": 136,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:25:36.099997+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 12783.2,
+      "attempt": 1,
+      "bytes": 974762,
+      "decoded_frames": 147,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:25:38.689246+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 15372.5,
+      "attempt": 1,
+      "bytes": 1058008,
+      "decoded_frames": 159,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:25:39.728965+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 16412.2,
+      "attempt": 1,
+      "bytes": 1155538,
+      "decoded_frames": 173,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:25:40.759832+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 17443.0,
+      "attempt": 1,
+      "bytes": 1197352,
+      "decoded_frames": 179,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:25:41.769228+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 18452.4,
+      "attempt": 1,
+      "bytes": 1287949,
+      "decoded_frames": 192,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:25:43.562993+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 20246.2,
+      "attempt": 1,
+      "bytes": 1368026,
+      "decoded_frames": 203,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:25:44.588291+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 21271.5,
+      "attempt": 1,
+      "bytes": 1469103,
+      "decoded_frames": 218,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:25:45.712044+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 22395.3,
+      "attempt": 1,
+      "bytes": 1582168,
+      "decoded_frames": 234,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:25:46.801711+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 23485.0,
+      "attempt": 1,
+      "bytes": 1638605,
+      "decoded_frames": 244,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:25:47.963079+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 24646.3,
+      "attempt": 1,
+      "bytes": 1756897,
+      "decoded_frames": 262,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:25:49.027035+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 25710.2,
+      "attempt": 1,
+      "bytes": 1871705,
+      "decoded_frames": 278,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:25:50.267876+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 26951.1,
+      "attempt": 1,
+      "bytes": 2028532,
+      "decoded_frames": 301,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:25:51.293441+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 27976.6,
+      "attempt": 1,
+      "bytes": 2103249,
+      "decoded_frames": 312,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:25:52.325401+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 29008.5,
+      "attempt": 1,
+      "bytes": 2212805,
+      "decoded_frames": 329,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:25:53.390864+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 30074.0,
+      "attempt": 1,
+      "bytes": 2242825,
+      "decoded_frames": 333,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:25:55.110002+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 31793.2,
+      "attempt": 1,
+      "bytes": 2245697,
+      "decoded_frames": 333,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:25:57.238442+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 33921.6,
+      "attempt": 1,
+      "bytes": 2253782,
+      "decoded_frames": 335,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:25:58.241840+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 34925.0,
+      "attempt": 1,
+      "bytes": 2294887,
+      "decoded_frames": 341,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:00.773049+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 37456.2,
+      "attempt": 1,
+      "bytes": 2347541,
+      "decoded_frames": 348,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:02.367143+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 39050.3,
+      "attempt": 1,
+      "bytes": 2382069,
+      "decoded_frames": 354,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:03.377391+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 40060.5,
+      "attempt": 1,
+      "bytes": 2449366,
+      "decoded_frames": 365,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:04.655035+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 41338.2,
+      "attempt": 1,
+      "bytes": 2506417,
+      "decoded_frames": 374,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:06.294392+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 42977.5,
+      "attempt": 1,
+      "bytes": 2535128,
+      "decoded_frames": 379,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:08.702768+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 45385.9,
+      "attempt": 1,
+      "bytes": 2547254,
+      "decoded_frames": 381,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:09.829005+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 46512.1,
+      "attempt": 1,
+      "bytes": 2569404,
+      "decoded_frames": 384,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:12.720322+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 49403.4,
+      "attempt": 1,
+      "bytes": 2571726,
+      "decoded_frames": 385,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:14.675645+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 51358.8,
+      "attempt": 1,
+      "bytes": 2590080,
+      "decoded_frames": 388,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:17.739343+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 54422.4,
+      "attempt": 1,
+      "bytes": 2605184,
+      "decoded_frames": 390,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:18.945041+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 55628.1,
+      "attempt": 1,
+      "bytes": 2639528,
+      "decoded_frames": 396,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:20.020261+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 56703.3,
+      "attempt": 1,
+      "bytes": 2659572,
+      "decoded_frames": 399,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:21.022910+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 57706.0,
+      "attempt": 1,
+      "bytes": 2672456,
+      "decoded_frames": 401,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:22.064260+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 58747.3,
+      "attempt": 1,
+      "bytes": 2715396,
+      "decoded_frames": 408,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:23.091523+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 59774.6,
+      "attempt": 1,
+      "bytes": 2771220,
+      "decoded_frames": 417,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:24.122258+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 60805.3,
+      "attempt": 1,
+      "bytes": 2790505,
+      "decoded_frames": 421,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:25.237865+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 61921.0,
+      "attempt": 1,
+      "bytes": 2822736,
+      "decoded_frames": 426,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:26.261587+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 62944.6,
+      "attempt": 1,
+      "bytes": 2885720,
+      "decoded_frames": 436,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:27.344310+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 64027.4,
+      "attempt": 1,
+      "bytes": 2918983,
+      "decoded_frames": 442,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:28.362330+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 65045.4,
+      "attempt": 1,
+      "bytes": 2961588,
+      "decoded_frames": 449,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:29.591625+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 66274.7,
+      "attempt": 1,
+      "bytes": 3020264,
+      "decoded_frames": 458,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:30.596731+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 67279.8,
+      "attempt": 1,
+      "bytes": 3065925,
+      "decoded_frames": 466,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:31.599037+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 68282.1,
+      "attempt": 1,
+      "bytes": 3139267,
+      "decoded_frames": 478,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:32.627964+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 69311.0,
+      "attempt": 1,
+      "bytes": 3249355,
+      "decoded_frames": 496,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:33.635650+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 70318.7,
+      "attempt": 1,
+      "bytes": 3359479,
+      "decoded_frames": 514,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:34.658051+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 71341.1,
+      "attempt": 1,
+      "bytes": 3451249,
+      "decoded_frames": 529,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:35.662562+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 72345.6,
+      "attempt": 1,
+      "bytes": 3512429,
+      "decoded_frames": 539,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:37.681374+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 74364.4,
+      "attempt": 1,
+      "bytes": 3593635,
+      "decoded_frames": 552,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:41.160336+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 77843.4,
+      "attempt": 1,
+      "error_code": "timeout",
+      "bytes": 3616539,
+      "decoded_frames": 556
+    },
+    {
+      "at_utc": "2026-10-28T14:26:42.235991+00:00",
+      "stage": "stream_tcp_connect",
+      "elapsed_ms": 78919.0,
+      "attempt": 2,
+      "connected": true
+    },
+    {
+      "at_utc": "2026-10-28T14:26:42.271955+00:00",
+      "stage": "stream_headers",
+      "elapsed_ms": 78955.0,
+      "attempt": 2,
+      "http_status": 200
+    },
+    {
+      "at_utc": "2026-10-28T14:26:42.281783+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 78964.8,
+      "attempt": 2,
+      "bytes": 3616575,
+      "decoded_frames": 556,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:43.332034+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 80015.1,
+      "attempt": 2,
+      "bytes": 3653247,
+      "decoded_frames": 562,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:44.349745+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 81032.7,
+      "attempt": 2,
+      "bytes": 3703786,
+      "decoded_frames": 570,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:45.463942+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 82147.0,
+      "attempt": 2,
+      "bytes": 3725481,
+      "decoded_frames": 573,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:46.521536+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 83204.5,
+      "attempt": 2,
+      "bytes": 3749813,
+      "decoded_frames": 577,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:49.794958+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 86478.0,
+      "attempt": 2,
+      "bytes": 3778433,
+      "decoded_frames": 582,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:50.800575+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 87483.6,
+      "attempt": 2,
+      "bytes": 3806233,
+      "decoded_frames": 587,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:51.812526+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 88495.5,
+      "attempt": 2,
+      "bytes": 3818546,
+      "decoded_frames": 589,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:52.848431+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 89531.4,
+      "attempt": 2,
+      "bytes": 3855149,
+      "decoded_frames": 595,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:54.423406+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 91106.4,
+      "attempt": 2,
+      "bytes": 3895805,
+      "decoded_frames": 601,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:55.549962+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 92233.0,
+      "attempt": 2,
+      "bytes": 3910125,
+      "decoded_frames": 604,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:56.967390+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 93650.4,
+      "attempt": 2,
+      "bytes": 3931585,
+      "decoded_frames": 607,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:58.110157+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 94793.2,
+      "attempt": 2,
+      "bytes": 3940181,
+      "decoded_frames": 608,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:26:59.240559+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 95923.6,
+      "attempt": 2,
+      "bytes": 3959172,
+      "decoded_frames": 612,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:27:01.029206+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 97712.2,
+      "attempt": 2,
+      "bytes": 3993133,
+      "decoded_frames": 617,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:27:02.204755+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 98887.7,
+      "attempt": 2,
+      "bytes": 4000293,
+      "decoded_frames": 618,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:27:05.020136+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 101703.1,
+      "attempt": 2,
+      "bytes": 4017465,
+      "decoded_frames": 621,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:27:06.044937+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 102727.9,
+      "attempt": 2,
+      "bytes": 4054681,
+      "decoded_frames": 627,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:27:07.102801+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 103785.8,
+      "attempt": 2,
+      "bytes": 4080449,
+      "decoded_frames": 631,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:27:08.553822+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 105236.8,
+      "attempt": 2,
+      "bytes": 4112147,
+      "decoded_frames": 637,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:27:09.579263+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 106262.2,
+      "attempt": 2,
+      "bytes": 4134837,
+      "decoded_frames": 640,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:27:13.006566+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 109689.5,
+      "attempt": 2,
+      "error_code": "timeout",
+      "bytes": 4156297,
+      "decoded_frames": 644
+    },
+    {
+      "at_utc": "2026-10-28T14:27:14.504242+00:00",
+      "stage": "stream_tcp_connect",
+      "elapsed_ms": 111187.2,
+      "attempt": 3,
+      "connected": true
+    },
+    {
+      "at_utc": "2026-10-28T14:27:15.158709+00:00",
+      "stage": "stream_headers",
+      "elapsed_ms": 111841.6,
+      "attempt": 3,
+      "http_status": 200
+    },
+    {
+      "at_utc": "2026-10-28T14:27:15.169129+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 111852.1,
+      "attempt": 3,
+      "bytes": 4156333,
+      "decoded_frames": 644,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:27:16.280425+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 112963.3,
+      "attempt": 3,
+      "bytes": 4168535,
+      "decoded_frames": 646,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:27:19.286554+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 115969.5,
+      "attempt": 3,
+      "bytes": 4173046,
+      "decoded_frames": 647,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T14:27:22.364204+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 119047.1,
+      "attempt": 3,
+      "error_code": "timeout",
+      "bytes": 4176272,
+      "decoded_frames": 647
+    },
+    {
+      "at_utc": "2026-10-28T14:27:23.427719+00:00",
+      "stage": "status_tcp_connect",
+      "elapsed_ms": 93.1,
+      "connected": true
+    },
+    {
+      "at_utc": "2026-10-28T14:27:23.452368+00:00",
+      "stage": "status_headers",
+      "elapsed_ms": 117.7,
+      "http_status": 200
+    },
+    {
+      "at_utc": "2026-10-28T14:27:23.454958+00:00",
+      "stage": "status_body",
+      "elapsed_ms": 120.3,
+      "settings": {
+        "framesize": 6,
+        "quality": 10,
+        "pixformat": 4,
+        "xclk": 20
+      }
+    }
+  ],
+  "scope": "Original-only HTTP GET /status and GET :81/stream, sequential. No settings, firmware, serial, motors, audio or saved images.",
+  "physical_setup": "Original small-lens camera on visually checked ESP32-CAM-MB base. All five original jumper leads detached, robot master OFF, spare OFF with six leads detached. USB base to Mac is the sole original-camera supply. No serial port opened.",
+  "source_settings": "Unchanged; read-only status verifies values. USB supply voltage is not measured.",
+  "mac_ip": "192.168.4.2",
+  "started_at_utc": "2026-10-28T14:25:23.272820+00:00",
+  "stream_summary": {
+    "attempts": 3,
+    "bytes": 4176272,
+    "decoded_frames": 647,
+    "invalid_frames": 0,
+    "max_no_decoded_frame_seconds": 5.234,
+    "network_retained": true,
+    "note": "Reception timing only; no optical latency or identity analysis."
+  }
+}

@@ -1,14 +1,23 @@
 <section id="communication" class="card" aria-labelledby="communicationTitle">
   <div class="card-top">
-    <div><p class="eyebrow">PROPOSED FEATURE</p><h2 id="communicationTitle">Survivor communication</h2></div>
-    <span class="pill">Reply channel pending</span>
+    <div><p class="eyebrow">MANUAL HEADSET TEST</p><h2 id="communicationTitle">Survivor communication</h2></div>
+    <span class="pill">Live test required</span>
   </div>
-  <p>The survivor can signal with gestures observed by the responder through the robot’s camera. To reply without a phone, the robot needs an output the survivor can perceive. A usable visible camera LED could provide simple light acknowledgements, if its presence and control are confirmed.</p>
-  <p class="muted">The team confirmed that survivors must communicate through the robot without a phone, and the robot has no speaker, buzzer, or display. Visible LED control is unconfirmed. Two-way communication is not available yet. Dashboard text stays on the responder’s laptop; it is not sent to the survivor.</p>
+  <p>Use the available headset microphone and earpiece on the robot, with a separate operator microphone and output at the laptop. Select all four devices explicitly. This opens two local audio routes; no audio is saved or sent to a cloud service.</p>
+  <p class="muted">The headset earpiece must be audible near the robot. Software readiness does not establish real range or audibility. Dashboard text stays on the responder's laptop; it is not sent to the survivor.</p>
+  <div class="duplex-grid">
+    <label>Robot microphone<select id="duplexRobotMic"><option value="">Select a specific device</option></select></label>
+    <label>Operator microphone<select id="duplexOperatorMic"><option value="">Select a specific device</option></select></label>
+    <label>Robot earpiece / output<select id="duplexRobotOutput"><option value="">Select a specific device</option></select></label>
+    <label>Operator headphones / output<select id="duplexOperatorOutput"><option value="">Select a specific device</option></select></label>
+  </div>
+  <label class="sound-mount"><input id="duplexMounted" type="checkbox">I confirm the headset microphone and earpiece are secured on the robot, the operator devices are separate, and output volume is low.</label>
+  <div class="camera-controls"><button id="duplexFind" type="button">Find audio devices</button><button id="duplexStart" type="button" disabled>Start two-way audio</button><button id="duplexStop" type="button" disabled>Stop two-way audio</button></div>
+  <p id="duplexState" role="status">Two-way audio off. No microphone or output has been opened.</p>
   <details>
-    <summary>How this could use the existing equipment</summary>
-    <p>If your ESP32-CAM has an accessible visible LED, a firmware-controlled light acknowledgement could pair with camera-observed gestures. Light patterns need an agreed meaning that the survivor understands; they cannot explain arbitrary questions. Confirm the board and wiring before enabling this approach. Infrared illumination is not a visible message channel.</p>
-    <p>For spoken questions and replies, the planned microphone would need a robot speaker with a suitable driver or amplifier and audio firmware. That would require additional hardware. The current sound classification endpoint does not stream speech or interpret a survivor’s answer.</p>
+    <summary>Setup and limitations</summary>
+    <p>Connect or pair the headset with the laptop first. A wired headset is tethered. Use Google Chrome at localhost:5050 if output selection is unavailable in the in-app browser. Start with the robot and operator close together, then test the intended distance. Keep microphones away from their receiving speakers to reduce feedback. Some headsets mute themselves outside the ear or cannot support both inputs at once.</p>
+    <p>Discovery briefly requests microphone permission and releases the probe. Start opens only selected inputs; a mismatch or disconnect stops both directions. Hiding/closing the page or signing out stops audio. Two-way audio and the separate sound-analysis mode stop one another before starting.</p>
   </details>
   <div class="camera-controls communication-actions">
     <a href="#monitor">View live monitoring</a>

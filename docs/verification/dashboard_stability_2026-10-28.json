@@ -1,0 +1,78 @@
+{
+  "checked_at": "2026-10-28T15:15:22.627789+08:00",
+  "python_tests_passed": 247,
+  "browser_suites_passed": [
+    "dashboard_stability_ui.cjs",
+    "latest_frame_ui.cjs",
+    "shared_monitoring_ui.cjs",
+    "camera_recovery_ui.cjs",
+    "dashboard_ui.cjs",
+    "night_light_ui.cjs",
+    "thermal_live_ui.cjs",
+    "headset_audio_ui.cjs"
+  ],
+  "changes": [
+    "Main/Night subscriptions persist across monitoring sections until explicit disconnect/session end.",
+    "Brief network/5xx failures retry within the same viewer and original five-second frame deadline; startup grace12s, explicit auth/protocol failure still terminates.",
+    "Invisible monitor-camera delivery is paced at500ms; returning wakes it immediately without changing viewer. Hidden browser tabs pause non-recording feeds/polls and resume operator-requested connections.",
+    "Thermal source polling targets at most4starts/s with existing100ms minimum post-read pause; foreground display250ms, shared summary1000ms. Installed acquisition rate remains unchanged.",
+    "Thermal uses a reusable32x24canvas with pixelated scaling and the original hue map, preserving all768sensor values.",
+    "Recent validated DHT/thermal samples survive brief transport faults with explicit retry labels and their original10s/5s expiry; invalid/stale samples still clear.",
+    "Internal authenticated60second recorder saves cached normal-dashboard health/history without starting devices or saving images/identities/credentials.",
+    "Drop isolated damaged JPEGs without clearing valid-video state or renewing its timestamp; persistent corruption still expires/reconnects.",
+    "Resynchronize a truncated image only at the declared next multipart boundary, preserving complete following frames.",
+    "Record invalid-JPEG counters and HTTP response-code counters without response bodies/identities.",
+    "One-shot runtime opt-in BIMBOT_CAPTURE_ON_VIDEO starts cached-state diagnostics after first valid video; partial file persists each sample and summaries separate robot-subnet samples from later internet/chat samples."
+  ],
+  "served_checks": {
+    "/": 200,
+    "thermal_canvas_present": true,
+    "no_public_guide_link": true,
+    "/testing": 200,
+    "normal_dashboard_record_button": true,
+    "/api/system-check/recording": 401,
+    "static/js/dashboard.js": true,
+    "static/js/live_camera_player.js": true,
+    "static/js/testing.js": true,
+    "static/css/dashboard.css": true
+  },
+  "live_normal_dashboard_check": "pending",
+  "physical_optical_latency": "not measured",
+  "firmware_uploaded": false,
+  "wiring_changed": false,
+  "movement_on_hold": true,
+  "source_sha256": {
+    "app.py": "2ff4370847d72ef3dd88b3e7726087bd39e28a7d0d7d3230b5b64df33bf8356f",
+    "features/live_camera.py": "d6848dceca44df1bfc404c1ac50250550f41bc2b0597d450dfe1917373404f4a",
+    "features/telemetry.py": "70a942f9d06adaf4ac9a672bbbc82ce5684baaa827623f612d22573b168d2c3b",
+    "features/system_diagnostics.py": "7db6a781936af4f22a5f7ad1b1befae0c92d73823eca997e70de0161717c8bee",
+    "static/js/live_camera_player.js": "4e3d6d7f1e6dcc4f20777192d59227aac165d2df74fdbaa81588b0d8bb9edd38",
+    "static/js/dashboard.js": "98ad73d727d35bc5134acd1cc45799d751c77af676f0f2df149c6eaa30592d1b",
+    "static/js/testing.js": "d40b15de49f51e3f0d81f8b5e6e83fad657930e0ff2d86519c78d9610f29788d",
+    "static/css/dashboard.css": "56bceffd2bbdcaa6526c39eb409911cddb8b7df55267b07532f05fb20f6fa54f",
+    "templates/dashboard/monitoring.html": "ad9a833e948c99a2b3a98ad3502d0efae570e4f2777ba73aed6ac9a38838695c",
+    "templates/testing.html": "b43d312a276c6c5abaac3f995edb89cf1968405111dd4bdcd297660f75721b40"
+  },
+  "operator_retest": "Operator still reports disconnects during close/quick movement; first requested normal-dashboard recording did not yield a completed file. Do not mark physical stability achieved.",
+  "passive_capture_smoke": {
+    "saved": true,
+    "one_shot_hooks_removed": true,
+    "stale_frame_did_not_trigger": true,
+    "hardware_or_workers_started": false
+  },
+  "latest_generated_latency": {
+    "synthetic_localhost": true,
+    "physical_robot_test": false,
+    "source_fps": 15,
+    "injected_decode_delay_ms": 120,
+    "painted_frames": 36,
+    "skipped_source_frames": 30,
+    "max_painted_reception_age_ms": 189.4,
+    "p95_painted_reception_age_ms": 189.4,
+    "first_six_mean_age_ms": 156.6,
+    "last_six_mean_age_ms": 154.4,
+    "maximum_concurrent_frame_requests": 1,
+    "remaining_viewer_leases": 0,
+    "remaining_upstream_clients": 0
+  }
+}

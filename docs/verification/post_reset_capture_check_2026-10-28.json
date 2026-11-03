@@ -1,0 +1,238 @@
+{
+  "phase": "finished",
+  "samples": [
+    {
+      "at": 1793177003.030954,
+      "request": "/status",
+      "http_status": 200,
+      "settings": {
+        "framesize": 6,
+        "quality": 10,
+        "pixformat": 4,
+        "xclk": 20
+      },
+      "transport_ms": 1874.8
+    },
+    {
+      "at": 1793177004.915361,
+      "request": "/status",
+      "http_status": 200,
+      "settings": {
+        "framesize": 6,
+        "quality": 10,
+        "pixformat": 4,
+        "xclk": 20
+      },
+      "transport_ms": 29.4
+    },
+    {
+      "at": 1793177006.957561,
+      "request": "/status",
+      "http_status": 200,
+      "settings": {
+        "framesize": 6,
+        "quality": 10,
+        "pixformat": 4,
+        "xclk": 20
+      },
+      "transport_ms": 43.9
+    },
+    {
+      "at": 1793177009.016456,
+      "request": "/status",
+      "http_status": 200,
+      "settings": {
+        "framesize": 6,
+        "quality": 10,
+        "pixformat": 4,
+        "xclk": 20
+      },
+      "transport_ms": 177.2
+    },
+    {
+      "at": 1793177011.2079291,
+      "request": "/capture",
+      "error_code": "timeout",
+      "transport_ms": 2388.9
+    },
+    {
+      "at": 1793177013.707264,
+      "request": "/capture",
+      "http_status": 200,
+      "valid_jpeg": true,
+      "size": [
+        320,
+        240
+      ],
+      "bytes": 12271,
+      "transport_ms": 472.6
+    },
+    {
+      "at": 1793177014.2966669,
+      "request": "/capture",
+      "http_status": 200,
+      "valid_jpeg": true,
+      "size": [
+        320,
+        240
+      ],
+      "bytes": 9294,
+      "transport_ms": 840.6
+    },
+    {
+      "at": 1793177015.249276,
+      "request": "/capture",
+      "error_code": "timeout",
+      "transport_ms": 2188.9
+    },
+    {
+      "at": 1793177017.5475998,
+      "request": "/capture",
+      "http_status": 200,
+      "valid_jpeg": true,
+      "size": [
+        320,
+        240
+      ],
+      "bytes": 9121,
+      "transport_ms": 913.3
+    },
+    {
+      "at": 1793177018.572757,
+      "request": "/capture",
+      "http_status": 200,
+      "valid_jpeg": true,
+      "size": [
+        320,
+        240
+      ],
+      "bytes": 9176,
+      "transport_ms": 1551.6
+    },
+    {
+      "at": 1793177020.2341702,
+      "request": "/capture",
+      "http_status": 200,
+      "valid_jpeg": true,
+      "size": [
+        320,
+        240
+      ],
+      "bytes": 9161,
+      "transport_ms": 425.2
+    },
+    {
+      "at": 1793177020.776612,
+      "request": "/capture",
+      "http_status": 200,
+      "valid_jpeg": true,
+      "size": [
+        320,
+        240
+      ],
+      "bytes": 9287,
+      "transport_ms": 1379.4
+    },
+    {
+      "at": 1793177022.267322,
+      "request": "/capture",
+      "http_status": 200,
+      "valid_jpeg": true,
+      "size": [
+        320,
+        240
+      ],
+      "bytes": 9323,
+      "transport_ms": 490.9
+    },
+    {
+      "at": 1793177022.8741188,
+      "request": "/capture",
+      "error_code": "timeout",
+      "transport_ms": 3168.1
+    },
+    {
+      "at": 1793177026.157114,
+      "request": "/capture",
+      "http_status": 200,
+      "valid_jpeg": true,
+      "size": [
+        320,
+        240
+      ],
+      "bytes": 9487,
+      "transport_ms": 2108.7
+    },
+    {
+      "at": 1793177028.3788931,
+      "request": "/capture",
+      "http_status": 200,
+      "error_code": "transport_error",
+      "transport_ms": 2370.4
+    },
+    {
+      "at": 1793177030.8638752,
+      "request": "/capture",
+      "error_code": "timeout",
+      "transport_ms": 2909.8
+    },
+    {
+      "at": 1793177033.888899,
+      "request": "/capture",
+      "http_status": 200,
+      "error_code": "transport_error",
+      "transport_ms": 2293.6
+    },
+    {
+      "at": 1793177036.292191,
+      "request": "/capture",
+      "error_code": "timeout",
+      "transport_ms": 1002.2
+    },
+    {
+      "at": 1793177037.4085498,
+      "request": "/capture",
+      "error_code": "timeout",
+      "transport_ms": 2998.3
+    },
+    {
+      "at": 1793177040.5221891,
+      "request": "/capture",
+      "http_status": 200,
+      "valid_jpeg": true,
+      "size": [
+        320,
+        240
+      ],
+      "bytes": 9159,
+      "transport_ms": 874.3
+    },
+    {
+      "at": 1793177041.510956,
+      "request": "/capture",
+      "error_code": "timeout",
+      "transport_ms": 2002.1
+    },
+    {
+      "at": 1793177043.624275,
+      "request": "/capture",
+      "error_code": "timeout",
+      "transport_ms": 2009.6
+    },
+    {
+      "at": 1793177045.7461262,
+      "request": "/capture",
+      "http_status": 200,
+      "error_code": "transport_error",
+      "transport_ms": 3614.1
+    },
+    {
+      "at": 1793177049.4760199,
+      "request": "/status",
+      "error_code": "timeout",
+      "transport_ms": 1002.8
+    }
+  ],
+  "scope": "Direct original status and paced JPEG reads with dashboard stopped; no commands, saved images or firmware.",
+  "mac_ip": "192.168.4.4"
+}

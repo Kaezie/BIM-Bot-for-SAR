@@ -1,0 +1,121 @@
+{
+  "date": "2026-10-29",
+  "completed_at": "2026-10-29T14:07:31.574463+00:00",
+  "result": "Night application uploaded and independently flash-verified; live acceptance PENDING",
+  "target": {
+    "port": "/dev/cu.usbserial-110",
+    "usb": "CH340 1a86:7523",
+    "chip": "ESP32-D0WD-V3 rev3.1",
+    "flash_bytes": 4194304,
+    "role_proof": "Full backup application region contains installedbimbot-nightvision/2,fresh/1,retry/1; verified against physical flash."
+  },
+  "backup": {
+    "backup_file": "/Users/christine/Documents/ChatGPT/BIM-BOT/BIM-Bot-for-SAR/local_data/firmware_backups/night_2026-10-29/usb_full_before_20261029T135341Z.bin",
+    "bytes": 4194304,
+    "sha256": "f0f377d5ac23f1e8a02c7bf5c6c65e356bf2663fdffe333a7efb5eb61ede3711",
+    "night_firmware_marker_present": true,
+    "installed_fresh1_marker": true,
+    "installed_retry1_marker": true,
+    "partition_table_matches_candidate": true
+  },
+  "backup_device_verified": true,
+  "build": {
+    "path": "/Users/christine/Documents/ChatGPT/BIM-BOT/BIM-Bot-for-SAR/local_data/firmware_checks/night_fresh2_default_radio_refresh3",
+    "target": "esp32:esp32:esp32cam",
+    "returncode": 0,
+    "warning_count": 0,
+    "stream_target_fps": 8,
+    "jpeg_quality": 12,
+    "geometry": "QVGA unchanged",
+    "radio": "platform default; earlier proposed8.5dBm override removed BEFOREupload",
+    "failed_join_retry_ms": 3000,
+    "stream_send_timeout_seconds": 5,
+    "thermal_enabled": true,
+    "thermal_refresh_code": 3,
+    "native_tests_passed": [
+      "frame_pacing",
+      "wifi_retry",
+      "stream_packet",
+      "illumination_lease",
+      "camera_startup",
+      "thermal_frame"
+    ]
+  },
+  "preupload_safety": {
+    "credential_bytes_match_installed_and_candidate": true,
+    "private_header_unchanged_since_build": true,
+    "sources_match_build": true,
+    "application_sha256": "0b1b6d33c20c5e34f454d11dfff583f5e25b91d98b8cdec5d73c36750f09a3f5",
+    "application_hash_matches_build": true,
+    "partition_table_matches_backup": true,
+    "firmware_written": false,
+    "image_validation_returncode": 0,
+    "safe_image_info": [
+      "Flash size: 4MB",
+      "Flash freq: 80m",
+      "Flash mode: DIO",
+      "Chip ID: 0 (ESP32)",
+      "Checksum: 0xdf (valid)"
+    ]
+  },
+  "upload": {
+    "started_at": "2026-10-29T14:00:26.081132+00:00",
+    "operation": "Night application-only write",
+    "port": "/dev/cu.usbserial-110",
+    "offset": "0x10000",
+    "bytes": 1049520,
+    "application_sha256": "0b1b6d33c20c5e34f454d11dfff583f5e25b91d98b8cdec5d73c36750f09a3f5",
+    "backup_sha256": "f0f377d5ac23f1e8a02c7bf5c6c65e356bf2663fdffe333a7efb5eb61ede3711",
+    "backup_verified_against_device": true,
+    "installed_night_identity_verified": true,
+    "header_flash_parameters_unchanged": true,
+    "credentials_match_installed": true,
+    "stream_target_fps": 8,
+    "radio_power": "platform default",
+    "thermal_enabled": true,
+    "thermal_refresh_code": 3,
+    "main_firmware_written": false,
+    "bootloader_partition_nvs_written": false,
+    "stage": "write_complete",
+    "returncode": 0,
+    "safe_diagnostics": [
+      "Wrote 1049520 bytes (674455 compressed) at 0x00010000 in 33.4 seconds (251.5 kbit/s).",
+      "Hash of data verified.",
+      "Hard resetting via RTS pin..."
+    ],
+    "finished_at": "2026-10-29T14:01:05.154331+00:00"
+  },
+  "postupload_device_verification": {
+    "operation": "independent post-upload device verification",
+    "returncode": 0,
+    "verified": true,
+    "application_sha256": "0b1b6d33c20c5e34f454d11dfff583f5e25b91d98b8cdec5d73c36750f09a3f5",
+    "offset": "0x10000",
+    "main_firmware_written": false,
+    "safe_diagnostics": []
+  },
+  "main_firmware_written": false,
+  "persistent_env_edited": false,
+  "robot_movement_commands_sent": false,
+  "runtime": {
+    "pid": 9960,
+    "session": 74415,
+    "port": 5050,
+    "login_http": 200,
+    "dashboard_http": 200,
+    "unauth_night_frame_http": 401,
+    "unauth_device_status_http": 401,
+    "main_url": "http://192.168.4.1:81/stream",
+    "night_url_last_verified": "http://192.168.4.3:81/stream",
+    "night_detection_enabled": true,
+    "sensor_and_thermal_and_motor_urls": "blank intentionally during camera test",
+    "passive_trace_seconds": 300
+  },
+  "postflash_status_observer": {
+    "session": 7605,
+    "path": "/private/tmp/bimbot_night_profile_observer.py",
+    "report": "local_data/diagnostics/night_fresh2_status_2026-10-29.json",
+    "scope": "Status only; no competing video stream. Awaits robot network. Must verifyretry/2,fresh/2,target8FPS,camera_readytrue."
+  },
+  "next_live_test": "OnESP32_CAM:disconnectMainvideo,connectNightonly2minutes; thenconnectMainaswell andswitchviews3minutes; stay30sextra. WhiteLEDoff,wheelsraised,unchangedwiring. No powercycle needed."
+}

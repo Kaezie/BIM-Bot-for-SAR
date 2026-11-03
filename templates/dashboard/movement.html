@@ -1,0 +1,15 @@
+<section id="recordedMovement" class="card movement-card" aria-labelledby="movementTitle">
+  <div class="card-top"><div><p class="eyebrow">ROBOT MOVEMENT</p><h2 id="movementTitle">Recorded movement</h2></div><span class="pill" id="movementState">Checking</span></div>
+  <p id="movementMessage" role="status">Checking for a movement recorder.</p>
+  <p class="muted">Commands and elapsed time describe what the controller requested. They do not measure distance, GPS coordinates, obstacle clearance or arrival at base.</p>
+  <dl class="movement-readings">
+    <div><dt>Source</dt><dd id="movementSource">—</dd></div>
+    <div><dt>Recorded steps</dt><dd id="movementCount">—</dd></div>
+    <div><dt>Recorded drive time</dt><dd id="movementTime">—</dd></div>
+    <div><dt>Current command</dt><dd id="movementCurrent">—</dd></div>
+    <div><dt>Reverse playback</dt><dd id="movementProgress">—</dd></div>
+  </dl>
+  <ol id="movementList" class="movement-list"><li>No recorded movements available.</li></ol>
+  <div class="camera-controls"><button id="movementReturn" type="button" disabled>Return along recorded commands</button><button id="movementStop" class="danger-btn" type="button" disabled>Stop return</button><button id="movementDownload" type="button" disabled>Download movement record</button></div>
+  <p class="muted">Use the updated Uno sketch and explicitly start the USB serial bridge. At the starting area, press * on the supplied IR remote to begin a fresh trace; OK stops movement. Supervised return is disabled by default until bench checks pass. Playback completion does not confirm physical arrival.</p>
+</section>

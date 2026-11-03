@@ -1,0 +1,12 @@
+{
+  "reviewed_at_utc": "2026-10-28T16:19:11.129111+00:00",
+  "method": "Held-state snapshots with operator confirmation, not the expired short-cycle watcher.",
+  "original_usb_unplugged": "No cu.usbserial nodes and no FTDI/CH340/CP210x matching USB device enumerated.",
+  "original_usb_reconnected": "Only cu.usbserial-A5069RR4 returned; FT232R0403:6001, no open owner before monitoring.",
+  "identity_verified_for_this_setup": true,
+  "short_cycle_watcher": "Saw no event; not used as proof.",
+  "serial_scope": "115200, DTR/RTSfalse beforeopen; read-only payload, whitelisted event labels only. Opening/closing can affect camera reset.",
+  "serial_observation": "Firstpoweroncode1, then two watchdogresetcode8 and three camera_boot messages in first8.1s. No activeMainstream duringUARTcapture. Later closed at15:49:50UTC. No rawtext saved.",
+  "causation_limit": "Startup observation can be influenced by opening port and is not proof resets caused earlier video freezes.",
+  "reset_code_reference": "https://github.com/espressif/esp-idf/blob/master/components/soc/esp32/include/soc/reset_reasons.h"
+}

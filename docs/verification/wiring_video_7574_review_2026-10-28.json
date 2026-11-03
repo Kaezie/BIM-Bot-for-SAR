@@ -1,0 +1,104 @@
+{
+  "reviewed_at_utc": "2026-10-28T09:16:24.396181+00:00",
+  "source_file": "/Users/christine/Downloads/IMG_7574.MOV",
+  "source_sha256": "71eb556be928766456a377c8736f82d593ed74d55bba6a9553e26c3fd2941ba0",
+  "duration_seconds": 54.165,
+  "review_method": "Sampled frames plus native-resolution crops; original video unchanged; no audio analysis.",
+  "observations": [
+    {
+      "seconds": [
+        3.6,
+        39.5,
+        46.7
+      ],
+      "observation": "Two camera boards visible; one in a black bracket and a free-standing ESP32-CAM with a large lens. Operator explicitly confirms the free-standing board is the spare/night camera."
+    },
+    {
+      "seconds": [
+        25.1,
+        28.7,
+        29
+      ],
+      "observation": "HGSEMI LM1085-5.0 marking and P9/VCC area visible; connector housings and crossing wires obscure parts of the ground labels and exact end-to-end pin mapping."
+    },
+    {
+      "seconds": [
+        21.5,
+        32.3
+      ],
+      "observation": "P5 IIC labels GND/VCC/SDA/SCL visible; a black jumper occupies the upper GND position. This is consistent with retained thermal PS grounding; full wire tracing is not independently established."
+    },
+    {
+      "seconds": [
+        14.4,
+        35.9
+      ],
+      "observation": "Uno USB-B socket appears unoccupied in the video."
+    },
+    {
+      "seconds": [
+        43.1
+      ],
+      "observation": "GY-MCU90640 module visible with multiple leads; electrical continuity, loaded voltage and current capacity are not measured."
+    }
+  ],
+  "not_established": [
+    "Incorrect wiring",
+    "Regulator overload/overtemperature",
+    "Voltage stability under load",
+    "Specific loose/broken connection",
+    "New hardware failure cause"
+  ],
+  "operator_confirmations": {
+    "free_standing_large_lens_is_spare": true,
+    "esp32_cam_mb_base_and_cable_available": true,
+    "all_six_spare_jumpers_removed_with_power_off": true,
+    "original_camera_untouched": true,
+    "usb_base_power_not_yet_authorized": true,
+    "usb_base_alignment_verified": true,
+    "usb_connected_to_mac": true,
+    "robot_on_and_wheels_raised": true,
+    "robot_own_usb_unplugged": true
+  },
+  "current_physical_stage": "Original on robot battery with wheels raised; spare isolated from all six robot/thermal jumpers and powered only by its USB base. Thermal physically disconnected. Operator reports responsive pictures but reconnects/slow latency. New conservative profile live comparison pending.",
+  "proposed_test": "Original camera on its existing robot supply; isolated spare on its USB base only, thermal intentionally disconnected. No firmware upload or serial access.",
+  "reference": "https://www.hgsemi.com.cn/upload/202406/%E5%8D%8E%E5%86%A0LM1085%28%E8%8B%B1%E6%96%87%29%20202404.pdf",
+  "runtime_stage": "Conservative profile1 on5050 in exec87492; thermal requests intentionally paused for physical isolation, Night enabled,120s metadata capture armed; motor command URLs blank; motor bridge stopped.",
+  "updated_at_utc": "2026-10-28T09:32:53.393644+00:00",
+  "usb_base_photo": {
+    "file": "/Users/christine/Downloads/IMG_7578.HEIC",
+    "sha256": "09df03760907fae42b4747f8618f08cb8d60aa5c6fa8f783f2ab02ce53f8652b",
+    "observed": "Separate ESP32-CAM-MB base on left, micro-USB at the bottom between IO0/RST buttons; isolated spare on right, lens up, ESP32-CAM lettering at bottom. Both rows of eight sockets on base visible, no USB cable or jumper leads attached. Camera5V/GND labels visible; base contact continuity not measured.",
+    "assembly_state": "Separate/unpowered; seating and alignment not yet verified.",
+    "next": "Fit unpowered with lens up, camera ESP32-CAM text end toward base USB end; all eight pins on each side aligned, no row offset. Request fitted photo before USB power."
+  },
+  "fitted_photo_review": {
+    "files": [
+      {
+        "file": "/Users/christine/Downloads/IMG_7579.HEIC",
+        "sha256": "edf3b457ab39f2a91362812a5786278bc1e361892ea99e4e0bbfb62adfb5a903"
+      },
+      {
+        "file": "/Users/christine/Downloads/IMG_7580.HEIC",
+        "sha256": "2f1ea2d31ca8c78581d74b716c6d496bbf4d39df55315bb3bfde6a15a2fac344"
+      }
+    ],
+    "observations": "Camera and base now stacked, lens outward, base extends at camera-lettering end. Visible side shows the header entering the long socket with boards roughly parallel; no evident row-end offset in that view. Opposite header row and USB-port end are not sufficiently visible to confirm every pin. No USB cable or robot/thermal jumpers visible.",
+    "assessment": "Expected orientation and visible row appear consistent; full mechanical alignment remains unverified. No power test/voltage measurement.",
+    "next": "Keep USB disconnected; obtain one opposite-side view including the USB-port end, with boards left fitted, before USB power."
+  },
+  "opposite_side_photo": {
+    "file": "/Users/christine/Downloads/IMG_7581.HEIC",
+    "sha256": "5227b7249689456d4bef2fda13580982ead1a9ceafd6afa5cfbc8d8ceca46e02",
+    "assessment": "Combined with IMG7579/7580, expected orientation and both header rows appear aligned and evenly seated; mechanical visual check, not continuity/voltage testing."
+  },
+  "usb_enumeration": {
+    "vendor_id": "1a86",
+    "product_id": "7523",
+    "product": "USB Serial",
+    "port_name": "/dev/cu.usbserial-110",
+    "baseline_count": 0,
+    "after_connection_count": 1,
+    "serial_port_opened": false
+  }
+}

@@ -1,36 +1,67 @@
 const {chromium}=require('playwright');
+const {cameraFrameFixture}=require('./camera_frame_fixture.cjs');
 const assert=require('node:assert/strict');
+const fs=require('node:fs/promises');
 (async()=>{
 const browser=await chromium.launch({headless:true,...(process.env.CHROME_PATH ? {executablePath:process.env.CHROME_PATH} : {})});const page=await browser.newPage({viewport:{width:1440,height:1050}});const errors=[];page.on('pageerror',error=>errors.push(error.message));
-let stale=false,failed=false,uploads=0,mission=null,review=null,reportDownloads=0;
+// Realistic, even frame dimensions are required by the browser's H.264 encoder.
+const cameraFrame=Buffer.from(await page.evaluate(()=>{const canvas=document.createElement('canvas');canvas.width=640;canvas.height=480;const ctx=canvas.getContext('2d');ctx.fillStyle='#456';ctx.fillRect(0,0,640,480);return canvas.toDataURL('image/jpeg',0.8).split(',')[1];}),'base64');
+let stale=false,failed=false,uploads=0,mission=null,review=null,reportDownloads=0,nightEnabled=false,nightLive=true,nightUpload=false,thermalEnabled=false,thermalFresh=true,mainRequests=0,nightRequests=0,nightStreamFailed=false;
+let trackNumber=7,motionObserved=null,nightFresh=true,nightWrongSource=false;
+const cameraFrames=cameraFrameFixture(cameraFrame,{fail:source=>source==='nightvision'&&nightStreamFailed,onOpen:source=>{if(source==='main')mainRequests++;else nightRequests++;}});
+const localClips=[{id:'fixture',name:'bimbot_main_fixture.mp4',size:102400,created_at:new Date().toISOString(),source:'main',sync_state:'pending',download_url:'/api/local-recordings/fixture/file'}];
+let capturedMP4;
 await page.route('**/fonts.googleapis.com/**',route=>route.abort());
-await page.route('**/cdn.jsdelivr.net/**',route=>route.fulfill({contentType:'application/javascript',body:`window.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:{access_token:'preview',user:{email:'rescue@example.test'}}}}),onAuthStateChange:()=>{},signOut:async()=>{}}})}` }));
+await page.route('**/static/js/auth.js',route=>route.fulfill({contentType:'application/javascript',body:`window.BIM_AUTH={auth:{getSession:async()=>({data:{session:{local:true,access_token:null,user:{email:'rescue@example.test'}}}}),onAuthStateChange:()=>{},signOut:async()=>({error:null})}};`}));
 await page.route('**/api/**',route=>{
+if(cameraFrames.matches(route))return cameraFrames.handle(route);
 const url=new URL(route.request().url()),now=Date.now()/1000;let data={};
 if(url.pathname==='/api/sensor-data')data={fresh:!stale,updated_at:now-(stale?30:0),temperature:36,humidity:72,heat_index:43,risk_level:'Moderate Risk',interpretation:'Heat stress likely',method:'threshold',confidence:.8,probabilities:{low:.1,moderate:.8,severe:.1}};
-if(url.pathname==='/api/survivors')data={available:!stale,updated_at:now-(stale?30:0),survivors_found:2,detections:[{confidence:.94,age:'Adult',consciousness:'Conscious',injury:'No Visible Injury Indicators',trapped:'Free',pose:'upright',thermal_alive:'No thermal camera',thermal_injury:'No thermal camera'}]};
+if(url.pathname==='/api/survivors')data={available:!stale,updated_at:now-(stale?30:0),survivors_found:2,detections:[{confidence:.94,age:'Adult',consciousness:motionObserved===true?'Conscious':'Unknown',injury:'Unknown',trapped:'Unknown',pose:'upright',thermal_alive:'No thermal camera',thermal_injury:'No thermal camera',track_number:trackNumber,track_id:`fixture-${trackNumber}`,pose_matched:true,motion_observed:motionObserved}]};
 if(url.pathname==='/api/mission')data={mission,can_start:!mission||mission.state==='stopped',control_configured:true,robot:{fresh:true,navigation_ready:true,simulated:true}};
 if(url.pathname==='/api/mission/start'){const payload=route.request().postDataJSON();mission={id:'mission-fixture',state:'searching',area_label:payload.area_label};data={mission};}
 if(url.pathname==='/api/mission/stop'){mission.state='stopped';data={mission};}
 if(url.pathname==='/api/survivor-events')data={events:mission?[{id:'event-fixture',at:now-30,evidence:{detections:[{confidence:.9,age:'Adult',consciousness:'Conscious',injury:'No Visible Injury Indicators',trapped:'Free',pose:'upright',thermal_alive:'No thermal camera',thermal_injury:'No thermal camera'}],area_label:mission.area_label,environment:{danger_level:'Danger'},observation_position:null},review,reviewed_at:review?now-20:null}]:[]};
 if(url.pathname==='/api/survivor-events/event-fixture/review'){review=route.request().postDataJSON();data={review};}
 if(url.pathname==='/api/situational-report'){reportDownloads++;data={requires_human_verification:true,mission,events:[]};}
-if(url.pathname==='/api/device-status')data={nightvision:false};
-if(url.pathname==='/api/thermal-data'||url.pathname==='/api/sound-data')data={connected:false};
+if(url.pathname==='/api/device-status')data={nightvision:nightEnabled,nightvision_status:{connected:nightLive,detection_enabled:true,person_analysis_enabled:true,detected_at:now-(nightFresh?0:3),detections_available:nightEnabled&&nightLive&&nightFresh,detections:[{source:nightWrongSource?'main':'nightvision',confidence:.8,age:'Child',age_years:null,consciousness:'Unknown',injury:'Unknown',trapped:'Unknown',pose:'upright',track_number:3,track_id:'fixture-night-3',motion_observed:false,immobility_seconds:4.2,gesture:'Possible waving/help gesture',gesture_state:'possible_wave'}],message:nightStreamFailed?'Select this camera to connect.':nightLive?'Select this tab to connect.':'Night camera offline.'}};
+if(url.pathname==='/api/nightvision/light')data={supported:true,available:true,firmware:'bimbot-nightvision/2',illumination:{enabled:route.request().method()==='POST'?route.request().postDataJSON().enabled:false,brightness:32,lease_ms:15000}};
+if(url.pathname==='/api/sound-data')data={connected:false};
+if(url.pathname==='/api/thermal-data')data=thermalEnabled?{configured:true,connected:true,simulated:true,updated_at:now-(thermalFresh?0:30),grid:Array.from({length:24},()=>Array(32).fill(24)),min_temp:24,max_temp:38.5}:{connected:false,configured:false};
 if(url.pathname==='/api/history')data={alerts:[{at:now,kind:'detection',message:'2 possible survivors detected. Verify in the feed.'}],samples:Array.from({length:20},(_,i)=>({at:now-60+i*3,temperature:30+i*.3,humidity:70+i*.1,heat_index:32+i*.4}))};
 if(url.pathname==='/api/recordings')data={recordings:[{name:'bimbot_mission.webm',size:102400,created_at:new Date().toISOString()}],has_more:false};
-if(url.pathname==='/api/upload-to-storage'){uploads++;if(failed)return route.fulfill({status:502,contentType:'application/json',body:JSON.stringify({error:'Cloud unavailable'})});data={success:true};}
+if(url.pathname==='/api/local-recordings'&&route.request().method()==='GET')data={recordings:localClips,has_more:false,pending_count:localClips.length};
+if(url.pathname==='/api/local-recordings'&&route.request().method()==='POST'){
+  uploads++;const body=route.request().postDataBuffer();if(body.includes(Buffer.from('bimbot_nightvision_')))nightUpload=true;
+  if(failed)return route.fulfill({status:500,contentType:'application/json',body:JSON.stringify({error:'Local disk unavailable'})});
+  const at=body.indexOf(Buffer.from('ftyp'));assert(at>=4);capturedMP4=body.subarray(at-4,body.indexOf(Buffer.from('\r\n--'),at));
+  const source=nightUpload?'nightvision':'main',id='saved-'+uploads;
+  const clip={id,name:`bimbot_${source}_${uploads}.mp4`,source,size:capturedMP4.length,created_at:new Date().toISOString(),sync_state:'pending',download_url:`/api/local-recordings/${id}/file`};
+  localClips.unshift(clip);data={success:true,recording:clip};
+}
+if(/^\/api\/local-recordings\/[^/]+\/file$/.test(url.pathname))return route.fulfill({contentType:'video/mp4',headers:{'Content-Disposition':`attachment; filename="bimbot_main_saved.mp4"`},body:capturedMP4});
 return route.fulfill({contentType:'application/json',body:JSON.stringify(data)});
 });
 await page.route('**/toggle_recording',route=>route.fulfill({contentType:'application/json',body:'{"is_recording":true}'}));
-await page.route('**/video_feed?**',route=>route.fulfill({contentType:'image/png',body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aK30AAAAASUVORK5CYII=','base64')}));
 await page.goto((process.env.UI_TEST_URL || 'http://127.0.0.1:5051/'));await page.waitForFunction(()=>document.getElementById('survivorCount').textContent==='2');
-assert((await page.locator('#survivorCard').boundingBox()).height < 160, 'Survivor telemetry must remain a compact overlay');
+assert((await page.locator('#survivorCard').boundingBox()).height < 160, 'Survivor telemetry must remain compact');
 assert.equal(await page.locator('#availability-thermal').textContent(),'Not installed');assert.equal(await page.locator('#recordingList li').count(),1);
 assert.equal(await page.locator('#riskLevel').textContent(),'Moderate Risk');
+thermalEnabled=true;await page.locator('#refreshBtn').click();await page.waitForFunction(()=>document.getElementById('mainThermalRange').textContent==='24.0–38.5 °C');
+assert(await page.locator('#mainThermalReading').isVisible());assert.match(await page.locator('#mainThermalState').textContent(),/SIMULATED/);assert.equal(await page.locator('#tempDisplay').textContent(),'36.0');
+await page.screenshot({path:'/tmp/bimbot-main-thermal.png',fullPage:false});
+thermalFresh=false;await page.locator('#refreshBtn').click();await page.waitForFunction(()=>document.getElementById('mainThermalRange').textContent==='—');
+assert.equal(await page.locator('#availability-thermal').textContent(),'Waiting');thermalEnabled=false;await page.locator('#refreshBtn').click();
+
 await page.locator('#missionTools > summary').click();
 assert.match(await page.locator('#survivorDetailList').textContent(),/Age: Adult/);
 assert.match(await page.locator('#survivorDetailList').textContent(),/Pose: upright/);
+assert.match(await page.locator('#survivorDetailList h3').textContent(),/Track 7/);
+assert.match(await page.locator('#survivorDetailList').textContent(),/Image motion: Unknown/);
+assert.match(await page.locator('#survivorDetailList h3').getAttribute('title'),/Temporary camera track/);
+trackNumber=12;motionObserved=true;await page.locator('#refreshBtn').click();
+await page.waitForFunction(()=>document.querySelector('#survivorDetailList h3').textContent.includes('Track 12'));
+assert.match(await page.locator('#survivorDetailList').textContent(),/Image motion: Region changed/);
 await page.locator('#missionTools > summary').click();
 assert.match(await page.locator('#mlAssessment').textContent(),/SAR threshold rules/);
 await page.locator('#missionTools > summary').click();
@@ -40,7 +71,8 @@ assert(await page.locator('#missionArea').isDisabled());assert(await page.locato
 await page.locator('#refreshBtn').click();await page.waitForFunction(()=>document.querySelectorAll('.review-form').length===1);
 assert.match(await page.locator('#survivorEventList').textContent(),/Coordinates unavailable/);
 assert.match(await page.locator('#survivorEventList').textContent(),/Pose: upright/);
-assert.match(await page.locator('#communication').textContent(),/Two-way communication is not available yet/);
+assert.match(await page.locator('#communication').textContent(),/Start two-way audio/);
+assert.match(await page.locator('#communication').textContent(),/Live test required/);
 await page.locator('[name=notes]').fill('Existing observation.');
 await page.getByRole('button',{name:'Add communication note'}).click();
 assert.match(await page.locator('[name=notes]').inputValue(),/^Existing observation\.\n\nCommunication observation/);
@@ -58,36 +90,97 @@ assert.equal(review.assessment.age_group,'adult');assert.equal(review.assessment
 const downloadPromise=page.waitForEvent('download');await page.locator('#downloadReport').click();const download=await downloadPromise;assert.match(download.suggestedFilename(),/bimbot_report_/);assert.equal(reportDownloads,1);
 await page.locator('#missionStop').click();await page.waitForFunction(()=>document.getElementById('missionState').textContent==='stopped');
 assert(await page.locator('#trendChart').isVisible());await page.waitForTimeout(500);await page.screenshot({path:'/tmp/bimbot-desktop.png',fullPage:true});
-for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:900});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`Overflow at ${width}`);}
+for(const width of [320,390,768,1440]){
+await page.setViewportSize({width,height:900});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`Overflow at ${width}`);
+const summaryBox=await page.locator('#survivorCard').boundingBox(),feedBox=await page.locator('.feed-stage').boundingBox();
+assert(summaryBox.y+summaryBox.height<=feedBox.y,`Survivor summary must not cover the camera at ${width}px`);
+if(width===390){await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:'/tmp/bimbot-survivor-mobile.png',fullPage:false});}
+}
 await page.setViewportSize({width:390,height:844});await page.waitForTimeout(500);await page.screenshot({path:'/tmp/bimbot-mobile.png',fullPage:false});
 await page.getByRole('tab',{name:/Thermal/}).click();assert(await page.locator('#panel-thermal').isVisible());assert(await page.locator('#connectBtn').isHidden());
-await page.getByRole('tab',{name:/Main camera/}).click();await page.locator('#connectBtn').click();await page.waitForFunction(()=>!document.getElementById('recordBtn').disabled);
-await page.locator('#recordBtn').click();await page.waitForFunction(()=>!document.getElementById('stopBtn').hidden);await page.waitForTimeout(1100);await page.locator('#stopBtn').click();await page.waitForFunction(()=>document.getElementById('saveTitle').textContent==='Recording saved');assert.equal(uploads,1);await page.locator('#closeSave').click();
-failed=true;await page.locator('#recordBtn').click();await page.waitForTimeout(1100);await page.locator('#stopBtn').click();await page.waitForFunction(()=>document.getElementById('saveTitle').textContent==='Cloud save needs attention');assert(await page.locator('#retryUpload').isVisible());assert(await page.locator('#closeSave').isDisabled());
-await page.keyboard.press('Escape');assert(await page.locator('#saveDialog').isVisible());failed=false;await page.locator('#retryUpload').click();await page.waitForFunction(()=>document.getElementById('saveTitle').textContent==='Recording saved');await page.locator('#closeSave').click();
-stale=true;await page.locator('#refreshBtn').click();await page.waitForFunction(()=>document.getElementById('tempDisplay').textContent==='—');assert.equal(await page.locator('#survivorCount').textContent(),'—');assert.equal(await page.locator('#riskLevel').textContent(),'Assessment unavailable');assert.equal(await page.locator('#survivorDetailsState').textContent(),'Unavailable');assert.doesNotMatch(await page.locator('#survivorDetailList').textContent(),/Consciousness: Conscious/);
-let signedIn=false;
-await page.route('**/cdn.jsdelivr.net/**',route=>route.fulfill({contentType:'application/javascript',body:`
-window.oauthShouldFail=true;
-window.supabase={createClient:()=>({auth:{
-  getSession:async()=>({data:{session:${signedIn ? "{access_token:'preview',user:{email:'rescue@example.test'}}" : 'null'}}}),
-  onAuthStateChange:()=>{},signOut:async()=>{},
-  signInWithOAuth:async options=>{window.lastOAuthOptions=options;return {error:window.oauthShouldFail?{message:'Google sign-in unavailable'}:null};}
-}})};` }));
-await page.goto(new URL('/login',process.env.UI_TEST_URL || 'http://127.0.0.1:5051/').href);
-assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-await page.locator('#googleBtn').click();
-await page.waitForFunction(()=>!document.getElementById('errorMsg').hidden);
-assert.equal(await page.locator('#errorMsg').textContent(),'Google sign-in unavailable');
-assert(await page.locator('#googleBtn').isEnabled());
-assert.deepEqual(await page.evaluate(()=>window.lastOAuthOptions),{provider:'google',options:{redirectTo:new URL('/',page.url()).href}});
-await page.evaluate(()=>{window.oauthShouldFail=false;});
-await page.locator('#googleBtn').click();
-assert(await page.locator('#googleBtn').isDisabled());
-assert.equal(await page.locator('#googleBtnLabel').textContent(),'Redirecting to Google…');
-signedIn=true;
-await page.goto(new URL('/login',process.env.UI_TEST_URL || 'http://127.0.0.1:5051/').href);
-await page.waitForURL(url=>url.pathname==='/');
-assert.deepEqual(errors,[]);console.log('PASS: mission start/stop, area label, operator review, report download, SAR classifications and threshold scores, responsive widths 320/390/768/1440, tabs, library, automatic recording save, failed upload retry, Escape protection, stale readings, login OAuth/error handling/session redirect; no JavaScript errors.');
+await page.getByRole('tab',{name:/Main camera/}).click();await page.waitForFunction(()=>!document.getElementById('recordBtn').disabled);
+assert.equal(mainRequests,1,'Explicit main-tab selection must connect without another Connect click');
+await page.locator('#disconnectBtn').click();
+await page.locator('#refreshBtn').click();await page.waitForFunction(()=>!document.getElementById('refreshBtn').disabled);
+assert.equal(await page.locator('#camStream').getAttribute('data-viewer'),null,'Refresh must respect a manual camera disconnect');
+assert.equal(mainRequests,1,'Status refresh must not create a replacement main stream');
+await page.getByRole('tab',{name:/Main camera/}).click();await page.waitForFunction(()=>!document.getElementById('recordBtn').disabled);
+assert.equal(mainRequests,2,'Explicit main-tab selection must reconnect after manual disconnect');
+await page.getByRole('tab',{name:/Thermal/}).click();
+await page.locator('#camStream').evaluate(image=>image.dispatchEvent(new Event('error')));
+assert.equal(await page.locator('#camStream').getAttribute('data-viewer'),null);
+await page.getByRole('tab',{name:/Thermal/}).focus();await page.keyboard.press('Home');
+await page.waitForFunction(()=>!document.getElementById('recordBtn').disabled);
+assert.equal(mainRequests,3,'Keyboard selection must reconnect the main camera after a failure while away');
+await page.evaluate(()=>{window.originalTypeSupported=MediaRecorder.isTypeSupported;MediaRecorder.isTypeSupported=()=>false;});
+await page.locator('#recordBtn').click();assert.match(await page.locator('#notice').textContent(),/cannot record MP4/);assert(await page.locator('#recordBtn').isEnabled());assert.equal(uploads,0);
+await page.evaluate(()=>{MediaRecorder.isTypeSupported=window.originalTypeSupported;});
+await page.locator('#recordBtn').click();await page.waitForFunction(()=>!document.getElementById('stopBtn').hidden);await page.waitForTimeout(1100);await page.locator('#stopBtn').click();await page.waitForFunction(()=>document.getElementById('saveTitle').textContent==='Recording saved on this laptop');assert.equal(uploads,1);
+const backupPromise=page.waitForEvent('download');await page.locator('#downloadBtn').click();const backup=await backupPromise;
+assert.match(backup.suggestedFilename(),/^bimbot_main_.*\.mp4$/);
+const backupBytes=await fs.readFile(await backup.path());assert.equal(backupBytes.toString('ascii',4,8),'ftyp','Backup must contain an MP4 container, not renamed WebM');
+await page.locator('#closeSave').click();
+failed=true;await page.locator('#recordBtn').click();await page.waitForTimeout(1100);await page.locator('#stopBtn').click();await page.waitForFunction(()=>document.getElementById('saveTitle').textContent==='Local save needs attention');assert(await page.locator('#retryUpload').isVisible());assert(await page.locator('#closeSave').isDisabled());
+await page.keyboard.press('Escape');assert(await page.locator('#saveDialog').isVisible());
+const offlineBackupPromise=page.waitForEvent('download');await page.locator('#downloadBtn').click();const offlineBackup=await offlineBackupPromise;assert.match(offlineBackup.suggestedFilename(),/\.mp4$/);assert.equal((await fs.readFile(await offlineBackup.path())).toString('ascii',4,8),'ftyp');
+failed=false;await page.locator('#retryUpload').click();await page.waitForFunction(()=>document.getElementById('saveTitle').textContent==='Recording saved on this laptop');await page.locator('#closeSave').click();
+nightEnabled=true;await page.locator('#refreshBtn').click();
+const mainSourceBeforeNight=await page.locator('#camStream').getAttribute('data-viewer'),mainRequestsBeforeNight=mainRequests;
+await page.getByRole('tab',{name:/Night vision/}).click();await page.waitForFunction(()=>!document.getElementById('recordBtn').disabled);
+assert.equal(await page.locator('#camStream').getAttribute('data-viewer'),mainSourceBeforeNight,'Original camera remains subscribed during night viewing');
+await page.waitForFunction(()=>document.getElementById('nvDetectionStatus').textContent.includes('1 possible person'));
+assert.equal(await page.locator('#survivorCount').textContent(),'2','Night detections must not inflate main-camera counts');
+await page.locator('#refreshBtn').click();
+await page.waitForFunction(()=>document.getElementById('nightSurvivorDetailsState').textContent==='Live · Night camera');
+await page.locator('#nvDetailsLink').click();
+assert(await page.locator('#nightSurvivorDetails').isVisible());
+assert.equal(await page.locator('#missionTools').getAttribute('open'),'');
+assert.match(await page.locator('#nightSurvivorDetailList').textContent(),/Track 3/);
+assert.match(await page.locator('#nightSurvivorDetailList').textContent(),/Age: Child/);
+assert.match(await page.locator('#nightSurvivorDetailList').textContent(),/Consciousness: Unknown/);
+assert.match(await page.locator('#nightSurvivorDetailList').textContent(),/Help gesture: Possible waving/);
+assert.match(await page.locator('#nightSurvivorDetailList').textContent(),/Image inactivity: 4.2 s/);
+assert.match(await page.locator('#survivorDetailList').textContent(),/Age: Adult/);
+assert.doesNotMatch(await page.locator('#survivorDetailList').textContent(),/Track 3/);
+assert.match(await page.locator('#nightSurvivorDetails').textContent(),/not an age in years/);
+for(const width of [320,390,768,1440]){
+  await page.setViewportSize({width,height:1050});
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`Night details overflow at ${width}`);
+}
+await page.setViewportSize({width:1440,height:1050});
+await page.screenshot({path:'/tmp/bimbot-night-person-details.png',fullPage:false});
+nightWrongSource=true;await page.locator('#refreshBtn').click();
+await page.waitForFunction(()=>!document.getElementById('nightSurvivorDetailList').textContent.includes('Track 3'));
+nightWrongSource=false;nightFresh=false;await page.locator('#refreshBtn').click();
+await page.waitForFunction(()=>document.getElementById('nightSurvivorDetailsState').textContent==='Unavailable');
+assert.doesNotMatch(await page.locator('#nightSurvivorDetailList').textContent(),/Age: Child/);
+nightFresh=true;await page.locator('#refreshBtn').click();
+await page.waitForFunction(()=>document.getElementById('nightSurvivorDetailList').textContent.includes('Track 3'));
+await page.locator('#missionTools > summary').click();
+await page.evaluate(()=>scrollTo(0,0));
+
+await page.evaluate(()=>{window.recordedSources=[];const original=CanvasRenderingContext2D.prototype.drawImage;CanvasRenderingContext2D.prototype.drawImage=function(image,...args){if(this.canvas.id==='recordCanvas')window.recordedSources.push(image.id);return original.call(this,image,...args);};});
+await page.screenshot({path:'/tmp/bimbot-nightvision.png',fullPage:false});await page.locator('#recordBtn').click();await page.getByRole('tab',{name:/Main camera/}).click();await page.waitForTimeout(1100);
+assert.equal(await page.locator('#camStream').getAttribute('data-viewer'),mainSourceBeforeNight);
+assert.equal(mainRequests,mainRequestsBeforeNight,'Returning to a live original camera must reuse its existing stream');
+assert((await page.evaluate(()=>window.recordedSources)).every(source=>source==='nvStream'),'Switching tabs must not switch the recording source');
+const nightSave=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/local-recordings' && response.request().method()==='POST');nightLive=false;await page.locator('#nvStream').evaluate(image=>image.dispatchEvent(new Event('error')));await nightSave;await page.waitForFunction(()=>document.getElementById('saveTitle').textContent==='Recording saved on this laptop');
+assert(nightUpload,'Night recordings must carry a source-labelled filename');assert.equal(uploads,4);await page.locator('#closeSave').click();
+nightLive=true;await page.getByRole('tab',{name:/Night vision/}).click();await page.waitForFunction(()=>document.getElementById('availability-nightvision').textContent==='Live',{timeout:15000});
+const retainedNight=await page.locator('#nvStream').getAttribute('data-viewer');
+await page.getByRole('tab',{name:/Main camera/}).click();
+assert.equal(await page.locator('#nvStream').getAttribute('data-viewer'),retainedNight,'Switching away must keep Night connected');
+nightStreamFailed=true;nightLive=false;
+await page.waitForTimeout(700);await page.locator('#refreshBtn').click();
+assert.equal(await page.locator('#nvStream').getAttribute('data-viewer'),retainedNight,'A short fault/status sample must not tear down fresh Night video');
+nightStreamFailed=false;nightLive=true;
+await page.waitForFunction(()=>document.getElementById('availability-nightvision').textContent==='Live',{timeout:10000});
+for(const feed of ['Thermal','Main camera','Night vision'])await page.getByRole('tab',{name:new RegExp(feed)}).click();
+assert.equal(await page.locator('#nvStream').getAttribute('data-viewer'),retainedNight);
+assert.equal(await page.locator('#camStream').getAttribute('data-viewer'),mainSourceBeforeNight);
+assert.equal(mainRequests,mainRequestsBeforeNight);
+await page.getByRole('tab',{name:/Main camera/}).click();
+stale=true;await page.locator('#refreshBtn').click();await page.waitForFunction(()=>document.getElementById('tempDisplay').textContent==='—'&&document.getElementById('survivorCount').textContent==='—');assert.equal(await page.locator('#survivorCount').textContent(),'—');assert.equal(await page.locator('#riskLevel').textContent(),'Assessment unavailable');assert.equal(await page.locator('#survivorDetailsState').textContent(),'Unavailable');assert.doesNotMatch(await page.locator('#survivorDetailList').textContent(),/Consciousness: Conscious/);
+assert.deepEqual(errors,[]);cameraFrames.assertSerial();console.log('PASS: SAR/mission review, thermal, responsive layout, camera auto-connection, retained main feed, fixed MP4 capture source, local save/download/retry, pending library and stale readings.');
 await browser.close();
 })().catch(error=>{console.error(error);process.exit(1)});

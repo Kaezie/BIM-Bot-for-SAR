@@ -1,0 +1,65 @@
+{
+  "date": "2026-10-29",
+  "operator_report": "Readings appeared; both cameras respond.",
+  "dht_result": "Functional restoration confirmed by real fresh data and operator; calibration not assessed.",
+  "evidence": "dht_camera_live_2026-10-29.json",
+  "robot_samples": 61,
+  "excluded_other_samples": 114,
+  "dht_fresh_samples": 57,
+  "temperature_c": 26.3,
+  "humidity_percent": 76.0,
+  "source_updates_advance": true,
+  "cameras": {
+    "main_received_frames": 412,
+    "main_active_samples": 40,
+    "main_fresh_active_samples": 38,
+    "main_new_source_errors": 0,
+    "night_received_frames": 13,
+    "night_active_samples": 3,
+    "night_fresh_active_samples": 2,
+    "night_new_source_errors": 0,
+    "simultaneous_viewer_samples": 0,
+    "limitation": "No simultaneous/long combined-load acceptance; operator confirms both respond in use."
+  },
+  "actual_night_profile": {
+    "firmware": "bimbot-nightvision/2",
+    "checked_at": 1793286264.169374,
+    "startup_profile": "retry/2",
+    "stream_profile": "fresh/2",
+    "stream_target_fps": 8,
+    "camera_ready": true
+  },
+  "main_quality": {
+    "target": "original_camera_192.168.4.1",
+    "requested_quality": 20,
+    "control_attempted": true,
+    "verified": true,
+    "checked_at": "2026-10-29T15:03:43.387903+00:00",
+    "before": {
+      "framesize": 6,
+      "pixformat": 4,
+      "xclk": 20,
+      "quality": 10
+    },
+    "control_http_status": 200,
+    "after": {
+      "framesize": 6,
+      "pixformat": 4,
+      "xclk": 20,
+      "quality": 20
+    }
+  },
+  "runtime": {
+    "pid": 13200,
+    "session": 78057,
+    "port": 5050,
+    "dht_url": "http://192.168.4.1/dht",
+    "night_last_verified": "http://192.168.4.2:81/stream",
+    "thermal_data_url": "",
+    "motor_command_urls": "blank"
+  },
+  "next_stage": "Thermal MLX90640 separately; current wire connection state asked and pending. No instructions to rewire or powercycle yet. Night onUSB and base header accessibility/sharedground must be resolved before hardware steps.",
+  "firmware_uploaded_this_stage": false,
+  "serial_opened_this_stage": false,
+  "motor_commands_sent": false
+}

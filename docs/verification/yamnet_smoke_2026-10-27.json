@@ -1,0 +1,108 @@
+{
+  "source": "https://storage.googleapis.com/mediapipe-assets/speech_16000_hz_mono.wav",
+  "scope": "Official public example only; not robot/audio field accuracy. No microphone opened.",
+  "results": [
+    {
+      "event": "Possible speech",
+      "model_label": "Speech",
+      "score": 0.91796875,
+      "top_events": [
+        {
+          "label": "Speech",
+          "score": 0.91796875
+        },
+        {
+          "label": "Inside, small room",
+          "score": 0.05859375
+        },
+        {
+          "label": "Silence",
+          "score": 0.015625
+        },
+        {
+          "label": "Narration, monologue",
+          "score": 0.0078125
+        },
+        {
+          "label": "Typing",
+          "score": 0.00390625
+        }
+      ],
+      "model": "YAMNet",
+      "inference_ms": 2.23,
+      "audio_saved": false,
+      "words_recognized": false,
+      "survivor_confirmed": false,
+      "requires_verification": true,
+      "threshold": 0.35
+    },
+    {
+      "event": "Possible speech",
+      "model_label": "Speech",
+      "score": 0.984375,
+      "top_events": [
+        {
+          "label": "Speech",
+          "score": 0.984375
+        },
+        {
+          "label": "Inside, small room",
+          "score": 0.00390625
+        },
+        {
+          "label": "Narration, monologue",
+          "score": 0.00390625
+        },
+        {
+          "label": "Rattle (instrument)",
+          "score": 0.0
+        },
+        {
+          "label": "Marimba, xylophone",
+          "score": 0.0
+        }
+      ],
+      "model": "YAMNet",
+      "inference_ms": 0.55,
+      "audio_saved": false,
+      "words_recognized": false,
+      "survivor_confirmed": false,
+      "requires_verification": true,
+      "threshold": 0.35
+    },
+    {
+      "event": "Possible speech",
+      "model_label": "Speech",
+      "score": 0.9921875,
+      "top_events": [
+        {
+          "label": "Speech",
+          "score": 0.9921875
+        },
+        {
+          "label": "Speech synthesizer",
+          "score": 0.015625
+        },
+        {
+          "label": "Narration, monologue",
+          "score": 0.01171875
+        },
+        {
+          "label": "Inside, small room",
+          "score": 0.00390625
+        },
+        {
+          "label": "Tabla",
+          "score": 0.0
+        }
+      ],
+      "model": "YAMNet",
+      "inference_ms": 0.54,
+      "audio_saved": false,
+      "words_recognized": false,
+      "survivor_confirmed": false,
+      "requires_verification": true,
+      "threshold": 0.35
+    }
+  ]
+}

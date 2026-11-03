@@ -1,0 +1,15 @@
+<section id="robotPosition" class="card position-card" aria-labelledby="positionTitle">
+  <div class="card-top"><div><p class="eyebrow">ROBOT LOCATION</p><h2 id="positionTitle">GPS &amp; local position</h2></div><span class="pill" id="positionState">Checking</span></div>
+  <p id="positionMessage" class="muted" role="status">Checking position availability.</p>
+  <dl class="position-readings">
+    <div><dt>Coordinate system</dt><dd id="positionFrame">—</dd></div>
+    <div><dt>Source</dt><dd id="positionSource">—</dd></div>
+    <div><dt id="positionFirstLabel">Latitude / local X</dt><dd id="positionFirst">—</dd></div>
+    <div><dt id="positionSecondLabel">Longitude / local Y</dt><dd id="positionSecond">—</dd></div>
+    <div><dt>Fix quality</dt><dd id="positionQuality">—</dd></div>
+    <div><dt>Last position sample</dt><dd id="positionTime">—</dd></div>
+  </dl>
+  <a id="positionMap" target="_blank" rel="noopener noreferrer" hidden>Open coordinates on a map (internet)</a>
+  <p class="muted">Outdoor GPS needs suitable satellite reception. Room and floor tracking needs a separate indoor positioning system.</p>
+  <small>Position refers to the robot, not a detected person's coordinates. Opening the map shares the displayed coordinates with OpenStreetMap. This page does not request your laptop's location.</small>
+</section>

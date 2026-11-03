@@ -1,51 +1,40 @@
-# Proposed survivor communication
+# Survivor communication with the available headset
 
-The team confirmed that survivors must communicate through the robot without a
-phone, and that the robot has no speaker, buzzer or display. A visible LED has not
-yet been confirmed.
+Updated October 27, 2026, Asia/Manila. The operator confirms a Bluetooth headset
+with a microphone and earpiece. Local two-way routing software is prepared and
+checked using generated streams/stubbed speakers. Real audibility, simultaneous
+capture, microphone identity, range and motor-noise performance remain pending.
+No standalone robot speaker/driver or ESP32 audio firmware has been added.
 
-The current system can receive camera images, which an operator can use to observe
-gestures. It has no implemented robot output for conveying replies to survivors.
-The feature outline proposes a microphone but no speaker or display; the current
-integration notes also say sound hardware is pending. A sound-event label is not
-an audio stream, transcript, or understood survivor answer.
+Use [the guided test](http://localhost:5050/testing#communication). Pair the
+headset directly to the laptop. In Mission tools & history → Survivor
+communication, press Find audio devices, select all four named roles, confirm
+placement/low volume and press Start two-way audio.
 
-## Proposed flow
+| Role | Select | Route |
+| --- | --- | --- |
+| Robot microphone | Bluetooth headset microphone | Heard through operator output |
+| Operator microphone | Laptop microphone or separate operator mic | Heard through robot earpiece |
+| Robot output | Bluetooth headset earpiece | Receives operator speech |
+| Operator output | Laptop speaker or separate headphones | Receives robot-side sound |
 
-Use a short-prompt, human-verified response loop, once an outbound channel is
-confirmed. First stop the robot using the existing acknowledged Stop control;
-verify that it is stationary. Deliver one prompt through the confirmed channel,
-observe the response on the camera (or listen if real audio becomes available),
-and document the actual response and uncertainty in the detection review.
-Do not infer a medical condition from a missing response.
+Default aliases and duplicate inputs/outputs are refused. The browser must
+confirm exact microphone IDs and output sink IDs; mismatches fail closed.
+Both routes are opened before playback begins. Cancelling a pending permission
+request discards/stops a late grant. Disconnect, unavailable input/output,
+hiding/closing the dashboard or sign-out stops both routes with no fallback.
+Use Google Chrome at localhost:5050 if output selection is unavailable. Live
+camera viewing can continue while two-way audio is active; leaving the browser
+page hidden stops audio. Sound analysis and two-way mode stop each other.
 
-With no additional hardware, one possibility needs confirmation:
+Start close to the robot at low volume. Verify each direction separately, then
+test the intended separation. Earpiece off-ear sleep, low volume and Bluetooth
+quality/range can prevent acceptance even when the software opens correctly.
+Software cannot prove physical mounting. No audio is recorded or uploaded to a
+cloud service. A sound-event label does not interpret a survivor answer.
 
-- If the installed ESP32-CAM has a usable visible LED, firmware could transmit
-  simple acknowledgements. This needs verified board/pin/power details and a
-  means of teaching the survivor the signal meanings. It does not support
-  arbitrary spoken questions, and its use must be validated in the test setting.
-  The night-vision infrared illuminators cannot convey a visible message.
-
-Voice communication through the robot requires a microphone, a speaker and an
-appropriate output driver/amplifier plus firmware audio transport. These are not
-implemented or confirmed in this workspace, so full two-way voice cannot be
-claimed using only the documented current equipment.
-
-## Dashboard changes supplied now
-
-The Survivor communication section states the proposal and integration limits.
-“Add communication note” appends a dated observation template to an existing
-detection review without replacing its notes. Saving uses the existing protected
-review endpoint and SQLite storage; it sends no message to the robot or survivor.
-The situational report includes these saved notes through its existing event data.
-Existing review saves replace the previous review, so this is not an immutable
-conversation audit log.
-
-## Clarifications before transmission implementation
-
-1. Does the installed ESP32-CAM have a working visible flash LED, and which exact
-   board model is installed?
-2. If so, which firmware endpoint and pin allocation are available to control it?
-
-No hardware command, live cloud write, or deployment was performed for this change.
+Communication notes remain separate: Add communication note in an operator
+review records what actually happened without sending dashboard text to the
+robot. Unclear or absent response remains unknown. Stillness does not establish
+unconsciousness. The earlier visible-LED proposal is historical; this update
+does not upload camera firmware or implement coded light messages.

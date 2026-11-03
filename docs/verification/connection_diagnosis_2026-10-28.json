@@ -1,0 +1,49 @@
+{
+  "checked_at": "2026-10-28T08:48:20.755183+00:00",
+  "status": "unresolved_device_or_network_availability",
+  "python_tests_passed": 255,
+  "frontend_changed_in_latest_diagnosis": false,
+  "previous_browser_suites_passed": 8,
+  "operator_confirmations": {
+    "wifi_stays_associated": true,
+    "both_cameras_on_robot_battery_board": true,
+    "single_master_switch": true,
+    "multimeter_available_now": false,
+    "camera_leds_off_with_master_off_usb_connected": true,
+    "wheels_securely_raised": true,
+    "power_reset_completed": true
+  },
+  "live_results": {
+    "initial_normal_trace": "normal_dashboard_failure_2026-10-28.json",
+    "detailed_normal_trace": "normal_dashboard_transport_failure_2026-10-28.json",
+    "main_only_trace": "main_only_failure_2026-10-28.json",
+    "independent_status": "original_status_transport_failure_2026-10-28.json",
+    "direct_camera_before_reset": "direct_capture_failure_2026-10-28.json",
+    "wifi_metrics": "wifi_signal_2026-10-28.json",
+    "direct_camera_after_reset": "post_reset_capture_check_2026-10-28.json",
+    "direct_complete_jpegs_before_reset": {
+      "complete": 0,
+      "requests": 21
+    },
+    "direct_complete_jpegs_after_reset": {
+      "complete": 9,
+      "requests": 20
+    }
+  },
+  "conclusion": "Failure reproduced outside dashboard and without Night/thermal traffic; supply, camera/AP firmware and radio causes not distinguished. No proven physical repair.",
+  "next": "Identify current power connections and verify supply under load when a meter is available.",
+  "runtime": "Full dashboard restored; no temporary isolated mode remains.",
+  "firmware_uploaded": false,
+  "wiring_changed": false,
+  "private_settings_rewritten": false,
+  "motor_commands_sent": false,
+  "movement_on_hold": true,
+  "source_sha256": {
+    "app.py": "9c157d866f897e1187352441f0f255a59f9188615c330c1826c1271a24f334d9",
+    "features/robot_connection.py": "52ab7f36c96ad87bd9baf85d95022113e57dde946399c39b434e4e852a4de850",
+    "features/live_camera.py": "92c6b36d0d74e2edd99a46d49a80b04ca5147578e2b95b4fb27d9ea6090e6094",
+    "features/telemetry.py": "cf8205fa5e60322a629fa54c6748a19661cfab767f427718fb319c472d2de137",
+    "features/system_diagnostics.py": "b592a7e157bcbbf1dd0c97279477681472ea4d06f428472acaa3a9af79761705",
+    "tests/test_robot_connection.py": "b40fda87b18b987c3b5993e7d370a64b0a37e5128c9eedca0b5e659af04d56e2"
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "date": "2026-10-29",
+  "operator_report": "Both cameras and DHT respond after Night robot-power restoration.",
+  "power_stage_evidence": "night_robot_power_result_2026-10-29.json",
+  "power_stage_limits": {
+    "robot_samples": 67,
+    "other_samples": 221,
+    "main_active_samples": 34,
+    "main_new_source_errors": 1,
+    "night_active_samples": 16,
+    "night_new_source_errors": 0,
+    "dht_fresh_samples": 65,
+    "simultaneous_viewer_samples": 0,
+    "result": "Operator functional power-restoration confirmation; no five-minute simultaneous-load acceptance."
+  },
+  "hardware_reported": "Main+Night onrobotpower;USBbase/cablesremoved (no USBserial nodes observed); thermal leads not yet restored.",
+  "thermal_wiring_to_restore": {
+    "Night3V3": "thermalVIN (red sensor lead)",
+    "Night free labelledGND": "thermalGND (black sensor lead)",
+    "NightIO14": "thermalSDA (yellow)",
+    "NightIO13": "thermalSCL (blue)",
+    "thermalPS": "original robotP5GND lead retained; commonrobotground now restored"
+  },
+  "hardware_cautions": "MasterOFF andUSBabsentduringwiring;preserveNight5V/GNDpowerpair andMain/DHT; matchprintedlabels/sourceends not colouralone;PSgroundconnectedbeforepower-up;RX/TX/NC/SETI2C untouched. IfunclearleaveOFF.",
+  "software": {
+    "runtime_pid": 17585,
+    "runtime_session": 44049,
+    "port": 5050,
+    "main_url": "http://192.168.4.1:81/stream",
+    "dht_url": "http://192.168.4.1/dht",
+    "night_url_last_verified": "http://192.168.4.2:81/stream",
+    "thermal_data_url": "http://192.168.4.2/thermal",
+    "poll_seconds": 1,
+    "thermal_browser_visible_seconds": 1,
+    "thermal_freshness_seconds": 5,
+    "auto_trace_seconds": 300,
+    "motor_command_urls": "blank",
+    "login_and_dashboard_http": 200,
+    "unauth_thermal_sensor_http": 401
+  },
+  "validation_workflow": "Endpointrole was alreadyverified; productionTelemetry nowenabled soThermalviewwaitsforvalidrealgrid afterphysicalrestore. No parallel directthermalpoller/video reader. Verify>=2advancingthermal sequences andfreshvalidated24x32grid via production/diagnostics, thenoperatorwarmhandandcombinedtest. This replaces earlier plan requiring a standalonecheckbeforeenablingURL.",
+  "main_quality_guard": {
+    "session": 12928,
+    "report": "local_data/diagnostics/main_quality_thermal_stage_2026-10-29.json",
+    "scope": "Guardedverify/restoreacceptedquality20afterrequiredpowercycle;doesnotblockdashboard."
+  },
+  "thermal_hardware_connection": "NOTYETconfirmed",
+  "thermal_real_frames": "NOTYETverified;neverclaimtemperature/heatmappassbeforedata",
+  "firmware_uploaded_this_stage": false,
+  "source_changed_this_stage": false,
+  "serial_opened_this_stage": false,
+  "persistent_env_edited": false,
+  "motor_commands_sent": false
+}

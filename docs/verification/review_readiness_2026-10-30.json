@@ -1,0 +1,72 @@
+{
+  "date_local": "2026-10-30",
+  "scope": "Pre-push software verification only. No real robot, microphone, speaker, serial port, firmware upload or cloud storage write.",
+  "python": {
+    "passed": 274,
+    "failed": 0,
+    "command": "python -m unittest discover -s tests -p 'test_*.py'",
+    "localhost_socket_access_required": true
+  },
+  "browser": {
+    "passed": 13,
+    "failed": 0,
+    "runtime": "Playwright 1.62.1 with installed Google Chrome",
+    "preview_port": 5051,
+    "suites": [
+      "dashboard_ui",
+      "camera_recovery_ui",
+      "dashboard_stability_ui",
+      "night_light_ui",
+      "shared_monitoring_ui",
+      "thermal_live_ui",
+      "headset_audio_ui",
+      "laptop_sound_ui",
+      "movement_ui",
+      "position_ui",
+      "auth_ui",
+      "offline_ui",
+      "latest_frame_ui"
+    ],
+    "scope": "Mocked API/auth, generated images/audio, simulated storage/output devices."
+  },
+  "native": {
+    "passed": 9,
+    "failed": 0,
+    "esp32_standard": "C++17",
+    "uno_standard": "C++11",
+    "thermal_transport_refresh_code": 3,
+    "cases": [
+      "illumination_lease",
+      "stream_packet",
+      "frame_pacing",
+      "thermal_frame",
+      "camera_startup",
+      "wifi_retry",
+      "movement_core",
+      "movement_actual_sketch_protocol",
+      "thermal_sensor_simulated_transport"
+    ]
+  },
+  "publication": {
+    "private_files_excluded": true,
+    "private_file_contents_inspected": false,
+    "large_raw_captures_kept_local": 17,
+    "staged_content_check": "passed: no forbidden private/runtime/model/backup paths or high-specificity secret patterns in 198 staged files; literal-assignment checks found only an intentionally unretained credential fixture in a test",
+    "whitespace_normalized_working_copies": [
+      "docs/ORIGINAL_CAMERA_SOURCE.md",
+      "firmware/nightvision_camera/src/mlx90640/MLX90640_API.c",
+      "firmware/nightvision_camera/src/mlx90640/MLX90640_API.h",
+      "firmware/original_camera/original_camera.ino",
+      "firmware/robot_movement/IR_remote.cpp",
+      "firmware/robot_movement/IR_remote.h",
+      "firmware/robot_movement/Keymap.cpp",
+      "firmware/robot_movement/Keymap.h",
+      "tests/test_dashboard_check.py"
+    ],
+    "source_archives_untouched": true
+  },
+  "hardware_acceptance": "pending; groupmate will verify remaining integration checks",
+  "model_accuracy": "pending",
+  "movement": "hold; bridge stopped; supervised return disabled",
+  "main_merge": "not authorized"
+}

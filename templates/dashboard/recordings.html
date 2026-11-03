@@ -1,10 +1,19 @@
 <section class="card" id="recordings">
   <div class="card-top">
-    <div><p class="eyebrow">CLOUD STORAGE</p><h2>Your recordings</h2></div>
+    <div><p class="eyebrow">LOCAL + SUPABASE STORAGE</p><h2>Your recordings</h2></div>
     <button id="reloadRecordings">Refresh library</button>
   </div>
-  <p class="muted">Recordings saved to your account. Open a clip to review or download it.</p>
+  <p class="muted">Clips save to this laptop first. Supabase receives a copy when internet returns. Keep the app running for automatic syncing.</p>
+  <p id="syncStatus" role="status">Checking saved recordings…</p>
+  <button id="syncRecordings">Sync queued recordings</button>
   <p id="libraryStatus" role="status">Loading recordings…</p>
   <ul id="recordingList" class="recording-list"></ul>
   <button id="loadMore" hidden>Load more recordings</button>
+  <details>
+    <summary>Earlier cloud recordings</summary>
+    <p class="muted">Recordings uploaded before local saving was added require internet to open.</p>
+    <button id="loadCloudRecordings">Load earlier cloud recordings</button>
+    <p id="cloudLibraryStatus" role="status"></p>
+    <ul id="cloudRecordingList" class="recording-list"></ul>
+  </details>
 </section>

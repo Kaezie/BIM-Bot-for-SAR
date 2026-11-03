@@ -1,0 +1,57 @@
+{
+  "date": "2026-10-29",
+  "parser_fixed_operator_report": "After one disconnect latency became smoother, but faster gestures still freeze from time to time.",
+  "baseline_video": "parser_recovery_before_peer_isolation_2026-10-29.json",
+  "baseline_reachability": "reachability_before_peer_isolation_2026-10-29.json",
+  "steady_result": {
+    "window_utc": [
+      "2026-10-28T15:58:25.926+00:00",
+      "2026-10-28T16:00:46.337+00:00"
+    ],
+    "new_source_errors": 0,
+    "additional_frames": 613,
+    "additional_bytes": 4058828,
+    "max_sampled_picture_age_ms": 4879,
+    "ping_median_ms": 162,
+    "ping_max_ms": 2144,
+    "ping_above_500ms": 29,
+    "ping_samples": 139
+  },
+  "loss_correction": "Allfourtimeout messages(2,9,14,86) eventually received replies. Missing8/10occurredstartup;174atnetworkexit. Do not equate timeout-messagecount with lostpacketcount.",
+  "interpretation": "Parser recovery and steady delivery improved in the earlier baseline, but long image gaps and high local RTT remain. This supports transport jitter without identifying RF/firmware/supply/Mac cause. The completed sharing-off comparison did not establish a benefit; the operator explicitly corrected the initial report to no improvement at all.",
+  "current_setup": "OriginalUSBonly/masterOFF/all5jumpersdetached; spareOFF/all6detached; serialclosed. CameraQVGA/quality10, all rates/read10/image5unchanged.",
+  "mac": "macOS27.0.1; AirDrop wasEveryone. User confirms AirDrop/Handoff/AirPlayReceiver off for temporary comparison; AirDropOff verified. Previous Handoff/Receiver values not available via queried keys.",
+  "test": "Same checked parser and 300-second Main capture; sharing options off, same quick gestures requested. No new firmware, quality, model or wiring change. The separate reachability observer expired before robot-network activity and supplied no concurrent ping comparison.",
+  "live_sharing_off_result": {
+    "state": "completed_failed_acceptance",
+    "trace": "peer_sharing_off_main_2026-10-29.json",
+    "started_at_utc": "2026-10-28T16:28:30.999683+00:00",
+    "duration_seconds": 300.0292247499965,
+    "operator_final_correction": "no improvement at all",
+    "supersedes_initial_report": "Better, but still stutters or reconnects",
+    "total_samples": 293,
+    "robot_subnet_samples": 293,
+    "main_active_samples": 291,
+    "main_fresh_active_samples": 247,
+    "source_errors_start": 231,
+    "source_errors_end": 237,
+    "new_source_errors": 6,
+    "new_source_errors_by_code": {
+      "timeout": 5,
+      "protocol_error": 1
+    },
+    "invalid_frames_during_check": 0,
+    "received_frames_start": 0,
+    "received_frames_end": 909,
+    "additional_frames": 909,
+    "median_sampled_jpeg_bytes": 5787,
+    "median_sampled_received_fps": 3.812950058273964,
+    "measurement_limit": "These are sampled laptop reception metrics, not optical latency. The 237 ending error total includes 231 errors accumulated before this trial; only six were new during this trial.",
+    "reachability_observer": {
+      "phase": "robot_network_not_observed",
+      "valid_concurrent_ping_evidence": false,
+      "reason": "Observer expired before this trial began; no sharing-off RTT or packet-loss comparison is established."
+    }
+  },
+  "restoration": "Restore sharing options to their previous user-noted states because the operator reports no benefit. AirDrop was Everyone before the comparison; prior Handoff/Receiver values were not retrieved. Restoration has not been confirmed. Do not infer that these options completely disabled AWDL."
+}

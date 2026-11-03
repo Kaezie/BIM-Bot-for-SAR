@@ -1,0 +1,63 @@
+{
+  "reviewed_at_utc": "2026-10-28T08:56:35.001034+00:00",
+  "source_file": "/Users/christine/Desktop/Screen Recording 2026-10-28 at 3.57.11\u202fPM.mov",
+  "source_sha256": "2c22c9da76e3ba76dad8be91c291acf62e8aedae922ebd6029fcbd27e2a6955e",
+  "file_size_bytes": 207788552,
+  "reported_duration_seconds": 105.68333333333332,
+  "dimensions": [
+    3420,
+    2224
+  ],
+  "review_method": "Visual review of sampled frames and Wi-Fi-menu detail from the user-provided recording. No live device activation or source-video edit.",
+  "recorded_clock": "October 28, 3:57\u20133:58 PM, preceding the later Main-only/direct/reset checks. Not a new post-fix acceptance test.",
+  "observations": [
+    {
+      "seconds": [
+        2,
+        10,
+        18
+      ],
+      "observation": "Wi-Fi menu shows ESP32_CAM selected while dashboard data is unavailable. Other network names omitted."
+    },
+    {
+      "seconds": [
+        24,
+        26
+      ],
+      "observation": "Environment briefly shows live temperature/humidity while Main is disconnected/connecting; thermal still waiting."
+    },
+    {
+      "seconds": [
+        28.5,
+        30,
+        32
+      ],
+      "observation": "Main briefly displays a person-detection overlay and the same visible frame across these samples. At30s the summary shows one detection; at32s the summary is unavailable while the old image remains visible."
+    },
+    {
+      "seconds": [
+        38.1,
+        47.6
+      ],
+      "observation": "Main shows Connecting/Camera offline and environment readings are stale/blank before Thermal is opened."
+    },
+    {
+      "seconds": [
+        57.1,
+        66.6,
+        104.7
+      ],
+      "observation": "Night shows Connecting with a light-unavailable message; no successful Night frame seen in reviewed samples."
+    },
+    {
+      "seconds": [
+        85.6
+      ],
+      "observation": "Thermal shows telemetry unavailable/invalid, with no heatmap."
+    }
+  ],
+  "interpretation": "The Main/environment outage precedes Thermal selection in this recording. Combined with independent device-read failures, the common connection/device-availability investigation remains open. This recording alone does not prove voltage, supply, firmware or radio root cause. Light unavailable is not proof that firmware needs uploading.",
+  "code_or_firmware_changes_in_this_review": false,
+  "movement_on_hold": true,
+  "next": "Inspect current physical power-board/camera power connections with robot switched off; obtain loaded supply measurements when a multimeter is available."
+}

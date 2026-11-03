@@ -1,0 +1,241 @@
+{
+  "phase": "finished",
+  "events": [
+    {
+      "at_utc": "2026-10-28T13:52:29.375830+00:00",
+      "stage": "status_tcp_connect",
+      "elapsed_ms": 249.9,
+      "connected": true
+    },
+    {
+      "at_utc": "2026-10-28T13:52:30.305022+00:00",
+      "stage": "status_headers",
+      "elapsed_ms": 1179.1,
+      "http_status": 200
+    },
+    {
+      "at_utc": "2026-10-28T13:52:30.305880+00:00",
+      "stage": "status_body",
+      "elapsed_ms": 1179.9,
+      "settings": {
+        "framesize": 6,
+        "quality": 10,
+        "pixformat": 4,
+        "xclk": 20
+      }
+    },
+    {
+      "at_utc": "2026-10-28T13:52:32.497856+00:00",
+      "stage": "stream_tcp_connect",
+      "elapsed_ms": 2181.7,
+      "attempt": 1,
+      "error_code": "timeout",
+      "bytes": 0,
+      "decoded_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T13:52:33.860722+00:00",
+      "stage": "stream_tcp_connect",
+      "elapsed_ms": 3544.5,
+      "attempt": 2,
+      "connected": true
+    },
+    {
+      "at_utc": "2026-10-28T13:52:36.452032+00:00",
+      "stage": "stream_headers",
+      "elapsed_ms": 6135.8,
+      "attempt": 2,
+      "http_status": 200
+    },
+    {
+      "at_utc": "2026-10-28T13:52:36.460395+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 6144.2,
+      "attempt": 2,
+      "bytes": 36,
+      "decoded_frames": 0,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T13:52:37.484418+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 7168.2,
+      "attempt": 2,
+      "bytes": 27175,
+      "decoded_frames": 2,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T13:52:39.455154+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 9139.0,
+      "attempt": 2,
+      "bytes": 42951,
+      "decoded_frames": 3,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T13:52:41.668614+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 11352.4,
+      "attempt": 2,
+      "bytes": 45605,
+      "decoded_frames": 4,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T13:52:43.310693+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 12994.6,
+      "attempt": 2,
+      "bytes": 50111,
+      "decoded_frames": 4,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T13:52:46.324037+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 16007.8,
+      "attempt": 2,
+      "error_code": "timeout",
+      "bytes": 50111,
+      "decoded_frames": 4
+    },
+    {
+      "at_utc": "2026-10-28T13:52:47.389544+00:00",
+      "stage": "stream_tcp_connect",
+      "elapsed_ms": 17073.3,
+      "attempt": 3,
+      "connected": true
+    },
+    {
+      "at_utc": "2026-10-28T13:52:47.647837+00:00",
+      "stage": "stream_headers",
+      "elapsed_ms": 17331.6,
+      "attempt": 3,
+      "http_status": 200
+    },
+    {
+      "at_utc": "2026-10-28T13:52:47.654971+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 17338.7,
+      "attempt": 3,
+      "bytes": 50147,
+      "decoded_frames": 4,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T13:52:51.118568+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 20802.3,
+      "attempt": 3,
+      "error_code": "timeout",
+      "bytes": 55786,
+      "decoded_frames": 4
+    },
+    {
+      "at_utc": "2026-10-28T13:52:52.582140+00:00",
+      "stage": "stream_tcp_connect",
+      "elapsed_ms": 22265.9,
+      "attempt": 4,
+      "connected": true
+    },
+    {
+      "at_utc": "2026-10-28T13:52:52.763792+00:00",
+      "stage": "stream_headers",
+      "elapsed_ms": 22447.5,
+      "attempt": 4,
+      "http_status": 200
+    },
+    {
+      "at_utc": "2026-10-28T13:52:52.772687+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 22456.5,
+      "attempt": 4,
+      "bytes": 55822,
+      "decoded_frames": 4,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T13:52:54.009855+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 23693.6,
+      "attempt": 4,
+      "bytes": 71493,
+      "decoded_frames": 5,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T13:52:56.716262+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 26400.0,
+      "attempt": 4,
+      "bytes": 77237,
+      "decoded_frames": 5,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T13:52:58.196186+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 27879.9,
+      "attempt": 4,
+      "bytes": 82961,
+      "decoded_frames": 6,
+      "invalid_frames": 0
+    },
+    {
+      "at_utc": "2026-10-28T13:53:01.328202+00:00",
+      "stage": "stream_body",
+      "elapsed_ms": 31012.0,
+      "attempt": 4,
+      "error_code": "timeout",
+      "bytes": 90141,
+      "decoded_frames": 6
+    },
+    {
+      "at_utc": "2026-10-28T13:53:04.344029+00:00",
+      "stage": "stream_tcp_connect",
+      "elapsed_ms": 34027.8,
+      "attempt": 5,
+      "error_code": "timeout",
+      "bytes": 90141,
+      "decoded_frames": 6
+    },
+    {
+      "at_utc": "2026-10-28T13:53:06.953288+00:00",
+      "stage": "stream_tcp_connect",
+      "elapsed_ms": 36637.0,
+      "attempt": 6,
+      "connected": true
+    },
+    {
+      "at_utc": "2026-10-28T13:53:09.956119+00:00",
+      "stage": "stream_headers",
+      "elapsed_ms": 39639.8,
+      "attempt": 6,
+      "error_code": "timeout",
+      "bytes": 90141,
+      "decoded_frames": 6
+    },
+    {
+      "at_utc": "2026-10-28T13:53:12.337656+00:00",
+      "stage": "status_tcp_connect",
+      "elapsed_ms": 2001.4,
+      "error_code": "timeout"
+    }
+  ],
+  "scope": "Original-only HTTP GET /status and GET :81/stream, sequential. No settings, firmware, serial, motors, audio or saved images.",
+  "physical_setup": "Operator reports newly installed full batteries. Retain previous isolation: spare USB unplugged, six spare jumpers detached, original wiring unchanged, wheels raised, direct stream tab closed.",
+  "battery_state": "New full set installed, operator confirmed; voltage not measured.",
+  "mac_ip": "192.168.4.2",
+  "started_at_utc": "2026-10-28T13:52:29.125037+00:00",
+  "stream_summary": {
+    "attempts": 6,
+    "bytes": 90141,
+    "decoded_frames": 6,
+    "invalid_frames": 0,
+    "max_no_decoded_frame_seconds": 13.55,
+    "network_retained": true,
+    "note": "Reception timing only; no optical latency or identity analysis."
+  }
+}

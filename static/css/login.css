@@ -15,3 +15,4 @@
 .google-btn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; border-radius: 30px; font-size: .85rem; }
 .login-card .msg { background: #482a2833; border: 1px solid #a74d43; padding: 12px; margin-bottom: 20px; border-radius: 8px; color: #efaaa0; font-size: .85rem; text-align: center; }
 .login-card .msg.success { color: var(--text); background: #449d7322; border-color: var(--green); }
+.auth-note { color: var(--muted); font-size: .8rem; line-height: 1.6; text-align: center; margin: 22px 0 0; }

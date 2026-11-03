@@ -9,6 +9,8 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from flask import Flask, g
+from requests import Response
+from requests.exceptions import ConnectionError as RequestsConnectionError, Timeout
 from features.telemetry import Telemetry, validate
 from features.missions import Missions, MissionError
 from features.routes import register
@@ -52,7 +54,158 @@ class FeatureTests(unittest.TestCase):
         self.telemetry.readings['thermal']['updated_at']=time.time()
         self.http.get.side_effect=TimeoutError
         self.telemetry.poll('thermal')
-        self.assertFalse(self.telemetry.get('thermal')['connected'])
+        self.assertTrue(self.telemetry.get('thermal')['connected'])
+        self.assertTrue(self.telemetry.get('thermal')['retrying'])
+
+    def test_thermal_source_freshness_metadata_validation(self):
+        grid = [[25.0] * 32 for _ in range(24)]
+        for name, invalid_values in {
+            'fresh': (False, None, 0, 1, 'true'),
+            'frame_age_ms': (True, None, '100', -1, float('nan'), float('inf'), 5000, 6000),
+            'sequence': (True, None, '1', -1, 1.5, float('nan')),
+        }.items():
+            for value in invalid_values:
+                with self.subTest(name=name, value=value), self.assertRaises(ValueError):
+                    validate('thermal', {'grid': grid, name: value})
+        validated = validate('thermal', {'grid': grid, 'fresh': True,
+                                         'frame_age_ms': 4999, 'sequence': 0})
+        self.assertEqual(validated['frame_age_ms'], 4999)
+        self.assertEqual(validated['sequence'], 0)
+
+    def test_thermal_poll_retains_acquisition_age_and_expires_at_source_limit(self):
+        payload = {'grid': [[25.0] * 32 for _ in range(24)], 'fresh': True,
+                   'frame_age_ms': 500, 'sequence': 4}
+        self.http.get.return_value.json.return_value = payload
+        with patch('features.telemetry.time.time', return_value=100), \
+                patch('features.telemetry.time.monotonic', return_value=0):
+            self.telemetry.poll('thermal')
+            first = self.telemetry.get('thermal')
+        self.assertTrue(first['connected'])
+        self.assertEqual(first['updated_at'], 99.5)
+
+        # The second response is the same sample, now two seconds older.
+        payload['frame_age_ms'] = 2500
+        with patch('features.telemetry.time.time', return_value=102), \
+                patch('features.telemetry.time.monotonic', return_value=0):
+            self.telemetry.poll('thermal')
+            self.assertEqual(self.telemetry.get('thermal')['updated_at'], 99.5)
+
+        with patch('features.telemetry.time.time', return_value=104.5):
+            self.assertFalse(self.telemetry.get('thermal')['connected'])
+
+        # A reboot can reset the sequence without blocking a new fresh frame.
+        payload.update(frame_age_ms=100, sequence=0)
+        with patch('features.telemetry.time.time', return_value=105), \
+                patch('features.telemetry.time.monotonic', return_value=0):
+            self.telemetry.poll('thermal')
+            recovered = self.telemetry.get('thermal')
+        self.assertTrue(recovered['connected'])
+        self.assertEqual(recovered['updated_at'], 104.9)
+
+    def test_thermal_http_failure_invalidates_cache_and_recovers(self):
+        payload = {'grid': [[25.0] * 32 for _ in range(24)],
+                   'fresh': True, 'frame_age_ms': 100, 'sequence': 1}
+        response = Response()
+        response.status_code = 200
+        response._content = json.dumps(payload).encode()
+        self.http.get.return_value = response
+        self.telemetry.poll('thermal')
+        self.assertTrue(self.telemetry.get('thermal')['connected'])
+        response.status_code = 503
+        response._content = b'{"fresh":false,"error":"sensor unavailable"}'
+        self.telemetry.poll('thermal')
+        self.assertFalse(self.telemetry.get('thermal')['fresh'])
+        response.status_code = 200
+        payload['sequence'] = 2
+        response._content = json.dumps(payload).encode()
+        self.telemetry.poll('thermal')
+        self.assertTrue(self.telemetry.get('thermal')['fresh'])
+        self.assertNotIn('thermal', self.telemetry.errors)
+
+    def test_thermal_sensor_failure_or_stale_frame_invalidates_last_good_reading(self):
+        good = {'grid': [[25.0] * 32 for _ in range(24)], 'fresh': True,
+                'frame_age_ms': 100, 'sequence': 1}
+        for invalid in ({'fresh': False}, {'frame_age_ms': 5000}):
+            with self.subTest(invalid=invalid):
+                self.http.get.return_value.json.return_value = good
+                self.telemetry.poll('thermal')
+                self.assertTrue(self.telemetry.get('thermal')['fresh'])
+                self.http.get.return_value.json.return_value = {**good, **invalid}
+                self.telemetry.poll('thermal')
+                self.assertFalse(self.telemetry.get('thermal')['fresh'])
+
+    def test_telemetry_failure_categories_never_publish_exception_details(self):
+        secret = 'SYNTHETIC_SECRET_DO_NOT_PUBLISH'
+        cases = (
+            (Timeout(secret), 'timeout'),
+            (TimeoutError(secret), 'timeout'),
+            (RequestsConnectionError(secret), 'transport_error'),
+            (OSError(secret), 'transport_error'),
+            (RuntimeError(secret), 'unavailable'),
+        )
+        for error, expected in cases:
+            with self.subTest(category=expected, exception=type(error).__name__):
+                self.http.get.side_effect = error
+                self.telemetry.poll('thermal')
+                reading = self.telemetry.get('thermal')
+                self.assertEqual(reading['error_code'], expected)
+                self.assertFalse(reading['connected'])
+                self.assertFalse(reading['fresh'])
+                self.assertNotIn('http_status', reading)
+                self.assertNotIn(secret, json.dumps(reading))
+                self.assertEqual(reading['message'],
+                                 'Telemetry unavailable or invalid; check firmware and connection.')
+
+    def test_telemetry_http_and_payload_diagnostics_clear_on_recovery(self):
+        secret = 'SYNTHETIC_SECRET_DO_NOT_PUBLISH'
+        response = Response()
+        response.status_code = 503
+        response.reason = secret
+        response.url = f'http://user:{secret}@robot/thermal?token={secret}'
+        response._content = json.dumps({'error': secret}).encode()
+        self.http.get.return_value = response
+        self.telemetry.poll('thermal')
+        reading = self.telemetry.get('thermal')
+        self.assertEqual(reading['error_code'], 'http_error')
+        self.assertEqual(reading['http_status'], 503)
+        self.assertNotIn(secret, json.dumps(reading))
+
+        response.status_code = 200
+        response._content = ('invalid json ' + secret).encode()
+        self.telemetry.poll('thermal')
+        reading = self.telemetry.get('thermal')
+        self.assertEqual(reading['error_code'], 'invalid_payload')
+        self.assertEqual(reading['http_status'], 200)
+        self.assertNotIn(secret, json.dumps(reading))
+
+        response._content = json.dumps({'grid': [[secret]]}).encode()
+        self.telemetry.poll('thermal')
+        self.assertEqual(self.telemetry.get('thermal')['error_code'], 'invalid_payload')
+        self.assertNotIn(secret, json.dumps(self.telemetry.get('thermal')))
+
+        response._content = json.dumps({
+            'grid': [[25.0] * 32 for _ in range(24)], 'fresh': True,
+            'frame_age_ms': 100, 'sequence': 2}).encode()
+        self.telemetry.poll('thermal')
+        reading = self.telemetry.get('thermal')
+        self.assertTrue(reading['connected'])
+        self.assertNotIn('error_code', reading)
+        self.assertNotIn('http_status', reading)
+        self.assertNotIn('thermal', self.telemetry.diagnostics)
+        self.assertEqual(reading['message'], 'Live telemetry.')
+
+    def test_thermal_legacy_grid_keeps_existing_ttl_and_rejects_future_timestamps(self):
+        self.http.get.return_value.json.return_value = {
+            'grid': [[25.0] * 32 for _ in range(24)], 'simulated': True}
+        with patch('features.telemetry.time.time', return_value=100):
+            self.telemetry.poll('thermal')
+        with patch('features.telemetry.time.time', return_value=106):
+            reading = self.telemetry.get('thermal')
+            self.assertTrue(reading['fresh'])
+            self.assertTrue(reading['simulated'])
+        for now in (99, 110):
+            with self.subTest(now=now), patch('features.telemetry.time.time', return_value=now):
+                self.assertFalse(self.telemetry.get('thermal')['fresh'])
 
     def test_audio_and_position_validation(self):
         with self.assertRaises(ValueError): validate('sound', {'db_level':-1})
@@ -99,6 +252,16 @@ class FeatureTests(unittest.TestCase):
         self.http.post.side_effect=TimeoutError
         self.missions.heartbeat()
         self.assertEqual(self.missions.active()['state'],'command_uncertain')
+
+    def test_receiver_without_fix_is_not_recorded_as_observation_position(self):
+        self.missions.start('a','Generated test area')
+        self.telemetry.readings['position'] = {
+            'frame':'wgs84','source':'fixture-gps','fix_valid':False,
+            'updated_at':time.time(),'satellites':2}
+        self.missions.observe([{'confidence':.8,'bbox_xyxy':[0,0,10,20]}],{})
+        evidence=self.missions.events('a')[0]['evidence']
+        self.assertIsNone(evidence['observation_position'])
+        self.assertIn('Survivor coordinates are not estimated',evidence['location_note'])
 
     def test_evidence_context_cooldown_review_and_persistence(self):
         self.missions.start('a','Hallway')

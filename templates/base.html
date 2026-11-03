@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/common.css') }}">
   {% block styles %}{% endblock %}
   <script id="bim-config" type="application/json">{{ {'url': supabase_url, 'key': supabase_anon_key}|tojson }}</script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <script id="bim-monitoring-profile" type="application/json">{{ monitoring_profile|default({})|tojson }}</script>
   <script src="{{ url_for('static', filename='js/auth.js') }}" defer></script>
   {% block scripts %}{% endblock %}
 </head>

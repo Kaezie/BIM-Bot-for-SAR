@@ -1,0 +1,64 @@
+{
+  "checked_at": "2026-10-27T19:13:18.008377+08:00",
+  "python_tests_passed": 227,
+  "browser_suites_passed": [
+    "headset_audio_ui.cjs",
+    "laptop_sound_ui.cjs",
+    "dashboard_ui.cjs",
+    "shared_monitoring_ui.cjs"
+  ],
+  "scope": "Generated software/browser checks and model smoke only. No real microphone, speaker, camera feed or motor acceptance.",
+  "real_runtime_smoke": {
+    "blank_image_counts": [
+      0,
+      0
+    ],
+    "generated_silence_event": "Silence/background",
+    "weights_unchanged": true,
+    "project_workers_started": false
+  },
+  "public_speech_smoke": "yamnet_smoke_2026-10-27.json",
+  "routes": {
+    "/login": 200,
+    "/testing": 200,
+    "/api/sound-model": 401,
+    "/api/survivors": 401
+  },
+  "unauthenticated_sound_classify": 401,
+  "current_javascript_verified": true,
+  "headset_available": "Operator-confirmed Bluetooth headset with microphone and earpiece; model/pairing/live acceptance pending.",
+  "movement_on_hold": true,
+  "usb_bridge_started": false,
+  "firmware_uploaded": false,
+  "real_audio_captured": false,
+  "physical_acceptance": "pending",
+  "model_accuracy": "pending",
+  "clinical_condition_validation": "pending",
+  "model_assets": {
+    "yamnet.tflite": {
+      "source": "https://storage.googleapis.com/mediapipe-models/audio_classifier/yamnet/float32/1/yamnet.tflite",
+      "sha256": "4d8b4a53282dc83ef04e3e7dbc4fbc98082e34e44ed798e16c3a0cdd4c584faf",
+      "bytes": 4126810
+    },
+    "yamnet_class_map.csv": {
+      "source": "https://raw.githubusercontent.com/tensorflow/models/master/research/audioset/yamnet/yamnet_class_map.csv",
+      "sha256": "cdf24d193e196d9e95912a2667051ae203e92a2ba09449218ccb40ef787c6df2",
+      "bytes": 14096
+    },
+    "LICENSE": {
+      "source": "https://raw.githubusercontent.com/tensorflow/models/master/LICENSE",
+      "sha256": "5b17814bf0de8cf65069bc6d7cc38cff19fcaa864d243423ad3ef3db01b52385",
+      "bytes": 11512
+    }
+  },
+  "source_sha256": {
+    "app.py": "3858a993f46c1c7162f416dc62db32675226685636bd3fb9682d76706822657b",
+    "features/survivor_observations.py": "f9c550bd922a09069e557596b91287a9ad5f514c33c45ba79c11070214788f4a",
+    "features/sound_classifier.py": "f8b0f4dfdb0f408bbd3899c8410cd1fc06c442f879ac85d2868306fbab55ecc4",
+    "static/js/headset_audio.js": "ceaa633ec12958cbec249c8d8754d6bdc720fb212fe3f06169fa558ca07be620",
+    "static/js/pcm_capture_worklet.js": "cd8fa1f0b1386d39207cadd187ebbea4532284c66be69b5c9e4af0377d2981bf",
+    "static/js/laptop_sound.js": "213e31789d2b0339ee18613fde5d92118b65475f3ca656c55235be8091890bd3",
+    "static/js/testing.js": "75ffdb81dbd6299e37c989ea704e058ee58596492e992f530b81e4a989afc999",
+    "templates/testing.html": "efc7a6b5c04140e9a7179d280abaf5cb06768614f46291b2a069179083eeaa6a"
+  }
+}

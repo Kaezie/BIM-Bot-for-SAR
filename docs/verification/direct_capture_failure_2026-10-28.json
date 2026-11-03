@@ -1,0 +1,177 @@
+{
+  "phase": "finished",
+  "samples": [
+    {
+      "at": 1793176292.987733,
+      "request": "/status",
+      "http_status": 200,
+      "settings": {
+        "framesize": 6,
+        "quality": 10,
+        "pixformat": 4,
+        "xclk": 20
+      },
+      "transport_ms": 2872.5
+    },
+    {
+      "at": 1793176297.868445,
+      "request": "/status",
+      "http_status": 200,
+      "settings": {
+        "framesize": 6,
+        "quality": 10,
+        "pixformat": 4,
+        "xclk": 20
+      },
+      "transport_ms": 1320.8
+    },
+    {
+      "at": 1793176301.204407,
+      "request": "/status",
+      "http_status": 200,
+      "settings": {
+        "framesize": 6,
+        "quality": 10,
+        "pixformat": 4,
+        "xclk": 20
+      },
+      "transport_ms": 592.8
+    },
+    {
+      "at": 1793176303.81286,
+      "request": "/capture",
+      "http_status": 200,
+      "error_code": "transport_error",
+      "transport_ms": 3313.8
+    },
+    {
+      "at": 1793176307.237629,
+      "request": "/capture",
+      "error_code": "timeout",
+      "transport_ms": 2655.6
+    },
+    {
+      "at": 1793176310.005214,
+      "request": "/capture",
+      "error_code": "timeout",
+      "transport_ms": 1002.4
+    },
+    {
+      "at": 1793176311.117147,
+      "request": "/capture",
+      "error_code": "timeout",
+      "transport_ms": 1002.1
+    },
+    {
+      "at": 1793176312.2296152,
+      "request": "/capture",
+      "error_code": "timeout",
+      "transport_ms": 1002.5
+    },
+    {
+      "at": 1793176313.348256,
+      "request": "/capture",
+      "error_code": "timeout",
+      "transport_ms": 1002.4
+    },
+    {
+      "at": 1793176314.462469,
+      "request": "/capture",
+      "error_code": "timeout",
+      "transport_ms": 1001.6
+    },
+    {
+      "at": 1793176315.576649,
+      "request": "/capture",
+      "error_code": "timeout",
+      "transport_ms": 1002.2
+    },
+    {
+      "at": 1793176316.693366,
+      "request": "/capture",
+      "error_code": "timeout",
+      "transport_ms": 1002.4
+    },
+    {
+      "at": 1793176317.810879,
+      "request": "/capture",
+      "error_code": "timeout",
+      "transport_ms": 1002.3
+    },
+    {
+      "at": 1793176318.923365,
+      "request": "/capture",
+      "error_code": "timeout",
+      "transport_ms": 1002.2
+    },
+    {
+      "at": 1793176320.036038,
+      "request": "/capture",
+      "error_code": "timeout",
+      "transport_ms": 1001.6
+    },
+    {
+      "at": 1793176321.147773,
+      "request": "/capture",
+      "error_code": "timeout",
+      "transport_ms": 1002.4
+    },
+    {
+      "at": 1793176322.262557,
+      "request": "/capture",
+      "error_code": "timeout",
+      "transport_ms": 1002.7
+    },
+    {
+      "at": 1793176323.377296,
+      "request": "/capture",
+      "error_code": "timeout",
+      "transport_ms": 3263.1
+    },
+    {
+      "at": 1793176326.750754,
+      "request": "/capture",
+      "http_status": 200,
+      "error_code": "transport_error",
+      "transport_ms": 4034.0
+    },
+    {
+      "at": 1793176330.9011462,
+      "request": "/capture",
+      "error_code": "timeout",
+      "transport_ms": 1002.7
+    },
+    {
+      "at": 1793176332.01579,
+      "request": "/capture",
+      "error_code": "timeout",
+      "transport_ms": 1002.2
+    },
+    {
+      "at": 1793176333.127738,
+      "request": "/capture",
+      "error_code": "timeout",
+      "transport_ms": 3077.6
+    },
+    {
+      "at": 1793176336.315129,
+      "request": "/capture",
+      "error_code": "timeout",
+      "transport_ms": 2059.0
+    },
+    {
+      "at": 1793176338.4871192,
+      "request": "/capture",
+      "error_code": "timeout",
+      "transport_ms": 1003.1
+    },
+    {
+      "at": 1793176339.604862,
+      "request": "/status",
+      "error_code": "timeout",
+      "transport_ms": 1002.9
+    }
+  ],
+  "scope": "Direct original status and paced JPEG reads with dashboard stopped; no commands, saved images or firmware.",
+  "mac_ip": "192.168.4.2"
+}

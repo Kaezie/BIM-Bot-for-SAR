@@ -1,14 +1,14 @@
 import os
 import sqlite3
 import math
-from uuid import uuid4
+from uuid import UUID, uuid4
 import threading
 import time
 from datetime import datetime
 from functools import wraps
 from contextlib import contextmanager
 
-from flask import Flask, Response, jsonify, request, render_template, g
+from flask import Flask, Response, jsonify, request, render_template, g, redirect, url_for
 from ultralytics import YOLO
 import cv2
 import numpy as np
@@ -18,8 +18,23 @@ from supabase import create_client
 from features.telemetry import Telemetry
 from features.missions import Missions
 from features.routes import register as register_feature_routes
+from features.nightvision import NightVision
+from features.person_analysis import PersonAnalysis, draw_people
+from features.live_camera import LiveCamera
+from features.person_tracking import PersonTracker, match_boxes, valid_box, usable_keypoints, person_region_motion
+from features.survivor_observations import SurvivorObservations
+from features.sound_classifier import SoundClassifier
+from features.system_diagnostics import save_check, collect_check, DashboardCheck, robot_network
+from features.robot_connection import SpareDiscovery
+from features.monitoring_profile import PROFILE as MONITORING_PROFILE
+from features.nightvision_illumination import NightVisionIllumination
+from features.offline_auth import OfflineSessions, same_origin_request, is_google_user, COOKIE_NAME
+from features.local_recordings import LocalRecordings
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# Small JPEG/blur operations should not each start a second CPU thread pool
+# alongside both cameras' person/pose models.
+cv2.setNumThreads(1)
 
 # Load a .env file if python-dotenv is installed and one exists (optional —
 # you can also just export these as real environment variables).
@@ -30,6 +45,31 @@ except ImportError:
     pass
 
 app = Flask(__name__)
+
+
+@app.context_processor
+def monitoring_profile_context():
+    return {'monitoring_profile': dict(MONITORING_PROFILE)}
+
+app.config['MAX_CONTENT_LENGTH'] = 513 * 1024 * 1024
+_camera_http_lock = threading.Lock()
+_camera_http_counts = {'main': {}, 'nightvision': {}}
+
+
+@app.after_request
+def count_camera_responses(response):
+    source = request.path.rsplit('/', 1)[-1]
+    if request.path == f'/api/camera-frame/{source}' and source in _camera_http_counts:
+        key = f'{request.method}:{response.status_code}'
+        with _camera_http_lock:
+            values = _camera_http_counts[source]
+            values[key] = values.get(key, 0) + 1
+    return response
+
+
+@app.errorhandler(413)
+def recording_too_large(_error):
+    return jsonify({'error': 'This request exceeds the 512 MB recording limit. Download the MP4 backup and record a shorter clip.'}), 413
 
 # =========================================================
 #  SUPABASE CONFIG
@@ -54,20 +94,26 @@ CAMERA_URL = os.environ.get('CAMERA_URL', 'http://192.168.4.1:81/stream')
 SENSOR_URL = os.environ.get('SENSOR_URL', 'http://192.168.4.1/dht')
 THERMAL_URL = os.environ.get('THERMAL_URL', 'http://192.168.4.1:82/stream')
 NIGHTVISION_CAMERA_URL = os.environ.get('NIGHTVISION_CAMERA_URL')
+camera_http = requests.Session()
+camera_http.trust_env = False
+nightvision_http = requests.Session()
+nightvision_http.trust_env = False
+sensor_http = requests.Session()
+sensor_http.trust_env = False
+sensor_health = {'error_code': None, 'last_attempt_at': None}
+nightvision_illumination = NightVisionIllumination(NIGHTVISION_CAMERA_URL, CAMERA_URL)
 # Temperature-grid JSON and the SAR thermal video stream are different inputs.
+telemetry_http = requests.Session()
+telemetry_http.trust_env = False
 telemetry = Telemetry({kind: os.environ.get('THERMAL_DATA_URL' if kind == 'thermal' else f'{kind.upper()}_URL', '')
-                       for kind in ('thermal', 'sound', 'position', 'robot')}, requests)
+                       for kind in ('thermal', 'sound', 'position', 'robot', 'movement')}, telemetry_http)
 last_detection_at = None
 
 # ── GLOBAL STATE ──
-cap = None
 thermal_cap = None
 thermal_available = False
-prev_frame = None
 latest_detections = []
 is_recording = False
-frame_count = 0
-last_results = None
 stationary_timers = {}
 
 latest_sensor_data = {
@@ -85,11 +131,25 @@ latest_sensor_data = {
 }
 
 # ── HEAT INDEX ──
+def valid_environment_values(temp_c, rh):
+    if isinstance(temp_c, bool) or isinstance(rh, bool) or temp_c is None or rh is None:
+        raise ValueError('Temperature and humidity are required.')
+    temp_c, rh = float(temp_c), float(rh)
+    if not math.isfinite(temp_c) or not math.isfinite(rh) or not -40 <= temp_c <= 85 or not 0 <= rh <= 100:
+        raise ValueError('Temperature or humidity is invalid.')
+    return temp_c, rh
+
+
 def calculate_heat_index(temp_c, rh):
-    if temp_c is None or rh is None:
-        return 0.0
+    temp_c, rh = valid_environment_values(temp_c, rh)
     T = temp_c * 9 / 5 + 32.0
     R = rh
+    # NWS screening avoids extrapolating the Rothfusz hot-weather polynomial
+    # into cool conditions. This remains heat screening, not general safety.
+    simple = .5 * (T + 61 + (T - 68) * 1.2 + R * .094)
+    screened = (simple + T) / 2
+    if screened < 80:
+        return (screened - 32) * 5 / 9
     HI_f = (-42.379 + 2.04901523*T + 10.14333127*R - 0.22475541*T*R
             - 0.00683783*T**2 - 0.05481717*R**2 + 0.00122874*T**2*R
             + 0.00085282*T*R**2 - 0.00000199*T**2*R**2)
@@ -103,25 +163,27 @@ def calculate_heat_index(temp_c, rh):
 
 # ── RISK LEVEL ──
 def calculate_risk(temp, hum):
+    temp, hum = valid_environment_values(temp, hum)
     hi = calculate_heat_index(temp, hum)
     if hi >= 54 or temp >= 41:
         return "Severe Risk", 3, 0.95, {"low": 0.02, "moderate": 0.03, "severe": 0.95}, "Dangerously hot conditions"
     elif hi >= 41 or temp >= 35:
         return "Moderate Risk", 2, 0.80, {"low": 0.10, "moderate": 0.80, "severe": 0.10}, "Heat stress likely"
     else:
-        return "Low Risk", 1, 0.90, {"low": 0.90, "moderate": 0.08, "severe": 0.02}, "Conditions are safe"
+        return "Low Risk", 1, 0.90, {"low": 0.90, "moderate": 0.08, "severe": 0.02}, "Below heat-warning thresholds; other hazards are not assessed"
 
 # ── SENSOR LISTENER ──
 def wifi_sensor_listener():
     global latest_sensor_data, is_recording
     print(f"📡 Sensor listener started. Polling {SENSOR_URL}...")
     while True:
+        response = None
+        sensor_health['last_attempt_at'] = time.time()
         try:
-            response = requests.get(SENSOR_URL, timeout=3)
+            response = sensor_http.get(SENSOR_URL, timeout=(1, 2), allow_redirects=False)
             if response.status_code == 200:
                 data = response.json()
-                temp = float(data.get('temp_c', 0))
-                hum  = float(data.get('humidity', 0))
+                temp, hum = valid_environment_values(data.get('temp_c'), data.get('humidity'))
                 hi   = calculate_heat_index(temp, hum)
                 current_time = time.strftime("%Y-%m-%d %H:%M:%S")
                 risk_label, risk_score, confidence, probs, interpretation = calculate_risk(temp, hum)
@@ -139,11 +201,18 @@ def wifi_sensor_listener():
                     "interpretation": interpretation,
                 }
                 publish_sensor_reading()
+                sensor_health['error_code'] = None
                 print(f"🌡️ {temp}°C | 💧{hum}% | {risk_label}")
             else:
+                sensor_health['error_code'] = 'http_error'
                 print(f"⚠️ Sensor status: {response.status_code}")
         except Exception as e:
-            print(f"[Sensor] Error: {e}")
+            sensor_health['error_code'] = ('timeout' if isinstance(e, requests.Timeout) else
+                                           'invalid_payload' if isinstance(e, ValueError) else 'transport_error')
+            print(f"[Sensor] {sensor_health['error_code']}; retrying independently of video.")
+        finally:
+            if response is not None:
+                response.close()
         time.sleep(2)
 
 # ── CLASSIFICATION FUNCTIONS ──
@@ -164,7 +233,8 @@ def classify_pose(keypoints):
     except:
         return "unknown"
 
-def classify_injury(keypoints, is_moving, pose, person_id):
+def classify_injury(keypoints, is_moving, pose, person_id, stationary_state=None):
+    timers = stationary_timers if stationary_state is None else stationary_state
     if keypoints is None:
         return "Unknown"
     try:
@@ -186,11 +256,11 @@ def classify_injury(keypoints, is_moving, pose, person_id):
         )
 
         if not is_moving:
-            if person_id not in stationary_timers:
-                stationary_timers[person_id] = time.time()
-            duration = time.time() - stationary_timers[person_id]
+            if person_id not in timers:
+                timers[person_id] = time.time()
+            duration = time.time() - timers[person_id]
         else:
-            stationary_timers.pop(person_id, None)
+            timers.pop(person_id, None)
             duration = 0
 
         if pose == "lying" and not is_moving and duration > 30:
@@ -211,17 +281,21 @@ def classify_injury(keypoints, is_moving, pose, person_id):
         return "Unknown"
 
 def classify_survivor(box, frame_shape, keypoints, is_moving,
-                      person_id=0, thermal_data=None):
+                      person_id=0, thermal_data=None, stationary_state=None):
     frame_h, frame_w = frame_shape[:2]
     x1, y1, x2, y2  = box
     box_h = y2 - y1
 
     age           = classify_age(box_h, frame_h)
     pose          = classify_pose(keypoints) if keypoints is not None else "unknown"
-    consciousness = "Conscious" if is_moving else "Unconscious/Unresponsive"
-    injury        = classify_injury(keypoints, is_moving, pose, person_id)
+    # Missing temporal evidence is not observed immobility. The existing
+    # condition rules remain unvalidated estimates when motion is available.
+    consciousness = "Unknown" if is_moving is None else "Conscious" if is_moving else "Unconscious/Unresponsive"
+    injury = "Unknown" if is_moving is None else classify_injury(keypoints, is_moving, pose, person_id, stationary_state)
 
-    if not is_moving and pose == "lying":
+    if is_moving is None:
+        trapped = "Unknown"
+    elif not is_moving and pose == "lying":
         trapped = "Possibly Trapped"
     elif not is_moving and pose == "upright":
         trapped = "Possibly Trapped"
@@ -284,107 +358,55 @@ def analyze_thermal(thermal_frame, detection_box):
         return {'alive_indicator': 'Unknown', 'injury_indicator': 'Unknown'}
 
 # ── CAMERA + YOLO ──
+main_analysis = PersonAnalysis(cv2, classify_survivor, 'main')
+
+
+def analyze_main_frame(frame):
+    return main_analysis.analyze(frame, main_camera, detection_model, pose_model,
+                                 thermal_frame=get_thermal_frame(), thermal_analyzer=analyze_thermal)
+
+
+def render_main_frame(frame, detections, age):
+    return draw_people(cv2, frame, detections, age)
+
+
+def clear_main_result():
+    global latest_detections, last_detection_at
+    latest_detections, last_detection_at = [], None
+    main_analysis.reset()
+
+
+def accept_main_result(detections, received_at):
+    global latest_detections, last_detection_at
+    latest_detections, last_detection_at = list(detections), received_at
+    return lambda: publish_survivor_reading(captured_at=received_at, detections=detections)
+
+
+main_camera = LiveCamera(CAMERA_URL, camera_http, cv2, np,
+                         analyze=analyze_main_frame, render=render_main_frame,
+                         on_result=accept_main_result, on_clear=clear_main_result)
+nightvision = NightVision(
+    NIGHTVISION_CAMERA_URL, nightvision_http, cv2, np,
+    lambda: YOLO(os.path.join(BASE_DIR, os.environ.get('YOLO_MODEL_PATH', 'best.pt'))),
+    detection=os.environ.get('NIGHTVISION_DETECTION_ENABLED', 'true').lower() == 'true',
+    pose_factory=lambda: YOLO(os.path.join(BASE_DIR, os.environ.get('POSE_MODEL_PATH', 'yolo11s-pose.pt'))),
+    classifier=classify_survivor)
+
+
+def apply_spare_address(host, camera_enabled, thermal_enabled):
+    if camera_enabled:
+        url = f'http://{host}:81/stream'
+        nightvision.set_url(url)
+        nightvision_illumination.camera_url = url
+    if thermal_enabled:
+        telemetry.set_url('thermal', f'http://{host}/thermal')
+
+
+spare_discovery = SpareDiscovery(NIGHTVISION_CAMERA_URL, telemetry.urls.get('thermal'), apply_spare_address)
+
+
 def generate_frames():
-    global latest_detections, frame_count, last_results, prev_frame, cap
-
-    while True:
-        if cap is None or not cap.isOpened():
-            cap = cv2.VideoCapture(CAMERA_URL)
-            if not cap.isOpened():
-                blank = np.zeros((480, 640, 3), dtype=np.uint8)
-                ret, buffer = cv2.imencode('.jpg', blank)
-                yield (b'--frame\r\n'
-                       b'Content-Type: image/jpeg\r\n\r\n' +
-                       buffer.tobytes() + b'\r\n')
-                time.sleep(1)
-                continue
-
-        ret, frame = cap.read()
-        if not ret:
-            cap = None
-            continue
-
-        frame_count += 1
-
-        if frame_count % 3 == 0:
-            # Motion detection
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            gray = cv2.GaussianBlur(gray, (21, 21), 0)
-            is_moving = False
-            if prev_frame is not None:
-                diff = cv2.absdiff(prev_frame, gray)
-                _, thresh = cv2.threshold(diff, 25, 255, cv2.THRESH_BINARY)
-                motion_pixels = cv2.countNonZero(thresh)
-                is_moving = motion_pixels > 1000
-            prev_frame = gray
-
-            # Get thermal frame
-            thermal_frame = get_thermal_frame()
-
-            # Run detection and pose
-            det_results  = detection_model(frame, classes=[14], conf=0.25)
-            pose_results = pose_model(frame, conf=0.25)
-
-            latest_detections = []
-
-            for i, box in enumerate(det_results[0].boxes):
-                x1, y1, x2, y2 = box.xyxy[0].tolist()
-                confidence = float(box.conf)
-
-                thermal_data = analyze_thermal(
-                    thermal_frame, (x1, y1, x2, y2)
-                )
-
-                keypoints = None
-                if (pose_results[0].keypoints is not None and
-                        i < len(pose_results[0].keypoints.xy)):
-                    keypoints = pose_results[0].keypoints.xy[i].tolist()
-
-                status = classify_survivor(
-                    (x1, y1, x2, y2),
-                    frame.shape,
-                    keypoints,
-                    is_moving,
-                    person_id=i,
-                    thermal_data=thermal_data
-                )
-
-                latest_detections.append({
-                    'confidence':     confidence,
-                    'x': x1, 'y': y1,
-                    'width': x2, 'height': y2,
-                    'age':            status['age'],
-                    'consciousness':  status['consciousness'],
-                    'injury':         status['injury'],
-                    'trapped':        status['trapped'],
-                    'pose':           status['pose'],
-                    'thermal_alive':  status['thermal_alive'],
-                    'thermal_injury': status['thermal_injury']
-                })
-
-            publish_survivor_reading()
-
-            # Draw annotations
-            annotated_frame = det_results[0].plot()
-
-            for det in latest_detections:
-                x1, y1 = int(det['x']), int(det['y'])
-                label  = f"{det['age']} | {det['consciousness']}"
-                label2 = f"{det['injury']} | {det['trapped']}"
-                cv2.putText(annotated_frame, label,
-                            (x1, y1 - 30),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-                cv2.putText(annotated_frame, label2,
-                            (x1, y1 - 10),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
-
-            last_results = annotated_frame
-
-        display_frame = last_results if last_results is not None else frame
-        ret, buffer = cv2.imencode('.jpg', display_frame)
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' +
-               buffer.tobytes() + b'\r\n')
+    yield from main_camera.frames()
 
 # Local mission history survives page reloads and server restarts.
 HISTORY_DB = os.environ.get('HISTORY_DB', os.path.join(BASE_DIR, 'mission_history.sqlite3'))
@@ -418,18 +440,35 @@ def add_alert(kind, message):
 init_history()
 missions = Missions(history_database, telemetry, requests,
                     os.environ.get('ROBOT_COMMAND_URL', ''), os.environ.get('ROBOT_COMMAND_KEY', ''))
+from features.movement import MovementControl
+movement = MovementControl(missions, telemetry, requests,
+                           os.environ.get('MOVEMENT_COMMAND_URL', ''), os.environ.get('ROBOT_COMMAND_KEY', ''))
+missions.external_motion_busy = lambda: movement.busy
 
 
 # =========================================================
-#  AUTH — verifying Supabase-issued JWTs on each request
+#  AUTH — Google-verified local sessions and existing Supabase access tokens
 #
-#  There's no server-side session here on purpose: the employee's browser
-#  holds the Supabase session (via supabase-js) and sends the access token
-#  with every request — as an Authorization header for normal API calls, or
-#  as an ?access_token= query param for things loaded as <img>/<video> src
-#  (which can't set custom headers). This route just checks that token is
-#  still valid for each request; Supabase itself is the source of truth.
+#  Google sign-in is verified online before this laptop receives an opaque,
+#  bounded local session. Local camera/API access then works without internet.
+#  Only session-token hashes are stored on disk, never Supabase refresh tokens.
 # =========================================================
+
+LOCAL_DATA_DIR = os.environ.get('LOCAL_DATA_DIR') or os.path.join(BASE_DIR, 'local_data')
+offline_sessions = OfflineSessions(LOCAL_DATA_DIR)
+
+
+def upload_local_recording(owner_id, filename, path):
+    # The queue supplies the verified owner and one immutable, unique filename.
+    # Retrying that same path is idempotent. The local source is always retained.
+    with open(path, 'rb') as recording:
+        supabase_admin_client.storage.from_(SUPABASE_STORAGE_BUCKET).upload(
+            f'{owner_id}/{filename}', recording,
+            {'content-type': 'video/mp4', 'upsert': 'true'},
+        )
+
+
+local_recordings = LocalRecordings(LOCAL_DATA_DIR, upload_local_recording)
 
 # Small cache so we're not hitting Supabase's Auth API on every single
 # 1-second poll from every employee's dashboard.
@@ -464,33 +503,56 @@ def _extract_token():
 def require_auth(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
+        local_user = offline_sessions.current_user()
+        if local_user is not None:
+            if request.method not in {'GET', 'HEAD', 'OPTIONS'} and not same_origin_request():
+                return jsonify({'error': 'Same-origin request required.'}), 403
+            g.user = local_user
+            return f(*args, **kwargs)
         token = _extract_token()
         if not token:
             return jsonify({'error': 'Missing access token.'}), 401
         user = _verify_token(token)
         if user is None:
             return jsonify({'error': 'Invalid or expired session.'}), 401
+        if not is_google_user(user):
+            return jsonify({'error': 'A verified Google account is required.'}), 403
         g.user = user
         return f(*args, **kwargs)
     return wrapper
 
 
+def verify_google_user_fresh(token):
+    # Device-session issuance always verifies online, without the poll cache.
+    result = supabase_auth_client.auth.get_user(token)
+    return result.user if result else None
+
+
+offline_sessions.register(app, verify_google_user_fresh)
+local_recordings.register(app, require_auth)
+nightvision_illumination.register(app, require_auth)
+sound_classifier = SoundClassifier(os.path.join(BASE_DIR, 'local_data', 'models', 'yamnet'))
+sound_classifier.register(app, require_auth)
+
+
 # =========================================================
 #  PAGES
-#  These render unconditionally — the pages themselves check for a valid
-#  Supabase session client-side (via supabase-js) and redirect to /login if
-#  there isn't one. The API routes below are what's actually protected.
+#  Pages render locally and use the server-verified device session before any
+#  cloud authentication call. API routes remain protected in both modes.
 # =========================================================
 
 @app.route('/login')
-@app.route('/signup')
 def login_page():
     return render_template(
         'login.html',
-        signup=request.path == '/signup',
         supabase_url=SUPABASE_URL,
         supabase_anon_key=SUPABASE_ANON_KEY,
     )
+
+
+@app.route('/signup')
+def signup_page():
+    return redirect(url_for('login_page'))
 
 
 @app.route('/')
@@ -500,6 +562,11 @@ def dashboard():
         supabase_url=SUPABASE_URL,
         supabase_anon_key=SUPABASE_ANON_KEY,
     )
+
+
+@app.get('/testing')
+def testing_guide():
+    return render_template('testing.html', supabase_url=SUPABASE_URL, supabase_anon_key=SUPABASE_ANON_KEY)
 
 
 # =========================================================
@@ -534,8 +601,8 @@ def upload_to_storage():
         link = signed.get('signedURL') or signed.get('signedUrl') or signed.get('signed_url')
 
         return jsonify({'success': True, 'path': storage_path, 'link': link})
-    except Exception as e:
-        return jsonify({'error': f'Upload failed: {e}'}), 500
+    except Exception:
+        return jsonify({'error': 'Cloud upload could not finish. Keep the local recording and retry when internet is available.'}), 502
 
 
 @app.route('/api/recordings')
@@ -591,23 +658,139 @@ def publish_sensor_reading():
     previous_risk = risk
 
 
-def publish_survivor_reading():
+def publish_survivor_reading(captured_at=None, detections=None):
     global last_detection_at, previous_detection_count
-    last_detection_at = time.time()
-    missions.observe(latest_detections, latest_sensor_data)
-    count = len(latest_detections)
+    if captured_at is None:
+        last_detection_at = time.time()
+    evidence = latest_detections if detections is None else detections
+    missions.observe(evidence, latest_sensor_data)
+    count = len(evidence)
     if count > 0 and count != previous_detection_count:
         add_alert('detection', f'{count} possible survivor(s) detected. Verify in the camera feed.')
     previous_detection_count = count
 
 
+def authorized_camera_frames(frames):
+    """Close local-session streams on expiry/revocation, including open clients."""
+    if not getattr(g.user, 'local', False):
+        return frames
+    # Capture context before Flask returns the streaming response.
+    token = request.cookies.get(COOKIE_NAME)
+    owner, expires_at = g.user.id, g.user.expires_at
+
+    def stream():
+        next_check = 0
+        try:
+            for frame in frames:
+                now = time.time()
+                if now >= expires_at:
+                    break
+                if now >= next_check:
+                    user = offline_sessions.resolve(token)
+                    if user is None or user.id != owner:
+                        break
+                    next_check = now + 2
+                yield frame
+        finally:
+            frames.close()
+    return stream()
+
+
+def require_camera_frame_auth(f):
+    protected = require_auth(f)
+
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        # The new fetch-based transport never verifies URL credentials.
+        if 'access_token' in request.args:
+            result = jsonify({'error': 'Use the session cookie or Authorization header.'}), 400
+        else:
+            result = protected(*args, **kwargs)
+        # This includes failed auth and malformed viewer requests, which must
+        # not be reused by an intermediary or the browser after a new sign-in.
+        response = app.make_response(result)
+        response.headers['Cache-Control'] = 'no-store'
+        response.headers['Vary'] = 'Cookie, Authorization, X-Camera-Viewer'
+        return response
+    return wrapper
+
+
+@app.route('/api/camera-frame/<source>', methods=['GET', 'DELETE'])
+@require_camera_frame_auth
+def camera_frame(source):
+    """A bounded current-image request avoids an accumulating browser stream."""
+    camera = {'main': main_camera, 'nightvision': nightvision}.get(source)
+    if camera is None:
+        return jsonify({'error': 'Unknown camera source.'}), 404
+    viewer_id = request.headers.get('X-Camera-Viewer', '')
+    try:
+        if len(viewer_id) != 36 or str(UUID(viewer_id)) != viewer_id.lower():
+            raise ValueError
+        cursor = []
+        for name in ('X-Camera-Sequence', 'X-Camera-Generation'):
+            value = request.headers.get(name, '-1')
+            if len(value) > 20:
+                raise ValueError
+            parsed = int(value)
+            if parsed < -1 or parsed > 2 ** 63 - 1:
+                raise ValueError
+            cursor.append(parsed)
+    except (ValueError, AttributeError):
+        return jsonify({'error': 'Invalid camera viewer or frame cursor.'}), 400
+    viewer = (str(g.user.id), viewer_id.lower())
+    if request.method == 'DELETE':
+        camera.close_snapshot(viewer, asynchronous=True)
+        response = Response(status=204)
+    else:
+        _capture_on_camera_request()
+        snapshot = camera.snapshot(viewer, sequence=cursor[0], generation=cursor[1])
+        if getattr(g.user, 'local', False):
+            # Recheck after the wait, just as open MJPEG streams check their
+            # captured lease before emitting another image.
+            user = offline_sessions.resolve(request.cookies.get(COOKIE_NAME))
+            if user is None or str(user.id) != str(g.user.id) or time.time() >= g.user.expires_at:
+                camera.close_snapshot(viewer, asynchronous=True)
+                response = jsonify({'error': 'Invalid or expired session.'})
+                response.status_code = 401
+                return response
+        state = snapshot['state']
+        if state == 'frame':
+            response = Response(snapshot['jpeg'], mimetype='image/jpeg')
+            response.headers['X-Camera-Sequence'] = str(snapshot['sequence'])
+            response.headers['X-Camera-Generation'] = str(snapshot['generation'])
+            response.headers['X-Camera-Received-At'] = f"{snapshot['received_at']:.6f}"
+            response.headers['X-Camera-Age-Ms'] = f"{snapshot['age_ms']:.3f}"
+        elif state == 'pending':
+            response = Response(status=204)
+        else:
+            response = jsonify({'connected': False, 'message': snapshot['message']})
+            response.status_code = 429 if state == 'busy' else 503
+            if state == 'busy':
+                response.headers['Retry-After'] = '1'
+    return response
+
+
 @app.route('/video_feed')
 @require_auth
 def video_feed():
-    return Response(
-        generate_frames(),
-        mimetype='multipart/x-mixed-replace; boundary=frame'
-    )
+    frames = generate_frames()
+    first = next(frames, None)
+    if first is None:
+        frames.close()
+        return jsonify({'connected': False, 'message': main_camera.status()['message']}), 503
+
+    def stream():
+        try:
+            yield first
+            yield from frames
+        finally:
+            frames.close()
+
+    response = Response(authorized_camera_frames(stream()),
+                        mimetype='multipart/x-mixed-replace; boundary=frame')
+    response.headers['Cache-Control'] = 'no-store'
+    response.call_on_close(frames.close)
+    return response
 
 @app.route('/api/survivors')
 @require_auth
@@ -617,7 +800,80 @@ def survivors():
 @app.route('/api/sensor-data')
 @require_auth
 def sensor_data():
-    return jsonify({**latest_sensor_data, 'fresh': bool(latest_sensor_data.get('updated_at') and time.time() - latest_sensor_data['updated_at'] < 10)})
+    retrying = sensor_health['error_code'] in ('timeout', 'transport_error')
+    fresh = bool(latest_sensor_data.get('updated_at') and
+                 0 <= time.time() - latest_sensor_data['updated_at'] < 10 and
+                 (not sensor_health['error_code'] or retrying))
+    response = jsonify({**latest_sensor_data, **sensor_health, 'fresh': fresh, 'retrying': retrying,
+                        'message': 'Retrying DHT connection; showing the last recent reading.' if retrying and fresh else
+                        'Fresh DHT readings.' if fresh else 'Waiting for the robot sensor. Check ESP32_CAM connectivity and robot power.'})
+    response.headers['Cache-Control'] = 'no-store'
+    return response
+
+
+@app.post('/api/system-check')
+@require_auth
+def system_check():
+    if not same_origin_request():
+        return jsonify({'error': 'Same-origin request required.'}), 403
+    try:
+        report = save_check(LOCAL_DATA_DIR, {'main': main_camera, 'nightvision': nightvision},
+                            latest_sensor_data.copy(), sensor_health.copy(), telemetry.get('thermal'))
+    except (OSError, ValueError):
+        return jsonify({'error': 'Could not save the internal diagnostic snapshot.'}), 503
+    response = jsonify({'saved': True, 'report': report})
+    response.headers['Cache-Control'] = 'no-store'
+    return response
+
+
+def _dashboard_diagnostic_snapshot():
+    report = collect_check({'main': main_camera, 'nightvision': nightvision},
+                            latest_sensor_data.copy(), sensor_health.copy(), telemetry.get('thermal'))
+    with _camera_http_lock:
+        report['camera_http'] = {source: values.copy() for source, values in _camera_http_counts.items()}
+    report['spare_discovery'] = spare_discovery.status()
+    return report
+
+
+dashboard_check = DashboardCheck(LOCAL_DATA_DIR, _dashboard_diagnostic_snapshot,
+                                 duration=max(30, min(300, int(os.environ.get('BIMBOT_CAPTURE_SECONDS', '180'))))
+                                 if os.environ.get('BIMBOT_CAPTURE_ON_VIDEO') == '1' else 60)
+
+_capture_enabled = os.environ.get('BIMBOT_CAPTURE_ON_VIDEO') == '1'
+_capture_start_lock = threading.Lock()
+_capture_started = False
+
+
+def _capture_on_camera_request():
+    """Include startup failures, without recording a home-network login check.
+
+    Keep the existing opt-in launch flag. Only the authenticated, validated GET
+    path calls this hook; recording itself never opens a camera connection.
+    """
+    global _capture_started
+    if not _capture_enabled or _capture_started:
+        return
+    try:
+        with _capture_start_lock:
+            if _capture_started or robot_network().get('robot_subnet') is not True:
+                return
+            _capture_started = True
+        dashboard_check.start()
+    except Exception:
+        pass  # Optional diagnostics must never interrupt a camera request.
+
+
+@app.route('/api/system-check/recording', methods=['GET', 'POST'])
+@require_auth
+def system_check_recording():
+    if request.method == 'POST':
+        if not same_origin_request():
+            return jsonify({'error': 'Same-origin request required.'}), 403
+        if not dashboard_check.start():
+            return jsonify({'error': 'A diagnostic recording is already running.'}), 409
+    response = jsonify(dashboard_check.status())
+    response.headers['Cache-Control'] = 'no-store'
+    return response, 202 if request.method == 'POST' else 200
 
 @app.route('/api/thermal')
 @require_auth
@@ -638,34 +894,46 @@ def toggle_recording():
 @app.route('/nightvision_feed')
 @require_auth
 def nightvision_feed():
-    if not NIGHTVISION_CAMERA_URL:
+    if not nightvision.url:
         return jsonify({'connected': False, 'message': 'Night-vision camera is not installed yet.'}), 503
+    frames = nightvision.frames()
+    first = next(frames, None)
+    if first is None:
+        frames.close()
+        return jsonify({'connected': False, 'message': nightvision.status()['message']}), 503
 
-    def generate_nv_frames():
-        nv_cap = cv2.VideoCapture(NIGHTVISION_CAMERA_URL)
+    def stream():
         try:
-            while True:
-                ret, frame = nv_cap.read()
-                if not ret:
-                    break
-                ret, buffer = cv2.imencode('.jpg', frame)
-                yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+            yield first
+            yield from frames
         finally:
-            nv_cap.release()
+            frames.close()
 
-    return Response(generate_nv_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    response = Response(authorized_camera_frames(stream()), mimetype='multipart/x-mixed-replace; boundary=frame')
+    response.headers['Cache-Control'] = 'no-store'
+    response.call_on_close(frames.close)
+    return response
+
+
+@app.route('/api/nightvision')
+@require_auth
+def nightvision_status():
+    return jsonify(nightvision.status())
 
 
 @app.route('/api/device-status')
 @require_auth
 def device_status():
-    return jsonify({'nightvision': bool(NIGHTVISION_CAMERA_URL)})
+    return jsonify({'nightvision': bool(nightvision.url), 'nightvision_status': nightvision.status(),
+                    'main_status': main_camera.status()})
 
 
 @app.route('/api/thermal-data')
 @require_auth
 def thermal_data():
-    return jsonify(telemetry.get('thermal'))
+    response = jsonify(telemetry.get('thermal'))
+    response.headers['Cache-Control'] = 'no-store'
+    return response
 
 
 @app.route('/api/sound-data')
@@ -675,7 +943,7 @@ def sound_data():
 
 
 def detection_snapshot():
-    fresh = bool(detection_model is not None and last_detection_at and time.time()-last_detection_at < 10)
+    fresh = bool(detection_model is not None and last_detection_at and 0 <= time.time()-last_detection_at < LiveCamera.RESULT_TTL)
     return {'available': fresh, 'updated_at': last_detection_at,
             'survivors_found': len(latest_detections) if fresh else None,
             'detections': list(latest_detections) if fresh else []}
@@ -686,7 +954,7 @@ register_feature_routes(app, require_auth, missions, telemetry,
                         lambda: {'detector_loaded': detection_model is not None, 'pose_loaded': pose_model is not None,
                                  'person_class_id': 14,
                                  'condition_classifier': 'sar_heuristics',
-                                 'preprocessing': False})
+                                 'preprocessing': False}, movement=movement)
 
 
 def mission_listener():
@@ -700,7 +968,9 @@ def mission_listener():
 
 
 def start_workers():
+    spare_discovery.start()
     telemetry.start()
+    local_recordings.start(interval=30)
     for worker in (wifi_sensor_listener, mission_listener):
         threading.Thread(target=worker, daemon=True).start()
 

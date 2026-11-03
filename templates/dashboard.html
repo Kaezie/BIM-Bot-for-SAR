@@ -2,7 +2,7 @@
 {% block title %}BIM-Bot | Mission dashboard{% endblock %}
 {% block body_class %}dashboard-page{% endblock %}
 {% block styles %}<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">{% endblock %}
-{% block scripts %}<script src="{{ url_for('static', filename='js/dashboard.js') }}" defer></script>{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/live_camera_player.js') }}" defer></script><script src="{{ url_for('static', filename='js/laptop_sound.js') }}" defer></script><script src="{{ url_for('static', filename='js/headset_audio.js') }}" defer></script><script src="{{ url_for('static', filename='js/movement.js') }}" defer></script><script src="{{ url_for('static', filename='js/dashboard.js') }}" defer></script>{% endblock %}
 {% block content %}
   <a class="skip-link" href="#main">Skip to dashboard</a>
   {% include "dashboard/header.html" %}
@@ -13,9 +13,11 @@
       <summary>Mission tools &amp; history <span>Mission control · Verification · Recordings</span></summary>
       <div class="tools-content">
         <nav class="section-nav" aria-label="Dashboard sections">
-          <a href="#mission">Mission &amp; verification</a><a href="#communication">Survivor communication</a><a href="#alerts">Alert history</a><a href="#trends">Sensor trends</a><a href="#recordings">Recordings</a>
+          <a href="#recordedMovement">Movement history</a><a href="#robotPosition">Robot position</a><a href="#mission">Mission &amp; verification</a><a href="#communication">Survivor communication</a><a href="#alerts">Alert history</a><a href="#trends">Sensor trends</a><a href="#recordings">Recordings</a>
         </nav>
         {% include "dashboard/survivors.html" %}
+        {% include "dashboard/movement.html" %}
+        {% include "dashboard/position.html" %}
         {% include "dashboard/mission.html" %}
         {% include "dashboard/communication.html" %}
         {% include "dashboard/alerts.html" %}

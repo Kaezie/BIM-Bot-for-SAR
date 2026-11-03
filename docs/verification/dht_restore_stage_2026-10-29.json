@@ -1,0 +1,51 @@
+{
+  "date": "2026-10-29",
+  "operator_report": "Night is better than before; asks to proceed to sensors. Confirms DHT is already reconnected.",
+  "night_postfix_evidence": "night_fresh2_short_browser_2026-10-29.json",
+  "evidence_limits": {
+    "robot_samples": 287,
+    "excluded_other_samples": 2,
+    "night_active_samples": 20,
+    "night_fresh_active_samples": 19,
+    "night_received_frames": 44,
+    "night_source_errors": 0,
+    "night_max_sampled_image_age_ms": 1520,
+    "main_active_samples": 27,
+    "main_source_error_delta": 2,
+    "simultaneous_viewer_samples": 0,
+    "conclusion": "Preliminary operator-reported Night improvement; not a completed five-minute combined-camera acceptance."
+  },
+  "prior_status_observer": "Expired before operator connected; no fresh retry/2+fresh/2 status proof from that observer. Do not interpret as firmware failure.",
+  "software_change": "Existing spare identity GET now retains only allowlisted typed firmware/profile fields and checked_at in diagnostics; no added hardware request or video stream.",
+  "validation": {
+    "python_tests_passed": 274,
+    "targeted_discovery_sensor_tests_passed": 17,
+    "git_diff_check": "pass"
+  },
+  "runtime": {
+    "pid": 13200,
+    "session": 78057,
+    "port": 5050,
+    "sensor_url": "http://192.168.4.1/dht",
+    "main_url": "http://192.168.4.1:81/stream",
+    "night_url_last_verified": "http://192.168.4.2:81/stream",
+    "thermal_data_url": "",
+    "robot_and_movement_command_urls": "blank",
+    "camera_trace_seconds": 180,
+    "login_http": 200,
+    "dashboard_http": 200,
+    "unauth_sensor_status_http": 401
+  },
+  "main_quality_check": {
+    "session": 33506,
+    "report": "local_data/diagnostics/main_quality_dht_stage_2026-10-29.json",
+    "scope": "Network-guarded verify/restore previously acceptedquality20 after power changes; no firmware write; waiting for robot network."
+  },
+  "dht_state": "Software reader restored; actual sensor data validation PENDING onESP32_CAM. No rewiring needed/attempted.",
+  "thermal_state": "Paused and NOT authorized for new physical connection in this step; restore separately after DHT is verified.",
+  "firmware_uploaded_this_stage": false,
+  "serial_opened_this_stage": false,
+  "persistent_env_edited": false,
+  "motor_commands_sent": false,
+  "next_test": "JoinESP32_CAM,wait10s,refreshdashboard. ConnectMainthenNightwithoutdisconnectingMain. KeepSafari visible3min. Checknumerictemperature/humidity/heatindex andbothcamera behavior. Keepcurrentpower/wiring,whiteLEDoff,wheelsraised."
+}

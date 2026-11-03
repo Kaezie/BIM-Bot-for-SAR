@@ -1,0 +1,2 @@
+# Local CPU inference for the official YAMNet model; installed separately.
+ai-edge-litert==2.3.0

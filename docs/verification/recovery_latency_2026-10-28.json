@@ -1,0 +1,87 @@
+{
+  "checked_at": "2026-10-28T13:52:14.682148+08:00",
+  "python_tests_passed": 239,
+  "browser_suites_passed": [
+    "camera_recovery_ui.cjs",
+    "thermal_live_ui.cjs",
+    "dashboard_ui.cjs",
+    "headset_audio_ui.cjs"
+  ],
+  "changes": [
+    "Latest-only analysis capped at four starts per second per camera; stale work dropped before model invocation.",
+    "OpenCV small-image CPU pool limited to one thread; model weights, CPU model input/thresholds and firmware frame-rate/quality unchanged.",
+    "DHT uses an independent persistent direct session with bounded timeouts, redirect refusal, response cleanup, health reporting and retry.",
+    "Browser sensor requests are single-flight with bounded timeouts; polling reschedules even after an unexpected callback failure.",
+    "DHT/thermal responses use no-store. Internal protected snapshot saves cache/timing/network diagnostics only, without images, identities, credentials or device activation.",
+    "Camera DELETE/session-expiry release clears ownership immediately and closes a stalled upstream asynchronously, without occupying a browser HTTP request until socket timeout."
+  ],
+  "generated_browser_latency": {
+    "synthetic_localhost": true,
+    "physical_robot_test": false,
+    "source_fps": 15,
+    "injected_decode_delay_ms": 120,
+    "painted_frames": 36,
+    "skipped_source_frames": 31,
+    "max_painted_reception_age_ms": 190.9,
+    "p95_painted_reception_age_ms": 190.2,
+    "first_six_mean_age_ms": 161.8,
+    "last_six_mean_age_ms": 167.1,
+    "maximum_concurrent_frame_requests": 1,
+    "remaining_viewer_leases": 0,
+    "remaining_upstream_clients": 0
+  },
+  "live_checks": {
+    "observed_mac_ipv4": "192.168.68.73",
+    "observed_robot_route_gateway": "192.168.68.1",
+    "dht": "ConnectTimeout",
+    "night_status": "ConnectTimeout",
+    "thermal": "ConnectTimeout",
+    "operator_report": "Mac shows ESP32_CAM and, after DHCP renewal, a 192.168.4.x address. Tool-based reads still observed the home route; snapshot while on robot Wi-Fi required.",
+    "live_robot_delay": "not established",
+    "live_sensor_recovery": "Fresh DHT27.4C/68% and thermal sequence11337,22.02-32.61C after camera exercise.",
+    "operator_snapshot": "sensor_recovery_2026-10-28.json",
+    "camera_snapshot_limitation": "Final snapshot has zero viewers after release; sustained frame rate/under-load continuity not measured.",
+    "operator_video_confirmation": "Both videos responsive in manual internal dual-feed test.",
+    "latest_snapshot": "dual_camera_recovery_2026-10-28.json"
+  },
+  "dual_model_benchmark": [
+    {
+      "torch_threads": 8,
+      "median_pair_ms": 191.9,
+      "max_pair_ms": 203.8
+    },
+    {
+      "torch_threads": 2,
+      "median_pair_ms": 189.1,
+      "max_pair_ms": 205.6
+    },
+    {
+      "torch_threads": 1,
+      "median_pair_ms": 216.1,
+      "max_pair_ms": 287.9
+    }
+  ],
+  "benchmark_note": "Generated images only; changing Torch threads did not show a material inference gain, so no Torch-thread override was installed.",
+  "movement_on_hold": true,
+  "firmware_uploaded": false,
+  "wiring_changed": false,
+  "source_sha256": {
+    "app.py": "c9cd5000f482ea28ceed7685202c01876a9c41311dcd554a3fa7972a29868d2f",
+    "features/live_camera.py": "8fd4b2b617066c016e97bdef8020b45777606c9d56a2dda1f11ebb3dc2f60237",
+    "features/system_diagnostics.py": "e43dfefa99a0d7593c76e072dd3a21ade74696357db979e085de6027430f2bf4",
+    "static/js/dashboard.js": "f30c097fccb8177bd9056f943181dc89d24f01f08d0b9e2c58318eeeb8bda3d7",
+    "static/js/testing.js": "58e7f38474d429ed3e71987d2c3a823a07c88c7c6dea774b6b80a421ad497525",
+    "static/css/testing.css": "b614502bab92cd05ee3925d751b8befd7cf25fe3a5d0137d69b82c961fa0887c",
+    "templates/testing.html": "d8f93f9e2bb80566326193fa48868e5b1ec9333354017a116afd8454152a5f2d"
+  },
+  "served_checks": {
+    "/login": 200,
+    "/testing": 200,
+    "internal_snapshot_button_present": true,
+    "/api/sensor-data": 401,
+    "/api/thermal-data": 401,
+    "unauthenticated_snapshot_post": 401,
+    "static/js/dashboard.js_current": true,
+    "static/js/testing.js_current": true
+  }
+}

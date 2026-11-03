@@ -1,0 +1,1245 @@
+{
+  "phase": "stopped_by_operator",
+  "port": "/dev/cu.usbserial-A5069RR4",
+  "baud": 115200,
+  "scope": "Original USB-only camera, passive UART +1Hz ICMP while on robot subnet. No UART payload writes, firmware, motor or light commands. No raw UART/SSID text saved.",
+  "opening_or_closing_may_reset_camera": true,
+  "events": [
+    {
+      "at_utc": "2026-10-28T15:47:57.124997+00:00",
+      "elapsed_seconds": 0.108,
+      "during_new_capture": false,
+      "kind": "reset_code",
+      "code_hex": "1"
+    },
+    {
+      "at_utc": "2026-10-28T15:47:57.965310+00:00",
+      "elapsed_seconds": 0.948,
+      "during_new_capture": false,
+      "kind": "camera_boot"
+    },
+    {
+      "at_utc": "2026-10-28T15:48:00.711702+00:00",
+      "elapsed_seconds": 3.695,
+      "during_new_capture": false,
+      "kind": "reset_code",
+      "code_hex": "8"
+    },
+    {
+      "at_utc": "2026-10-28T15:48:01.552476+00:00",
+      "elapsed_seconds": 4.536,
+      "during_new_capture": false,
+      "kind": "camera_boot"
+    },
+    {
+      "at_utc": "2026-10-28T15:48:04.264163+00:00",
+      "elapsed_seconds": 7.247,
+      "during_new_capture": false,
+      "kind": "reset_code",
+      "code_hex": "8"
+    },
+    {
+      "at_utc": "2026-10-28T15:48:05.110736+00:00",
+      "elapsed_seconds": 8.094,
+      "during_new_capture": false,
+      "kind": "camera_boot"
+    }
+  ],
+  "samples": [
+    {
+      "at_utc": "2026-10-28T15:47:57.139663+00:00",
+      "elapsed_seconds": 0.123,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 304,
+        "reset_code": 1
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:47:58.189054+00:00",
+      "elapsed_seconds": 1.172,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 395,
+        "reset_code": 1,
+        "camera_boot": 1
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:47:59.245899+00:00",
+      "elapsed_seconds": 2.229,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 395,
+        "reset_code": 1,
+        "camera_boot": 1
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:00.297307+00:00",
+      "elapsed_seconds": 3.28,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 417,
+        "reset_code": 1,
+        "camera_boot": 1
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:01.347802+00:00",
+      "elapsed_seconds": 4.331,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 724,
+        "reset_code": 2,
+        "camera_boot": 1
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:02.387893+00:00",
+      "elapsed_seconds": 5.371,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 815,
+        "reset_code": 2,
+        "camera_boot": 2
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:03.435637+00:00",
+      "elapsed_seconds": 6.419,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 837,
+        "reset_code": 2,
+        "camera_boot": 2
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:04.489609+00:00",
+      "elapsed_seconds": 7.473,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1144,
+        "reset_code": 3,
+        "camera_boot": 2
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:05.541335+00:00",
+      "elapsed_seconds": 8.524,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1235,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:06.583669+00:00",
+      "elapsed_seconds": 9.567,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1235,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:07.620606+00:00",
+      "elapsed_seconds": 10.604,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:08.678588+00:00",
+      "elapsed_seconds": 11.662,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:09.721539+00:00",
+      "elapsed_seconds": 12.705,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:10.772950+00:00",
+      "elapsed_seconds": 13.756,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:11.822206+00:00",
+      "elapsed_seconds": 14.805,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:12.876144+00:00",
+      "elapsed_seconds": 15.859,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:13.918237+00:00",
+      "elapsed_seconds": 16.901,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:14.978437+00:00",
+      "elapsed_seconds": 17.962,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:16.029610+00:00",
+      "elapsed_seconds": 19.013,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:17.084219+00:00",
+      "elapsed_seconds": 20.067,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:18.135182+00:00",
+      "elapsed_seconds": 21.118,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:19.187974+00:00",
+      "elapsed_seconds": 22.171,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:20.239307+00:00",
+      "elapsed_seconds": 23.222,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:21.285559+00:00",
+      "elapsed_seconds": 24.269,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:22.341449+00:00",
+      "elapsed_seconds": 25.325,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:23.378878+00:00",
+      "elapsed_seconds": 26.362,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:24.420042+00:00",
+      "elapsed_seconds": 27.403,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:25.467586+00:00",
+      "elapsed_seconds": 28.451,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:26.507445+00:00",
+      "elapsed_seconds": 29.491,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:27.550287+00:00",
+      "elapsed_seconds": 30.533,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:28.587493+00:00",
+      "elapsed_seconds": 31.571,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:29.641719+00:00",
+      "elapsed_seconds": 32.625,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:30.693950+00:00",
+      "elapsed_seconds": 33.677,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:31.736817+00:00",
+      "elapsed_seconds": 34.72,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:32.784818+00:00",
+      "elapsed_seconds": 35.768,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:33.840154+00:00",
+      "elapsed_seconds": 36.823,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:34.890390+00:00",
+      "elapsed_seconds": 37.873,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:35.937691+00:00",
+      "elapsed_seconds": 38.921,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:36.984417+00:00",
+      "elapsed_seconds": 39.967,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:38.042774+00:00",
+      "elapsed_seconds": 41.026,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:39.090430+00:00",
+      "elapsed_seconds": 42.073,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:40.139591+00:00",
+      "elapsed_seconds": 43.123,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:41.180225+00:00",
+      "elapsed_seconds": 44.163,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:42.235188+00:00",
+      "elapsed_seconds": 45.218,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:43.280404+00:00",
+      "elapsed_seconds": 46.263,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:44.335877+00:00",
+      "elapsed_seconds": 47.319,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:45.381578+00:00",
+      "elapsed_seconds": 48.365,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:46.440568+00:00",
+      "elapsed_seconds": 49.424,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:47.489278+00:00",
+      "elapsed_seconds": 50.472,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:48.536601+00:00",
+      "elapsed_seconds": 51.52,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:49.587653+00:00",
+      "elapsed_seconds": 52.571,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:50.624588+00:00",
+      "elapsed_seconds": 53.608,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:51.676587+00:00",
+      "elapsed_seconds": 54.66,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:52.721196+00:00",
+      "elapsed_seconds": 55.704,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:53.770470+00:00",
+      "elapsed_seconds": 56.753,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:54.824085+00:00",
+      "elapsed_seconds": 57.807,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:55.879156+00:00",
+      "elapsed_seconds": 58.862,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:56.923149+00:00",
+      "elapsed_seconds": 59.906,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:57.974459+00:00",
+      "elapsed_seconds": 60.957,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:48:59.030081+00:00",
+      "elapsed_seconds": 62.013,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:00.086057+00:00",
+      "elapsed_seconds": 63.069,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:01.143472+00:00",
+      "elapsed_seconds": 64.126,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:02.211341+00:00",
+      "elapsed_seconds": 65.194,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:03.269108+00:00",
+      "elapsed_seconds": 66.252,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:04.315650+00:00",
+      "elapsed_seconds": 67.299,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:05.370158+00:00",
+      "elapsed_seconds": 68.353,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:06.416218+00:00",
+      "elapsed_seconds": 69.399,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:07.474692+00:00",
+      "elapsed_seconds": 70.458,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:08.532023+00:00",
+      "elapsed_seconds": 71.515,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:09.585077+00:00",
+      "elapsed_seconds": 72.568,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:10.629769+00:00",
+      "elapsed_seconds": 73.613,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:11.672977+00:00",
+      "elapsed_seconds": 74.656,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:12.725000+00:00",
+      "elapsed_seconds": 75.708,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:13.776169+00:00",
+      "elapsed_seconds": 76.759,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:14.819442+00:00",
+      "elapsed_seconds": 77.802,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:15.884146+00:00",
+      "elapsed_seconds": 78.867,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:16.939677+00:00",
+      "elapsed_seconds": 79.923,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:17.991379+00:00",
+      "elapsed_seconds": 80.974,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:19.037529+00:00",
+      "elapsed_seconds": 82.02,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:20.082573+00:00",
+      "elapsed_seconds": 83.066,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:21.141142+00:00",
+      "elapsed_seconds": 84.124,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:22.190892+00:00",
+      "elapsed_seconds": 85.174,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:23.241794+00:00",
+      "elapsed_seconds": 86.225,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:24.292515+00:00",
+      "elapsed_seconds": 87.275,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:25.354231+00:00",
+      "elapsed_seconds": 88.337,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:26.412842+00:00",
+      "elapsed_seconds": 89.396,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:27.466605+00:00",
+      "elapsed_seconds": 90.45,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:28.512505+00:00",
+      "elapsed_seconds": 91.495,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:29.558584+00:00",
+      "elapsed_seconds": 92.541,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:30.609523+00:00",
+      "elapsed_seconds": 93.592,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:31.701708+00:00",
+      "elapsed_seconds": 94.685,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:32.759405+00:00",
+      "elapsed_seconds": 95.742,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:33.813550+00:00",
+      "elapsed_seconds": 96.796,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:34.862948+00:00",
+      "elapsed_seconds": 97.846,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:35.922434+00:00",
+      "elapsed_seconds": 98.905,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:36.967336+00:00",
+      "elapsed_seconds": 99.95,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:38.011320+00:00",
+      "elapsed_seconds": 100.994,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:39.064772+00:00",
+      "elapsed_seconds": 102.048,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:40.114011+00:00",
+      "elapsed_seconds": 103.097,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:41.164602+00:00",
+      "elapsed_seconds": 104.147,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:42.213030+00:00",
+      "elapsed_seconds": 105.196,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:43.259068+00:00",
+      "elapsed_seconds": 106.242,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:44.310040+00:00",
+      "elapsed_seconds": 107.293,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:45.348617+00:00",
+      "elapsed_seconds": 108.331,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:46.403386+00:00",
+      "elapsed_seconds": 109.386,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:47.460592+00:00",
+      "elapsed_seconds": 110.443,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:48.515255+00:00",
+      "elapsed_seconds": 111.498,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    },
+    {
+      "at_utc": "2026-10-28T15:49:49.577588+00:00",
+      "elapsed_seconds": 112.56,
+      "during_new_capture": false,
+      "robot_subnet": false,
+      "counts": {
+        "uart_bytes": 1372,
+        "reset_code": 3,
+        "camera_boot": 3
+      }
+    }
+  ],
+  "ping_replies": [],
+  "serial_opened_at": "2026-10-28T15:47:57.022530+00:00",
+  "counts": {
+    "uart_bytes": 1372,
+    "reset_code": 3,
+    "camera_boot": 3
+  },
+  "serial_closed_at": "2026-10-28T15:49:50.004294+00:00"
+}
