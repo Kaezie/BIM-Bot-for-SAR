@@ -1,11 +1,15 @@
 'use strict';
 
-// Local, operator-started analysis only. No recording, network or storage path.
+// Operator-started waveform analysis; only loud-event metadata leaves this class.
 window.BIMLaptopSound = class {
-  constructor({canStart, onState = () => {}, onBeforeStart = () => {}}) {
+  constructor({canStart, onState = () => {}, onBeforeStart = () => {}, onLoudSound = () => {}}) {
     this.canStart = canStart;
     this.onState = onState;
     this.onBeforeStart = onBeforeStart;
+    this.onLoudSound = onLoudSound;
+    this.lastLoudAt = -Infinity;
+    this.loudLatched = false;
+    this.loudQuietSince = null;
     this.state = 'idle';
     this.revision = 0;
     this.pendingPermission = false;
@@ -35,6 +39,11 @@ window.BIMLaptopSound = class {
     this.$('laptopSoundThreshold').addEventListener('input', () => {
       this.$('laptopSoundThresholdValue').textContent = `${this.$('laptopSoundThreshold').value}%`;
     });
+    this.$('loudSoundThreshold').addEventListener('input', () => {
+      this.$('loudSoundThresholdValue').textContent = `${this.$('loudSoundThreshold').value}%`;
+      this.loudLatched = false;
+      this.loudQuietSince = null;
+    });
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden' && this.active) this.stop('Stopped while this page is hidden.');
     });
@@ -63,6 +72,8 @@ window.BIMLaptopSound = class {
   }
 
   resetReadings() {
+    this.loudLatched = false;
+    this.loudQuietSince = null;
     this.$('laptopSoundLevel').textContent = '—';
     this.$('laptopSoundPeak').textContent = '—';
     this.$('laptopSoundMeter').value = 0;
@@ -239,6 +250,22 @@ window.BIMLaptopSound = class {
     }
   }
 
+  observeLoudSound(level, now = performance.now()) {
+    if (this.state !== 'listening' || !this.canStart() || !Number.isFinite(level)) return;
+    const threshold = Number(this.$('loudSoundThreshold').value);
+    if (level < threshold) {
+      if (this.loudQuietSince === null) this.loudQuietSince = now;
+      if (now - this.loudQuietSince >= 1000) this.loudLatched = false;
+      return;
+    }
+    this.loudQuietSince = null;
+    if (this.loudLatched || now - this.lastLoudAt < 10000) return;
+    this.loudLatched = true;
+    this.lastLoudAt = now;
+    this.onLoudSound({source: this.robotInput ? 'robot_headset' : 'laptop',
+      level_percent: Number(level.toFixed(1)), threshold_percent: threshold});
+  }
+
   renderSamples(samples) {
     let total = 0, square = 0, peak = 0;
     for (const value of samples) total += value;
@@ -249,6 +276,7 @@ window.BIMLaptopSound = class {
       peak = Math.max(peak, Math.abs(centered));
     }
     const level = Math.min(100, Math.sqrt(square / samples.length) * 100);
+    this.observeLoudSound(level);
     const active = level >= Number(this.$('laptopSoundThreshold').value);
     this.$('laptopSoundLevel').textContent = `${level.toFixed(1)}%`;
     this.$('laptopSoundPeak').textContent = `${Math.min(100, peak * 100).toFixed(1)}% peak`;

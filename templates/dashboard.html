@@ -7,7 +7,13 @@
   <a class="skip-link" href="#main">Skip to dashboard</a>
   {% include "dashboard/header.html" %}
   <main id="main" class="workspace">
-    <div id="notice" class="notice" role="status" hidden></div>
+    <div class="dashboard-notices">
+      <div id="notice" class="notice" role="status" hidden></div>
+      <div id="soundAlert" class="sound-alert" role="alert" aria-atomic="true" hidden>
+        <div><strong>Loud sound detected</strong><p id="soundAlertText"></p><small id="soundAlertSaveState" role="status"></small></div>
+        <button id="dismissSoundAlert" type="button" aria-label="Dismiss loud-sound alert">Dismiss</button>
+      </div>
+    </div>
     {% include "dashboard/monitoring.html" %}
     <details class="mission-tools" id="missionTools">
       <summary>Mission tools &amp; history <span>Mission control · Verification · Recordings</span></summary>
