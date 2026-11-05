@@ -34,6 +34,22 @@ class MovementRecorder {
     return true;
   }
 
+    // Autonomous drive: same recording rules as manual(), but the caller decides
+  // how to react to obstacle inputs.
+  bool autoMove(char dir, uint32_t now) {
+    if (dir == 'S') { stop(now); return true; }
+    if (!validDirection(dir) || state_ == RETURNING || fault_ != NONE) return false;
+    lastManual_ = now;                       // keeps the 250 ms timeout alive
+    if (dir == current_) return true;
+    if (!flush(now)) return false;
+    if (count_ >= CAPACITY) { fail(TRACE_OVERFLOW); return false; }
+    drive_('S'); drive_(dir); current_ = dir; since_ = now;
+    state_ = RECORDING; changed_++;
+    return true;
+  }
+  // While true, an obstacle only faults a FORWARD move, so backing/turning away is allowed.
+  void setAutonomous(bool on) { autonomous_ = on; }
+
   void stop(uint32_t now) {
     if (state_ == RETURNING) {
       drive_('S'); current_ = 'S'; state_ = CANCELLED;
@@ -47,6 +63,8 @@ class MovementRecorder {
 
   bool startReturn(uint32_t now, bool obstacle = false) {
     if (!ready(obstacle)) return false;
+        if (!ready(obstacle)) return false;
+    autonomous_ = false;
     drive_('S'); state_ = RETURNING; current_ = 'S';
     cursor_ = count_ - 1; returned_ = 0; running_ = false;
     phase_ = lease_ = now; changed_++; return true;
@@ -58,7 +76,7 @@ class MovementRecorder {
   }
 
   void tick(uint32_t now, bool obstacle) {
-    if (current_ != 'S' && obstacle) { fail(OBSTACLE); return; }
+    if (current_ != 'S' && obstacle && !(autonomous_ && current_ != 'F')) { fail(OBSTACLE); return; }
     if (state_ == RECORDING) {
       if (uint32_t(now - since_) > 60000UL || total_ + uint32_t(now - since_) > 600000UL) { fail(DURATION); return; }
       if (uint32_t(now - lastManual_) >= 250UL) stop(now);
@@ -115,7 +133,7 @@ class MovementRecorder {
     complete_ = false; running_ = false; changed_++;
   }
   Drive drive_;
-  bool enabled_, complete_ = false, running_ = false;
+  bool enabled_, complete_ = false, running_ = false, autonomous_ = false;
   State state_ = IDLE;
   Fault fault_ = NONE;
   uint8_t count_ = 0, returned_ = 0;

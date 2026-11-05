@@ -12,6 +12,11 @@
 #ifndef BIMBOT_SUPERVISED_RETURN
 #define BIMBOT_SUPERVISED_RETURN 0
 #endif
+// Default 0: the robot never moves by itself. 1 = supervised bench/floor test:
+// IR "*" marks the base, waits 5 s, then explores and avoids obstacles.
+#ifndef BIMBOT_AUTONOMOUS_EXPLORE
+#define BIMBOT_AUTONOMOUS_EXPLORE 0 //change 0 to 1 to turn on exploring omayghad
+#endif
 
 DHT dht(9, DHT11);
 IRremote ir(3);
@@ -35,6 +40,74 @@ bool dropping = false, obstacle = false, snapshot = false, fullDump = false;
 uint8_t snapshotStage = 0, dumpIndex = 0;
 uint32_t snapshotRevision = 0, query = 0;
 
+#if BIMBOT_AUTONOMOUS_EXPLORE
+enum ExploreState : uint8_t { EX_OFF, EX_WAIT, EX_FORWARD, EX_BACK, EX_TURN };
+ExploreState explore = EX_OFF;
+const uint32_t EX_START_DELAY_MS = 5000, EX_BACK_MS = 500;
+const uint32_t EX_TURN_MIN_MS = 400, EX_TURN_MAX_MS = 900;
+const uint32_t EX_LEG_MAX_MS = 30000;    // trace segments are limited to 60 s
+const uint32_t EX_TOTAL_MAX_MS = 540000; // trace total is limited to 10 min
+const uint8_t  EX_RESERVE = 4;           // keep room in the 80-segment trace
+const uint8_t  EX_STUCK_LIMIT = 6;       // give up after repeated avoidances
+uint32_t exploreAt = 0, turnMs = 0;
+char turnDir = 'R';
+bool turnFlip = false;
+uint8_t stuckCount = 0;
+
+bool exploring() { return explore != EX_OFF; }
+
+void endExplore(uint32_t now) {          // clean stop, trace stays valid
+  recorder.stop(now);
+  recorder.setAutonomous(false);
+  explore = EX_OFF;
+}
+void startExplore(uint32_t now) {        // call right after markBase() succeeds
+  explore = EX_WAIT; exploreAt = now; stuckCount = 0;
+  recorder.setAutonomous(true);
+}
+void beginAvoid(uint32_t now, bool leftObs, bool rightObs) {
+  if (leftObs && !rightObs) turnDir = 'R';
+  else if (rightObs && !leftObs) turnDir = 'L';
+  else { turnDir = turnFlip ? 'L' : 'R'; turnFlip = !turnFlip; }
+  turnMs = random(EX_TURN_MIN_MS, EX_TURN_MAX_MS);
+  explore = EX_BACK; exploreAt = now; stuckCount++;
+}
+void exploreTick(uint32_t now, bool leftObs, bool rightObs) {
+  if (explore == EX_OFF) return;
+  MovementRecorder::State s = recorder.state();
+  if (s == MovementRecorder::FAULT || s == MovementRecorder::RETURNING) {
+    recorder.setAutonomous(false); explore = EX_OFF; return;   // recorder gave up
+  }
+  if (recorder.count() + EX_RESERVE >= MovementRecorder::CAPACITY ||
+      recorder.total() >= EX_TOTAL_MAX_MS || stuckCount >= EX_STUCK_LIMIT) {
+    endExplore(now); return;             // trace nearly full or stuck: stop, operator returns
+  }
+  if (explore == EX_WAIT) {
+    if (now - exploreAt < EX_START_DELAY_MS) return;
+    explore = EX_FORWARD; exploreAt = now;
+  }
+  if (explore == EX_FORWARD) {
+    if (leftObs || rightObs) { beginAvoid(now, leftObs, rightObs); recorder.autoMove('B', now); return; }
+    if (recorder.activeDuration(now) >= EX_LEG_MAX_MS) recorder.stop(now);  // new segment
+    recorder.autoMove('F', now);
+    if (now - exploreAt >= 1000) stuckCount = 0;                            // real progress
+    return;
+  }
+  if (explore == EX_BACK) {
+    recorder.autoMove('B', now);
+    if (now - exploreAt >= EX_BACK_MS) { explore = EX_TURN; exploreAt = now; }
+    return;
+  }
+  recorder.autoMove(turnDir, now);       // EX_TURN
+  if (now - exploreAt >= turnMs) { explore = EX_FORWARD; exploreAt = now; }
+}
+#else
+bool exploring() { return false; }
+void endExplore(uint32_t) {}
+void startExplore(uint32_t) {}
+void exploreTick(uint32_t, bool, bool) {}
+#endif
+
 char stateCode() {
   const char codes[] = "ICSRPXE";
   return codes[recorder.state()];
@@ -57,15 +130,17 @@ void command(char *line) {
     query=strtoul(id,NULL,16); fullDump=!strcmp(action,"D");
     snapshot=true; snapshotStage=dumpIndex=0; snapshotRevision=recorder.revision(); return;
   }
+  
   if(!hexId(id,32))return;
-  if(!strcmp(action,"STOP") && arg && hexId(arg,8) && !extra) {
-    recorder.stop(millis()); strncpy(commandId,id,sizeof(commandId)); queueAck('S',id,arg,true);
+    if(!strcmp(action,"STOP") && arg && hexId(arg,8) && !extra) {
+    if(exploring())endExplore(millis()); else recorder.stop(millis());
+    strncpy(commandId,id,sizeof(commandId)); queueAck('S',id,arg,true);
   } else if(!strcmp(action,"KEEP") && arg && hexId(arg,8) && !extra) {
     bool accepted=!strcmp(commandId,id) && recorder.heartbeat(millis()); queueAck('K',id,arg,accepted);
   } else if(!strcmp(action,"RETURN") && arg && extra && hexId(extra,8)) {
     char *end; unsigned long expected=strtoul(arg,&end,10);
     bool accepted=false;
-    if(!*end && expected==recorder.trace()) {
+    if(!*end && expected==recorder.trace() && !exploring()) {
       // A retransmitted active command never restarts the path.
       if(!strcmp(commandId,id) && recorder.state()==MovementRecorder::RETURNING) accepted=true;
       else if(strcmp(commandId,id) && recorder.startReturn(millis(),obstacle)) {
@@ -120,11 +195,17 @@ void setup() {
   stopMotors();
   pinMode(RIGHT_IR,INPUT);pinMode(LEFT_IR,INPUT);
   Serial.begin(9600); dht.begin(); ir.begin();
+#if BIMBOT_AUTONOMOUS_EXPLORE
+  randomSeed(analogRead(A0));
+#endif
   Serial.println(F("BOOT BIMBOT_MOVE_1"));
 }
+
 void loop() {
   uint32_t now=millis();
+  bool leftObs=digitalRead(LEFT_IR)==LOW, rightObs=digitalRead(RIGHT_IR)==LOW;
   obstacle=digitalRead(RIGHT_IR)==LOW || digitalRead(LEFT_IR)==LOW;
+  if(exploring() && obstacle && recorder.current()=='F')recorder.stop(now);
   recorder.tick(now,obstacle);
   serviceSerial();
   uint8_t key=ir.getIrKey(ir.getCode(),IR_TYPE_NORMAL);
@@ -134,14 +215,17 @@ void loop() {
   if(key!=0xff) {
     bool edge=key!=previousKey;
     previousKey=key;keyAt=now;
-    if(key==IR_KEYCODE_OK)recorder.stop(now);
+    if(exploring()) {
+      if(key!=IR_KEYCODE_STAR || edge)endExplore(now);
+    } else if(key==IR_KEYCODE_OK)recorder.stop(now);
     else if(key==IR_KEYCODE_STAR && edge && !obstacle) {
-      if(recorder.markBase(now))strcpy(commandId,"-");
+      if(recorder.markBase(now)) { strcpy(commandId,"-"); startExplore(now); }
     } else if(key==IR_KEYCODE_UP)recorder.manual('F',now,obstacle);
     else if(key==IR_KEYCODE_DOWN)recorder.manual('B',now,obstacle);
     else if(key==IR_KEYCODE_LEFT)recorder.manual('L',now,obstacle);
     else if(key==IR_KEYCODE_RIGHT)recorder.manual('R',now,obstacle);
   }
+  exploreTick(now,leftObs,rightObs); 
   recorder.tick(millis(),obstacle);
   serviceOutput();
   // Preserve DHT serial readings. Read only while stopped: DHT timing must not
