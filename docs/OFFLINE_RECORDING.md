@@ -36,6 +36,14 @@ when tabs change. On **Stop**, the browser creates an MP4 and sends it to the lo
 Flask server on the laptop; this requires no internet. The supported browser must
 provide MP4/H.264 MediaRecorder support. This workflow has been checked in Chrome.
 
+New filenames use the selected camera and recording **start** date/time in
+Philippine time (`Asia/Manila`), followed by a short uniqueness suffix:
+`BIMBot_Main_2026-11-13_14-30-05_a1b2c3d4.mp4` or
+`BIMBot_NightVision_2026-11-13_14-30-05_a1b2c3d4.mp4`. Stopping later, switching
+tabs or retrying a failed save does not change the name. The local file,
+download and queued Supabase object use the same basename. Earlier clips and
+their existing storage paths retain their previous names.
+
 The save dialog confirms success only after the MP4 and queue metadata are on
 local disk. **Done** then allows another recording even when Supabase is offline.
 The recordings library shows each local clip as queued or uploaded, and provides
@@ -55,11 +63,11 @@ and the local-save confirmation.
 
 ## Where files live
 
-Default on this laptop:
+Under the configured local data folder, new clips use a private ID subfolder:
 
 ```text
-/Users/christine/Documents/ChatGPT/BIM-BOT/BIM-Bot-for-SAR/local_data/
-  recordings/<supabase-user-id>/<unique-id>_bimbot_<main-or-nightvision>_....mp4
+local_data/
+  recordings/<supabase-user-id>/<recording-id>/BIMBot_<Main-or-NightVision>_<start-date>_<start-time>_<suffix>.mp4
   recordings.sqlite3
   sessions.sqlite3
 ```
@@ -79,7 +87,7 @@ blocking recording. A Wi-Fi connection or browser `online` event alone does not
 mean Supabase is reachable.
 
 Each upload uses the verified owner's folder in the configured private bucket:
-`<user-id>/<unique-local-filename>.mp4`. Retries reuse that path to avoid duplicate
+`<user-id>/<recording-filename>.mp4`. Retries reuse that path to avoid duplicate
 cloud objects. The local copy is retained after Supabase confirms an upload.
 The worker uses server-side credentials; no refresh/access token is stored with
 queued clips. If a user signs out, already queued clips continue to sync under

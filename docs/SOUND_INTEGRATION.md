@@ -1,8 +1,10 @@
 # Two camera microphone channels
 
-Latest October27: operator confirms a Bluetooth headset with microphone and
-earpiece. Manual exact-input analysis, optional local YAMNet sound-event
-classification and separate exact-device two-way routing are now prepared.
+Latest November13: local YAMNet sound-event classification now starts
+automatically with Start microphone and stops with the selected input. The
+operator previously confirmed a Bluetooth headset with microphone and earpiece.
+Operator-started exact-input analysis and separate exact-device two-way routing
+remain available.
 Real capture/audibility/range remain pending; no microphone was activated by
 these software checks. See [current headset setup](HEADSET_SOUND.md),
 [two-way setup](SURVIVOR_COMMUNICATION.md), and the

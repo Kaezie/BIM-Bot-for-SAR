@@ -22,6 +22,7 @@ from werkzeug.utils import secure_filename
 
 OWNER = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}\Z")
 RECORDING_ID = re.compile(r"[a-f0-9]{32}\Z")
+AUTOMATIC_NAME = re.compile(r"BIMBot_(?P<source>Main|NightVision)_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}_[a-f0-9]{8}\.mp4\Z")
 PENDING_MESSAGE = "Saved on this laptop. Waiting to upload to Supabase."
 RETRY_MESSAGE = "Saved on this laptop. Cloud upload will retry when a connection is available."
 SYNCED_MESSAGE = "Saved on this laptop and uploaded to Supabase."
@@ -104,6 +105,14 @@ class LocalRecordings:
             raise LocalRecordingError("Enter a valid MP4 filename.")
         return clean[:-4] + ".mp4"
 
+    @staticmethod
+    def _display_name(name):
+        # Existing clips retain their names. New clips keep their private ID in
+        # a local subfolder, with one readable filename on disk and in Storage.
+        if RECORDING_ID.fullmatch(name[:32]) and name[32:33] == "_" and AUTOMATIC_NAME.fullmatch(name[33:]):
+            return name[33:]
+        return name
+
     def _file_path(self, owner, name):
         self._owner(owner)
         if self._filename(name) != name:
@@ -111,8 +120,12 @@ class LocalRecordings:
         owner_dir = (self.files_dir / owner).resolve()
         if owner_dir.parent != self.files_dir.resolve():
             raise LocalRecordingError("Recording folder is unavailable.", 500)
-        path = owner_dir / name
-        if path.resolve().parent != owner_dir:
+        filename = self._display_name(name)
+        file_dir = owner_dir if filename == name else owner_dir / name[:32]
+        if file_dir != owner_dir and file_dir.resolve().parent != owner_dir:
+            raise LocalRecordingError("Recording not found.", 404)
+        path = file_dir / filename
+        if path.resolve().parent != file_dir.resolve():
             raise LocalRecordingError("Recording not found.", 404)
         return path
 
@@ -172,6 +185,9 @@ class LocalRecordings:
         if video is None or not getattr(video, "stream", None):
             raise LocalRecordingError("A nonempty MP4 video is required.")
         original = self._filename(filename or video.filename)
+        automatic = AUTOMATIC_NAME.fullmatch(original)
+        if automatic and automatic["source"] != {"main": "Main", "nightvision": "NightVision"}[source]:
+            raise LocalRecordingError("The recording filename must match its camera source.")
         # Validate the multipart filename too, even when a display name is provided.
         self._filename(video.filename)
         if video.mimetype not in {"video/mp4", "application/mp4"}:
@@ -182,6 +198,7 @@ class LocalRecordings:
         if len(name) > 180:
             name = recording_id + "_" + original[:140] + ".mp4"
         final_path = self._file_path(owner, name)
+        (self.files_dir / owner).mkdir(mode=0o700, exist_ok=True)
         final_path.parent.mkdir(mode=0o700, exist_ok=True)
         pending_path = None
         installed = False
@@ -240,7 +257,7 @@ class LocalRecordings:
 
     @staticmethod
     def _public(row):
-        return {"id": row["id"], "name": row["name"], "source": row["source"], "size": row["size"],
+        return {"id": row["id"], "name": LocalRecordings._display_name(row["name"]), "source": row["source"], "size": row["size"],
                 "created_at": datetime.fromtimestamp(row["created_at"], timezone.utc).isoformat().replace("+00:00", "Z"),
                 "sync_state": "synced" if row["sync_state"] == "synced" else "pending",
                 "message": row["message"], "download_url": "/api/local-recordings/" + row["id"] + "/file"}
@@ -316,7 +333,7 @@ class LocalRecordings:
                     path = self._file_path(row["owner"], row["name"])
                     if not path.is_file() or path.stat().st_size != row["size"]:
                         raise OSError("Local recording unavailable")
-                    if self.uploader(row["owner"], row["name"], path) is False:
+                    if self.uploader(row["owner"], self._display_name(row["name"]), path) is False:
                         raise RuntimeError("Upload did not succeed")
                 except Exception:
                     # Never persist an exception string: HTTP exceptions may contain tokens.
@@ -407,7 +424,7 @@ class LocalRecordings:
             path = self._file_path(row["owner"], row["name"])
             if not path.is_file():
                 raise LocalRecordingError("The local recording file is unavailable.", 404)
-            response = send_file(path, mimetype="video/mp4", as_attachment=True, download_name=row["name"], conditional=True, max_age=0)
+            response = send_file(path, mimetype="video/mp4", as_attachment=True, download_name=self._display_name(row["name"]), conditional=True, max_age=0)
             response.headers["Cache-Control"] = "private, no-store"
             response.vary.add("Cookie")
             return response

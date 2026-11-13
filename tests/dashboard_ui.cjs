@@ -3,14 +3,14 @@ const {cameraFrameFixture}=require('./camera_frame_fixture.cjs');
 const assert=require('node:assert/strict');
 const fs=require('node:fs/promises');
 (async()=>{
-const browser=await chromium.launch({headless:true,...(process.env.CHROME_PATH ? {executablePath:process.env.CHROME_PATH} : {})});const page=await browser.newPage({viewport:{width:1440,height:1050}});const errors=[];page.on('pageerror',error=>errors.push(error.message));
+const browser=await chromium.launch({headless:true,...(process.env.CHROME_PATH ? {executablePath:process.env.CHROME_PATH} : {})});const page=await browser.newPage({viewport:{width:1440,height:1050},timezoneId:'America/Los_Angeles'});const errors=[];page.on('pageerror',error=>errors.push(error.message));
 // Realistic, even frame dimensions are required by the browser's H.264 encoder.
 const cameraFrame=Buffer.from(await page.evaluate(()=>{const canvas=document.createElement('canvas');canvas.width=640;canvas.height=480;const ctx=canvas.getContext('2d');ctx.fillStyle='#456';ctx.fillRect(0,0,640,480);return canvas.toDataURL('image/jpeg',0.8).split(',')[1];}),'base64');
 let stale=false,failed=false,uploads=0,mission=null,review=null,reportDownloads=0,nightEnabled=false,nightLive=true,nightUpload=false,thermalEnabled=false,thermalFresh=true,mainRequests=0,nightRequests=0,nightStreamFailed=false;
 let trackNumber=7,motionObserved=null,nightFresh=true,nightWrongSource=false;
 const cameraFrames=cameraFrameFixture(cameraFrame,{fail:source=>source==='nightvision'&&nightStreamFailed,onOpen:source=>{if(source==='main')mainRequests++;else nightRequests++;}});
 const localClips=[{id:'fixture',name:'bimbot_main_fixture.mp4',size:102400,created_at:new Date().toISOString(),source:'main',sync_state:'pending',download_url:'/api/local-recordings/fixture/file'}];
-let capturedMP4;
+let capturedMP4;const uploadNames=[];
 await page.route('**/fonts.googleapis.com/**',route=>route.abort());
 await page.route('**/static/js/auth.js',route=>route.fulfill({contentType:'application/javascript',body:`window.BIM_AUTH={auth:{getSession:async()=>({data:{session:{local:true,access_token:null,user:{email:'rescue@example.test'}}}}),onAuthStateChange:()=>{},signOut:async()=>({error:null})}};`}));
 await page.route('**/api/**',route=>{
@@ -32,11 +32,15 @@ if(url.pathname==='/api/history')data={alerts:[{at:now,kind:'detection',message:
 if(url.pathname==='/api/recordings')data={recordings:[{name:'bimbot_mission.webm',size:102400,created_at:new Date().toISOString()}],has_more:false};
 if(url.pathname==='/api/local-recordings'&&route.request().method()==='GET')data={recordings:localClips,has_more:false,pending_count:localClips.length};
 if(url.pathname==='/api/local-recordings'&&route.request().method()==='POST'){
-  uploads++;const body=route.request().postDataBuffer();if(body.includes(Buffer.from('bimbot_nightvision_')))nightUpload=true;
+  uploads++;const body=route.request().postDataBuffer();
+  const filename=/name="filename"\r\n\r\n([^\r\n]+)/.exec(body.toString('latin1'))?.[1];
+  assert.match(filename,/^BIMBot_(Main|NightVision)_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}_[a-f0-9]{8}\.mp4$/);
+  assert(body.includes(Buffer.from(`filename="${filename}"`)));uploadNames.push(filename);
+  const source=filename.startsWith('BIMBot_NightVision_')?'nightvision':'main';if(source==='nightvision')nightUpload=true;
   if(failed)return route.fulfill({status:500,contentType:'application/json',body:JSON.stringify({error:'Local disk unavailable'})});
   const at=body.indexOf(Buffer.from('ftyp'));assert(at>=4);capturedMP4=body.subarray(at-4,body.indexOf(Buffer.from('\r\n--'),at));
-  const source=nightUpload?'nightvision':'main',id='saved-'+uploads;
-  const clip={id,name:`bimbot_${source}_${uploads}.mp4`,source,size:capturedMP4.length,created_at:new Date().toISOString(),sync_state:'pending',download_url:`/api/local-recordings/${id}/file`};
+  const id='saved-'+uploads;
+  const clip={id,name:filename,source,size:capturedMP4.length,created_at:new Date().toISOString(),sync_state:'pending',download_url:`/api/local-recordings/${id}/file`};
   localClips.unshift(clip);data={success:true,recording:clip};
 }
 if(/^\/api\/local-recordings\/[^/]+\/file$/.test(url.pathname))return route.fulfill({contentType:'video/mp4',headers:{'Content-Disposition':`attachment; filename="bimbot_main_saved.mp4"`},body:capturedMP4});
@@ -44,6 +48,9 @@ return route.fulfill({contentType:'application/json',body:JSON.stringify(data)})
 });
 await page.route('**/toggle_recording',route=>route.fulfill({contentType:'application/json',body:'{"is_recording":true}'}));
 await page.goto((process.env.UI_TEST_URL || 'http://127.0.0.1:5051/'));await page.waitForFunction(()=>document.getElementById('survivorCount').textContent==='2');
+const midnightNames=await page.evaluate(()=>['main','nightvision'].map(source=>recordingFilename(source,Date.parse('2026-11-12T16:00:05Z'))));
+assert.match(midnightNames[0],/^BIMBot_Main_2026-11-13_00-00-05_[a-f0-9]{8}\.mp4$/);
+assert.match(midnightNames[1],/^BIMBot_NightVision_2026-11-13_00-00-05_[a-f0-9]{8}\.mp4$/);
 assert((await page.locator('#survivorCard').boundingBox()).height < 160, 'Survivor telemetry must remain compact');
 assert.equal(await page.locator('#availability-thermal').textContent(),'Not installed');assert.equal(await page.locator('#recordingList li').count(),1);
 assert.equal(await page.locator('#riskLevel').textContent(),'Moderate Risk');
@@ -115,15 +122,20 @@ assert.equal(mainRequests,3,'Keyboard selection must reconnect the main camera a
 await page.evaluate(()=>{window.originalTypeSupported=MediaRecorder.isTypeSupported;MediaRecorder.isTypeSupported=()=>false;});
 await page.locator('#recordBtn').click();assert.match(await page.locator('#notice').textContent(),/cannot record MP4/);assert(await page.locator('#recordBtn').isEnabled());assert.equal(uploads,0);
 await page.evaluate(()=>{MediaRecorder.isTypeSupported=window.originalTypeSupported;});
-await page.locator('#recordBtn').click();await page.waitForFunction(()=>!document.getElementById('stopBtn').hidden);await page.waitForTimeout(1100);await page.locator('#stopBtn').click();await page.waitForFunction(()=>document.getElementById('saveTitle').textContent==='Recording saved on this laptop');assert.equal(uploads,1);
+await page.locator('#recordBtn').click();await page.waitForFunction(()=>!document.getElementById('stopBtn').hidden);
+const mainStart=await page.evaluate(()=>new Date(recordingStarted+8*3600000).toISOString().slice(0,19).replace('T','_').replaceAll(':','-'));
+await page.waitForTimeout(1100);await page.locator('#stopBtn').click();await page.waitForFunction(()=>document.getElementById('saveTitle').textContent==='Recording saved on this laptop');assert.equal(uploads,1);
+assert(uploadNames[0].startsWith(`BIMBot_Main_${mainStart}_`),'Filename must use recording start time');
 const backupPromise=page.waitForEvent('download');await page.locator('#downloadBtn').click();const backup=await backupPromise;
-assert.match(backup.suggestedFilename(),/^bimbot_main_.*\.mp4$/);
+assert.equal(backup.suggestedFilename(),uploadNames[0]);
 const backupBytes=await fs.readFile(await backup.path());assert.equal(backupBytes.toString('ascii',4,8),'ftyp','Backup must contain an MP4 container, not renamed WebM');
 await page.locator('#closeSave').click();
 failed=true;await page.locator('#recordBtn').click();await page.waitForTimeout(1100);await page.locator('#stopBtn').click();await page.waitForFunction(()=>document.getElementById('saveTitle').textContent==='Local save needs attention');assert(await page.locator('#retryUpload').isVisible());assert(await page.locator('#closeSave').isDisabled());
 await page.keyboard.press('Escape');assert(await page.locator('#saveDialog').isVisible());
 const offlineBackupPromise=page.waitForEvent('download');await page.locator('#downloadBtn').click();const offlineBackup=await offlineBackupPromise;assert.match(offlineBackup.suggestedFilename(),/\.mp4$/);assert.equal((await fs.readFile(await offlineBackup.path())).toString('ascii',4,8),'ftyp');
-failed=false;await page.locator('#retryUpload').click();await page.waitForFunction(()=>document.getElementById('saveTitle').textContent==='Recording saved on this laptop');await page.locator('#closeSave').click();
+failed=false;await page.locator('#retryUpload').click();await page.waitForFunction(()=>document.getElementById('saveTitle').textContent==='Recording saved on this laptop');
+assert.equal(uploadNames[1],uploadNames[2],'Retry must preserve the original filename');assert.equal(offlineBackup.suggestedFilename(),uploadNames[2]);
+await page.locator('#closeSave').click();
 nightEnabled=true;await page.locator('#refreshBtn').click();
 const mainSourceBeforeNight=await page.locator('#camStream').getAttribute('data-viewer'),mainRequestsBeforeNight=mainRequests;
 await page.getByRole('tab',{name:/Night vision/}).click();await page.waitForFunction(()=>!document.getElementById('recordBtn').disabled);

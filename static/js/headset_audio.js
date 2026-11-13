@@ -2,51 +2,72 @@
 
 window.BIMSoundRecognition = class {
   constructor({api, getInput, canStart}) {
-    this.api=api;this.getInput=getInput;this.canStart=canStart;this.revision=0;this.active=false;this.modules=new WeakMap();
+    this.api=api;this.getInput=getInput;this.canStart=canStart;this.revision=0;this.active=false;this.modules=new WeakMap();this.inputSession=null;
     this.$=id=>document.getElementById(id);
-    this.$('soundRecognitionEnabled').addEventListener('change',()=>this.$('soundRecognitionEnabled').checked?this.start():this.stop());
-    this.controls();
+    this.stop();
   }
-  controls() { this.$('soundRecognitionEnabled').disabled=this.getInput()?.state!=='listening'; }
-  stop(message='Sound recognition off.') {
+  syncInput() {
+    const input=this.getInput();
+    if(!this.canStart()||input?.state!=='listening') {
+      this.inputSession=null;this.stop();return;
+    }
+    const session=this.inputSession;
+    if(session?.stream===input.stream&&session.revision===input.revision&&session.context===input.context)return;
+    this.stop();
+    this.inputSession={stream:input.stream,revision:input.revision,context:input.context};
+    this.start();
+  }
+  current(revision,session=this.inputSession) {
+    const input=this.getInput();
+    return revision===this.revision&&session&&session===this.inputSession&&this.canStart()&&
+      input?.state==='listening'&&input.revision===session.revision&&input.stream===session.stream&&input.context===session.context;
+  }
+  stop(message='Start microphone to run YAMNet automatically.',state='idle') {
     this.revision++;this.active=false;clearTimeout(this.expiry);this.abort?.abort();this.abort=null;
     for(const node of [this.capture,this.filter,this.worklet,this.silent])node?.disconnect();
-    if(this.worklet)this.worklet.port.onmessage=null;
+    if(this.worklet){this.worklet.port.onmessage=null;this.worklet.onprocessorerror=null;}
     this.capture=this.filter=this.worklet=this.silent=null;
-    this.$('soundRecognitionEnabled').checked=false;
+    this.$('soundRecognitionState').dataset.state=state;
     this.$('soundRecognitionState').textContent=message;
     this.$('soundRecognitionResult').textContent='No current sound classification.';
-    this.controls();
+  }
+  fail(message) {
+    this.stop(`${message} Stop and restart the microphone to retry YAMNet. Microphone levels remain available.`,'error');
   }
   async start() {
-    if(!this.canStart()||this.getInput()?.state!=='listening')return this.stop();
-    const revision=++this.revision;
+    const session=this.inputSession,revision=++this.revision;
+    if(!this.current(revision,session))return this.stop();
+    const abort=this.abort=new AbortController();
+    const startupTimer=setTimeout(()=>{if(this.current(revision,session))this.fail('YAMNet startup timed out.');},15000);
+    this.$('soundRecognitionState').dataset.state='starting';
     this.$('soundRecognitionState').textContent='Checking local YAMNet model…';
     try {
-      const status=await this.api('/api/sound-model');
-      if(revision!==this.revision)return;
+      const status=await this.api('/api/sound-model',{signal:abort.signal});
+      if(!this.current(revision,session))return;
       if(!status.ready)throw new Error(status.message||'Local sound model is not ready.');
-      const input=this.getInput(),context=input.context;
+      const context=session.context;
       if(!context?.audioWorklet)throw new Error('Audio worklets unavailable. Open localhost:5050 in Google Chrome.');
       let module=this.modules.get(context);
       if(!module){module=context.audioWorklet.addModule('/static/js/pcm_capture_worklet.js');this.modules.set(context,module);module.catch(()=>this.modules.delete(context));}
       await module;
-      if(revision!==this.revision||!this.canStart()||input.state!=='listening')return;
-      this.capture=context.createMediaStreamSource(input.stream);
+      if(!this.current(revision,session))return;
+      this.capture=context.createMediaStreamSource(session.stream);
       this.filter=context.createBiquadFilter();this.filter.type='lowpass';this.filter.frequency.value=7000;
       this.worklet=new AudioWorkletNode(context,'bim-pcm-capture');
       this.silent=context.createGain();this.silent.gain.value=0;
       this.capture.connect(this.filter);this.filter.connect(this.worklet);this.worklet.connect(this.silent);this.silent.connect(context.destination);
-      this.active=true;this.$('soundRecognitionState').textContent='YAMNet enabled · short audio frames processed by this laptop; not saved.';
+      this.active=true;this.$('soundRecognitionState').dataset.state='active';
+      this.$('soundRecognitionState').textContent='YAMNet running automatically with the microphone · short audio frames processed by this laptop; not saved.';
       this.worklet.port.onmessage=event=>this.classify(event.data,revision);
-      this.worklet.onprocessorerror=()=>this.stop('Audio processing stopped. Restart recognition to retry.');
-    } catch(error) { if(revision===this.revision)this.stop(error.message||'Sound recognition unavailable.'); }
+      this.worklet.onprocessorerror=()=>{if(this.current(revision,session))this.fail('Audio processing stopped.');};
+    } catch(error) { if(this.current(revision,session))this.fail(error.message||'Sound recognition unavailable.'); }
+    finally { clearTimeout(startupTimer); }
   }
   async classify(samples,revision) {
-    if(!this.active||this.flight||revision!==this.revision||!this.canStart()||this.getInput()?.state!=='listening')return;
+    if(!this.active||this.flight||!this.current(revision))return;
     const input=this.getInput();
-    if(input.stream.getAudioTracks().some(track=>track.readyState!=='live'||track.muted||!track.enabled))return this.stop('Microphone is not providing live audio; recognition stopped.');
-    if(input.robotInput&&input.stream.getAudioTracks().some(track=>track.getSettings().deviceId!==input.inputId))return this.stop('Headset input changed; recognition stopped.');
+    if(input.stream.getAudioTracks().some(track=>track.readyState!=='live'||track.muted||!track.enabled))return this.fail('Microphone is not providing live audio; recognition stopped.');
+    if(input.robotInput&&input.stream.getAudioTracks().some(track=>track.getSettings().deviceId!==input.inputId))return this.fail('Headset input changed; recognition stopped.');
     if(!(samples instanceof Float32Array)||samples.length!==15600)return;
     const pcm=new ArrayBuffer(62400),view=new DataView(pcm);
     samples.forEach((value,index)=>view.setFloat32(index*4,value,true));
@@ -55,11 +76,11 @@ window.BIMSoundRecognition = class {
     const flight=this.flight=(async()=>{
       try {
         const result=await this.api('/api/sound-classify',{method:'POST',headers:{'Content-Type':'application/octet-stream','X-Sample-Rate':'16000'},body:pcm,signal:abort.signal});
-        if(revision!==this.revision||!this.active||!this.canStart())return;
+        if(!this.current(revision)||!this.active)return;
         if(performance.now()-started>=2000){this.$('soundRecognitionResult').textContent='Classification arrived too late; waiting for a fresh audio frame.';return;}
         this.$('soundRecognitionResult').textContent=`${result.event} · ${result.model_label} · model score ${(result.score*100).toFixed(1)}%. Verify by listening.`;
-        clearTimeout(this.expiry);this.expiry=setTimeout(()=>{if(revision===this.revision)this.$('soundRecognitionResult').textContent='No fresh sound classification.';},3000);
-      } catch(error) { if(revision===this.revision&&this.active)this.stop(error.message||'Sound recognition stopped.'); }
+        clearTimeout(this.expiry);this.expiry=setTimeout(()=>{if(this.current(revision))this.$('soundRecognitionResult').textContent='No fresh sound classification.';},3000);
+      } catch(error) { if(this.current(revision)&&this.active)this.fail(error.message||'Sound recognition stopped.'); }
     })();
     try {await flight;} finally {if(this.flight===flight)this.flight=null;}
   }
