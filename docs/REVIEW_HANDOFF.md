@@ -24,7 +24,7 @@ recordings, session data, firmware backups or supplied raw sketches are included
 The original detector and pose files already tracked by the project are retained.
 Compact verification summaries are shared; large raw captures remain local and
 are identified in [the evidence index](verification/README.md).
-Optional YAMNet assets are downloaded separately by `scripts/setup_sound_model.py`
+YAMNet assets are installed separately by `scripts/setup_sound_model.py`
 after installing `requirements-sound.txt`; see [headset setup](HEADSET_SOUND.md).
 Install `requirements-serial.txt` only for the later manually started Uno bridge.
 
@@ -43,7 +43,7 @@ bridge merely because the branch was checked out.
 - Numeric MLX90640 heatmap, DHT validation and heat-only screening.
 - Local MP4 storage and retry queue, offline sessions, mission evidence/reviews
   and reports.
-- Exact selected-headset waveform input, optional local YAMNet sound events and
+- Exact selected-headset waveform input, local YAMNet sound events starting with the microphone, and
   separate two-way audio routing. Saved clips remain video-only.
 - Uno movement recording, an explicitly launched USB bridge and disabled-by-
   default supervised return foundations. Position input remains an adapter.

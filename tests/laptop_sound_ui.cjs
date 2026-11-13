@@ -56,6 +56,8 @@ const assert = require('node:assert/strict');
         '/api/survivors':{available:true,updated_at:now,survivors_found:0,detections:[]},
         '/api/thermal-data':{configured:false,connected:false},
         '/api/sound-data':{configured:false,connected:false},
+        '/api/sound-model':{ready:true,model:'YAMNet'},
+        '/api/sound-classify':{event:'Possible speech',model_label:'Speech',score:.8},
         '/api/history':{samples:[],alerts:[]},
         '/api/mission':{mission:null,can_start:false,control_configured:false,robot:{fresh:false}},
         '/api/survivor-events':{events:[]},
@@ -148,7 +150,7 @@ const assert = require('node:assert/strict');
     }
     const constraints = await page.evaluate(()=>audioFixture.constraints);
     assert(constraints.every(value=>value.video===false && value.audio),'Only audio may be requested');
-    assert.deepEqual(writes,[],'Local sound analysis must not upload audio or levels');
+    assert(writes.every(path=>path==='/api/sound-classify'),'Audio frames may only reach the local classifier');
     assert.deepEqual(errors,[]);
 
     // Explicit robot-headset source selection; all samples remain generated.
@@ -197,7 +199,7 @@ const assert = require('node:assert/strict');
     await page.screenshot({path:'/private/tmp/bimbot-headset-fixture.png',fullPage:false});
     await page.locator('#soundSourceMode').selectOption('laptop'); await stopped();
     await page.locator('#soundInputDevice').selectOption('');
-    assert.deepEqual(writes,[],'Headset samples must not be uploaded or written to robot endpoints');
+    assert(writes.every(path=>path==='/api/sound-classify'),'Headset frames must not reach cloud or robot endpoints');
     assert.deepEqual(errors,[]);
     await start();
     // An unsaved fixture clip keeps the page visible after session expiration,

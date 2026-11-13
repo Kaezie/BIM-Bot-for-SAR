@@ -73,7 +73,7 @@ class SoundClassifier:
             self.prepare()
             return {'ready': True, 'model': 'YAMNet', 'sample_rate': SAMPLE_RATE,
                     'sample_count': SAMPLE_COUNT, 'audio_saved': False, 'words_recognized': False,
-                    'message': 'Local sound-event model ready. Enable recognition manually; live accuracy remains unverified.'}
+                    'message': 'Local sound-event model ready. Recognition starts with the microphone; live accuracy remains unverified.'}
         except Exception:
             return {'ready': False, 'model': 'YAMNet', 'message': 'Local sound model unavailable. Check the model setup and restart the dashboard.'}
         finally:
