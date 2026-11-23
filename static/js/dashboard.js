@@ -69,12 +69,12 @@ const text = (id, value) => { if ($(id).textContent !== String(value)) $(id).tex
 const show = (id, visible) => { $(id).toggleAttribute('hidden', !visible); };
 laptopSound = window.BIMLaptopSound && $('laptopSoundStart') ? new window.BIMLaptopSound({
   canStart: () => !!session && !endingSession && selectedFeed === 'sound' && document.visibilityState !== 'hidden',
-  onState: () => {updateSoundAvailability();if(laptopSound?.state!=='listening')soundRecognition?.stop();soundRecognition?.controls();},
+  onState: () => {updateSoundAvailability();soundRecognition?.syncInput();},
   onBeforeStart: () => duplexAudio?.stop('Stopped before starting sound analysis.'),
   onLoudSound: loudSoundDetected
 }) : null;
 $('dismissSoundAlert').onclick = () => show('soundAlert', false);
-soundRecognition=window.BIMSoundRecognition&&$('soundRecognitionEnabled')?new window.BIMSoundRecognition({api,getInput:()=>laptopSound,canStart:()=>!!session&&!endingSession&&selectedFeed==='sound'&&document.visibilityState!=='hidden'}):null;
+soundRecognition=window.BIMSoundRecognition&&$('soundRecognitionState')?new window.BIMSoundRecognition({api,getInput:()=>laptopSound,canStart:()=>!!session&&!endingSession&&selectedFeed==='sound'&&document.visibilityState!=='hidden'}):null;
 duplexAudio=window.BIMDuplexAudio&&$('duplexFind')?new window.BIMDuplexAudio({canStart:()=>!!session&&!endingSession&&document.visibilityState!=='hidden',onBeforeStart:()=>laptopSound?.stop('Stopped before starting two-way audio.')}):null;
 const number = value => typeof value === 'number' && Number.isFinite(value) ? value.toFixed(1) : '—';
 const percent = value => typeof value === 'number' && Number.isFinite(value) ? `${(value * 100).toFixed(1)}%` : '—';
@@ -649,6 +649,15 @@ $('disconnectBtn').onclick=()=>{
   }else{mainRequested=false;cameraFailed('Camera disconnected. Connect again to resume monitoring.');}
 };
 async function toggleServerRecording(action){try{await api('/toggle_recording',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action})});}catch{notify('Could not update the robot’s recording status. Check your connection.');}}
+function recordingFilename(source, startedAt){
+  const parts=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{
+    timeZone:'Asia/Manila',calendar:'gregory',numberingSystem:'latn',
+    year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'
+  }).formatToParts(new Date(startedAt)).map(part=>[part.type,part.value]));
+  const camera=source==='nightvision'?'NightVision':'Main';
+  const suffix=crypto.randomUUID().replaceAll('-','').slice(0,8);
+  return `BIMBot_${camera}_${parts.year}-${parts.month}-${parts.day}_${parts.hour}-${parts.minute}-${parts.second}_${suffix}.mp4`;
+}
 function finishRecordingUI(){clearInterval(drawTimer);clearInterval(clockTimer);recordingStream?.getTracks().forEach(track=>track.stop());recordingSource=null;show('recBadge',false);show('nvRecordBadge',false);show('stopBtn',false);$('recordBtn').disabled=!recordable()||!!pendingClip;selectFeed(selectedFeed);}
 $('recordBtn').onclick=()=>{
   if(!recordable()||pendingClip||uploading||recorder?.state==='recording')return;
@@ -661,9 +670,10 @@ $('recordBtn').onclick=()=>{
     recordingStream=canvas.captureStream(30);
     recorder=new MediaRecorder(recordingStream,{mimeType:mime});const chunks=[];
     recorder.ondataavailable=event=>{if(event.data.size)chunks.push(event.data);};
-    recorder.onstop=()=>{const blob=new Blob(chunks,{type:recorder.mimeType});finishRecordingUI();if(!blob.size){notify('No video was captured. Reconnect the camera and retry.');return;}savedClip=null;pendingClip={blob,name:`bimbot_${source}_${Date.now()}_${crypto.randomUUID()}.mp4`,source};$('recordBtn').disabled=true;show('discardBtn',false);if(!$('saveDialog').open)$('saveDialog').showModal();saveClip();};
+    const startedAt=Date.now(),name=recordingFilename(source,startedAt);
+    recorder.onstop=()=>{const blob=new Blob(chunks,{type:recorder.mimeType});finishRecordingUI();if(!blob.size){notify('No video was captured. Reconnect the camera and retry.');return;}savedClip=null;pendingClip={blob,name,source};$('recordBtn').disabled=true;show('discardBtn',false);if(!$('saveDialog').open)$('saveDialog').showModal();saveClip();};
     recorder.onerror=()=>{notify('Recording stopped unexpectedly. Any captured footage will be saved.');stopRecording();};
-    recorder.start(1000);recordingStarted=Date.now();text('recordTime','00:00');
+    recorder.start(1000);recordingStarted=startedAt;text('recordTime','00:00');
     drawTimer=setInterval(()=>{try{ctx.drawImage(image,0,0,canvas.width,canvas.height);}catch{stopRecording();notify('Camera frames became unavailable. Saving captured footage.');}},33);
     clockTimer=setInterval(()=>{const seconds=Math.floor((Date.now()-recordingStarted)/1000);text('recordTime',`${Math.floor(seconds/60).toString().padStart(2,'0')}:${(seconds%60).toString().padStart(2,'0')}`);},1000);
     show(source==='nightvision'?'nvRecordBadge':'recBadge',true);show('recordBtn',false);show('stopBtn',true);toggleServerRecording('start');updateNightLight();

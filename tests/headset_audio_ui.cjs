@@ -9,7 +9,8 @@ const fs=require('node:fs/promises');
  try{
   const page=await browser.newPage({viewport:{width:1440,height:1050},acceptDownloads:true});
   const origin=new URL(process.env.UI_TEST_URL||'http://127.0.0.1:5051/').origin;
-  const errors=[],posts=[];let delayClassification=false,heldClassification;page.on('pageerror',error=>errors.push(error.message));
+  const errors=[],posts=[];let delayClassification=false,heldClassification,delayModel=false,heldModel,modelReady=true,modelRequests=0,classificationFails=false;
+  page.on('pageerror',error=>errors.push(error.message));
   await page.addInitScript(()=>{
    const Native=window.AudioContext;
    const f=window.headsetFixture={calls:[],streams:[],played:[],mode:'allow',devices:[
@@ -39,11 +40,17 @@ const fs=require('node:fs/promises');
   await page.route('**/api/**',route=>{
    const path=new URL(route.request().url()).pathname,now=Date.now()/1000;
    if(route.request().method()!=='GET')posts.push(path);
+   if(path==='/api/sound-model'){
+    modelRequests++;
+    if(delayModel){heldModel=route;return;}
+    return route.fulfill({contentType:'application/json',body:JSON.stringify({ready:modelReady,model:'YAMNet',message:'Local sound model is not ready.'})});
+   }
    if(path==='/api/sound-classify'){
     const pcm=route.request().postDataBuffer();assert.equal(pcm.length,62400);let power=0;
     for(let i=0;i<pcm.length;i+=4){const value=pcm.readFloatLE(i);assert(Number.isFinite(value)&&Math.abs(value)<=1);power+=value*value;}
     assert(power>1,'Generated audio samples must actually reach the classifier');
     if(delayClassification){heldClassification=route;return;}
+    if(classificationFails)return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'Sound model unavailable.'})});
     return route.fulfill({contentType:'application/json',body:JSON.stringify({event:'Possible speech',model_label:'Speech',score:.8})});
    }
    const data={
@@ -61,25 +68,81 @@ const fs=require('node:fs/promises');
   await page.goto(origin+'/?view=sound#monitor');
   await page.waitForFunction(()=>document.getElementById('tab-sound').getAttribute('aria-selected')==='true');
   assert.equal((await page.evaluate(()=>headsetFixture.calls)).length,0);
+  assert.equal(modelRequests,0,'Page load and Sound selection must not prepare recognition');
+  assert.equal(await page.locator('#soundRecognitionEnabled').count(),0,'No separate recognition enable step');
   await page.selectOption('#soundSourceMode','robot_headset');await page.click('#soundListInputs');
   await page.waitForFunction(()=>document.querySelectorAll('#soundInputDevice option').length===3);
+  assert.equal(modelRequests,0,'Device discovery must not run recognition');
   await page.selectOption('#soundInputDevice','headset-mic');await page.check('#soundMountConfirmed');await page.click('#laptopSoundStart');
   await page.waitForFunction(()=>document.getElementById('laptopSoundWave').dataset.live==='true');
-  assert.deepEqual(posts,[],'No classification audio until recognition is enabled');
-  await page.check('#soundRecognitionEnabled');
   await page.waitForFunction(()=>document.getElementById('soundRecognitionResult').textContent.includes('Possible speech'));
   assert(posts.includes('/api/sound-classify'));
+  assert.equal(modelRequests,1,'Starting the microphone automatically prepares YAMNet once');
+  assert.match(await page.textContent('#soundRecognitionState'),/running automatically/);
   const mediaCalls=(await page.evaluate(()=>headsetFixture.calls)).length;
-  await page.uncheck('#soundRecognitionEnabled');await page.check('#soundRecognitionEnabled');
-  await page.waitForFunction(()=>document.getElementById('soundRecognitionResult').textContent.includes('Possible speech'));
-  assert.equal((await page.evaluate(()=>headsetFixture.calls)).length,mediaCalls,'Toggling recognition must reuse the selected input');
-  await page.uncheck('#soundRecognitionEnabled');delayClassification=true;await page.check('#soundRecognitionEnabled');
+  await page.evaluate(()=>{laptopSound.status('Listening · fixture status refresh');soundRecognition.syncInput();});
+  assert.equal(modelRequests,1,'Repeated input status does not create duplicate pipelines');
+  assert.equal((await page.evaluate(()=>headsetFixture.calls)).length,mediaCalls,'Automatic recognition reuses the selected microphone');
+  delayClassification=true;
   for(let attempt=0;attempt<40&&!heldClassification;attempt++)await page.waitForTimeout(100);
   assert(heldClassification,'A generated PCM frame should be waiting');
   await page.click('#laptopSoundStop');
   await heldClassification.fulfill({contentType:'application/json',body:JSON.stringify({event:'LATE RESULT',model_label:'Speech',score:1})}).catch(()=>{});delayClassification=false;
-  assert.equal(await page.isChecked('#soundRecognitionEnabled'),false);
+  assert.equal(await page.locator('#soundRecognitionState').getAttribute('data-state'),'idle');
   assert.match(await page.textContent('#soundRecognitionResult'),/No current/);
+
+  async function restartMicrophone(){
+   await page.click('#laptopSoundStart');
+   await page.waitForFunction(()=>document.getElementById('laptopSoundWave').dataset.live==='true');
+  }
+  await restartMicrophone();
+  await page.waitForFunction(()=>document.getElementById('soundRecognitionResult').textContent.includes('Possible speech'));
+  await page.click('#laptopSoundStop');
+
+  // A stopped microphone cannot be revived by a delayed model-readiness reply.
+  delayModel=true;const beforePending=modelRequests;
+  await restartMicrophone();
+  for(let n=0;n<40&&!heldModel;n++)await page.waitForTimeout(50);
+  assert(heldModel);assert.equal(modelRequests,beforePending+1);
+  await page.evaluate(()=>soundRecognition.syncInput());
+  assert.equal(modelRequests,beforePending+1,'Pending automatic startup is not duplicated');
+  await page.click('#laptopSoundStop');
+  await heldModel.fulfill({contentType:'application/json',body:JSON.stringify({ready:true})}).catch(()=>{});
+  delayModel=false;heldModel=null;
+  assert.equal(await page.evaluate(()=>soundRecognition.active),false);
+  assert.equal(await page.locator('#soundRecognitionState').getAttribute('data-state'),'idle');
+
+  // Required recognition failures are explicit; waveform levels remain available.
+  modelReady=false;const beforeUnavailable=posts.length;
+  await restartMicrophone();
+  await page.waitForFunction(()=>document.getElementById('soundRecognitionState').dataset.state==='error');
+  assert.match(await page.textContent('#soundRecognitionState'),/not ready.*restart the microphone/);
+  assert.equal(await page.locator('#laptopSoundWave').getAttribute('data-live'),'true');
+  assert.equal(posts.length,beforeUnavailable,'Unavailable model must not receive audio');
+  await page.click('#laptopSoundStop');modelReady=true;classificationFails=true;
+  await restartMicrophone();
+  await page.waitForFunction(()=>document.getElementById('soundRecognitionState').dataset.state==='error');
+  assert.match(await page.textContent('#soundRecognitionState'),/Sound model unavailable/);
+  assert.match(await page.textContent('#soundRecognitionResult'),/No current/);
+  await page.click('#laptopSoundStop');classificationFails=false;
+
+  await restartMicrophone();
+  await page.waitForFunction(()=>document.getElementById('soundRecognitionResult').textContent.includes('Possible speech'));
+  const beforeDisconnect=(await page.evaluate(()=>headsetFixture.calls)).length;
+  await page.evaluate(()=>headsetFixture.streams.at(-1).getAudioTracks()[0].dispatchEvent(new Event('ended')));
+  await page.waitForFunction(()=>document.getElementById('laptopSoundState').dataset.state==='idle');
+  assert.equal(await page.evaluate(()=>soundRecognition.active),false);
+  assert.match(await page.textContent('#soundRecognitionResult'),/No current/);
+  assert.equal((await page.evaluate(()=>headsetFixture.calls)).length,beforeDisconnect,'Disconnect does not open a fallback input');
+
+  await restartMicrophone();
+  await page.waitForFunction(()=>document.getElementById('soundRecognitionResult').textContent.includes('Possible speech'));
+  await page.click('#tab-thermal');
+  assert.equal(await page.evaluate(()=>soundRecognition.active),false);
+  await page.click('#tab-sound');
+  assert.equal(await page.evaluate(()=>soundRecognition.active),false,'Returning to Sound does not restart the microphone');
+  await restartMicrophone();
+  await page.waitForFunction(()=>document.getElementById('soundRecognitionResult').textContent.includes('Possible speech'));
 
   await page.locator('#missionTools>summary').click();
   await page.click('#duplexFind');
@@ -148,6 +211,6 @@ const fs=require('node:fs/promises');
   for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:1000});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`Guide overflow at ${width}`);}
   await page.screenshot({path:'/private/tmp/bimbot-testing-guide.png',fullPage:true});
   assert.deepEqual(errors,[]);
-  console.log('PASS: generated audio PCM, manual recognition, exact two-way routes, mismatch/disconnect cleanup, no motor/cloud writes, guided readiness/download and responsive layout.');
+  console.log('PASS: automatic YAMNet on microphone start, generated PCM, duplicate-start prevention, delayed-start/result cancellation, unavailable-model/classification errors, restart/disconnect/tab cleanup, exact two-way routes, no motor/cloud writes, guided readiness/download and responsive layout.');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exit(1)});

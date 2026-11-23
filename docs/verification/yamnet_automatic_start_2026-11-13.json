@@ -1,0 +1,64 @@
+{
+  "date": "2026-11-13",
+  "timezone": "Asia/Manila",
+  "checkout": "BIM-Bot-for-SAR",
+  "requirement": "YAMNet starts automatically whenever Start microphone successfully opens the selected sound-analysis input; sound detection is required.",
+  "behavior": {
+    "separate_enable_switch": false,
+    "microphone_start_remains_explicit": true,
+    "same_selected_input_reused": true,
+    "duplicate_start_suppressed": true,
+    "cancel_late_start_and_results": true,
+    "failure_visible_with_restart_guidance": true,
+    "waveform_and_loud_threshold_remain_independent": true,
+    "two_way_audio_remains_separate": true
+  },
+  "verification": {
+    "python_sound_classifier": {
+      "passed": 5
+    },
+    "python_dashboard": {
+      "passed": 50
+    },
+    "headset_audio_browser": "PASS: generated PCM and mocked APIs; auto startup/restart, duplicate suppression, Stop during readiness/inference, model error and cleanup checks.",
+    "microphone_browser": "PASS: generated laptop/headset streams, permission/source/mount/disconnect/no-fallback and responsive checks.",
+    "loud_alert_browser": {
+      "checks_per_viewport": 21,
+      "widths": [
+        320,
+        390,
+        768,
+        1440
+      ],
+      "passed": true
+    },
+    "local_model_readiness": {
+      "ready": true,
+      "method": "Cached YAMNet asset checksums, label/tensor shape validation and CPU model loading; no microphone or field classification."
+    },
+    "syntax_and_diff_whitespace": "PASS",
+    "framework_native_offline_render": "PASS"
+  },
+  "source_sha256": {
+    "static/js/headset_audio.js": "2e1a9765ae91b63100c9ba5a68fde35ad8812ccc063f8af66645430054d4af51",
+    "static/js/dashboard.js": "5aae0bb94ea011b8cd52eeceba9ae738eb769212aecf37fca9e639ac8ffc4ac3",
+    "templates/dashboard/monitoring.html": "3fd75a784d586a4de91b8ebcb172cd4ff17e6aaf25a67f5219b1373929025b79",
+    "templates/testing.html": "7ce93fd091ebaf68c3e8356951ed44b5c98f880e4ba665bea72a60a373d24387",
+    "features/sound_classifier.py": "d89d11280bf5623b82e60bcd4cae50c890f199efb3a0358ad17f1bd28273fa6b",
+    "tests/headset_audio_ui.cjs": "6b2dbc4c1ca73690f26c7ef94ac8cc664e067b5d26080364e4d6158eda724a2f",
+    "tests/laptop_sound_ui.cjs": "2f5525e8f2fb22bb222ee789d7e4e0be3dfa2d8b011666ce0b27671d09e18c93"
+  },
+  "scope": {
+    "real_microphone_opened": false,
+    "real_speaker_used": false,
+    "robot_or_firmware_changed": false,
+    "private_configuration_read_or_changed": false,
+    "cloud_writes": false,
+    "production_restarted": false,
+    "separate_ui_prototype_changed": false,
+    "live_accuracy_established": false,
+    "original_docx_changed": false,
+    "temporary_preview_stopped": true
+  },
+  "remaining": "Restart Flask and reload the dashboard to load updated templates/code. Real headset capture, recognition accuracy, Bluetooth range and combined-load acceptance remain pending."
+}

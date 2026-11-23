@@ -1,0 +1,28 @@
+{
+  "date": "2026-11-13",
+  "timezone": "Asia/Manila",
+  "checkout": "BIM-Bot-for-SAR",
+  "change": "Automatic MP4 basenames use camera source and recording start time in Asia/Manila, plus an eight-hex uniqueness suffix. Local files, downloads and cloud retry object basenames match; earlier clips retain their names.",
+  "verification": {
+    "local_recording_python_tests": 17,
+    "dashboard_python_tests": 50,
+    "sound_classifier_python_tests": 5,
+    "dashboard_browser": "PASS: generated camera frames, real browser MP4 encoding, source/timezone/start-time filenames, matching multipart/download names and retry identity.",
+    "offline_browser": "PASS: mocked cookie-first sessions and cloud failures, local MP4/download/retry/sync and expiry.",
+    "headset_browser": "PASS: automatic microphone-linked YAMNet and cleanup; generated audio, mocked APIs.",
+    "git_diff_check": "PASS"
+  },
+  "source_sha256": {
+    "features/local_recordings.py": "3e7c37884c5601449620e9ef002f7b38669721fb19ec77ab5bc2dc08d622e3d4",
+    "static/js/dashboard.js": "5aae0bb94ea011b8cd52eeceba9ae738eb769212aecf37fca9e639ac8ffc4ac3",
+    "tests/test_local_recordings.py": "683f664efd29274f1e670924921d11a26f176434c18a95b96ed2d04ba97ad83a",
+    "tests/dashboard_ui.cjs": "105ecee338e2ffed1b9a214c7d250e10354ef7de52688f9c5b068c8de9887e80"
+  },
+  "limits": {
+    "real_camera_or_microphone_used": false,
+    "live_supabase_upload_verified": false,
+    "firmware_changed_by_this_update": false,
+    "private_configuration_changed": false
+  },
+  "scope": "YAMNet and recording source/docs/tests only. Firmware, movement tests, Windows setup and other unrelated changes remain unstaged."
+}

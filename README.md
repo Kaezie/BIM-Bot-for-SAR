@@ -84,6 +84,10 @@ access for up to 12 hours. Recordings save to this laptop first and queue for
 Supabase until internet returns. The app must be running to sync; local copies
 remain after upload. See [Offline recording](docs/OFFLINE_RECORDING.md) for the
 field workflow, file location, and limits. The service-role key stays server-side.
+New clips are named automatically using camera source and recording start time
+in Philippine time, for example `BIMBot_Main_2026-11-13_14-30-05_a1b2c3d4.mp4`.
+Local files, downloads and queued cloud uploads retain the same basename;
+existing clips retain their earlier names.
 The copied local `.env`, local recording/session data, and SQLite history are ignored by Git. The two original
 SAR model files remain tracked; new model artifacts are ignored.
 
@@ -123,7 +127,8 @@ Set `CHROME_PATH` if using a local Chrome executable. These tests do not contact
 robot hardware or upload recordings to the live Supabase bucket.
 
 The Sound tab offers manually selected laptop or robot-headset input, waveform
-and relative level, plus optional **local YAMNet sound-event recognition**.
+and relative level, plus **local YAMNet sound-event recognition**, which starts
+automatically with the selected microphone.
 The operator confirms a Bluetooth headset with mic/earpiece. Separate manual
 **Survivor communication** controls route headset input to the operator output
 and operator input to the earpiece, using exact devices with no fallback. Audio

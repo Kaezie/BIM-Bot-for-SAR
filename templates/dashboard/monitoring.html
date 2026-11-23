@@ -73,9 +73,9 @@
             <label class="sound-threshold" for="loudSoundThreshold">Loud-sound alert threshold <output id="loudSoundThresholdValue" for="loudSoundThreshold">20%</output><input id="loudSoundThreshold" type="range" min="1" max="100" value="20" step="1"></label>
             <small>While the microphone is listening, crossing this relative signal threshold shows a banner and saves an alert. Adjust for your input and background noise. Alerts wait at least 10 seconds between events and rearm after 1 second below the threshold.</small>
             <div class="laptop-sound-buttons"><button id="laptopSoundStart" class="primary" type="button" disabled>Start microphone</button><button id="laptopSoundStop" type="button" disabled>Stop microphone</button></div>
-            <label class="sound-mount"><input id="soundRecognitionEnabled" type="checkbox" disabled>Enable local YAMNet sound recognition after starting the microphone</label>
-            <p id="soundRecognitionState" role="status">Sound recognition off.</p><p id="soundRecognitionResult">No current sound classification.</p>
-            <p class="sound-privacy">Waveform analysis stays in the browser. Loud-sound alerts save only the source, relative level, threshold and time in this laptop's alert history. Optional recognition sends short audio frames only to this laptop's local server; audio is not saved or sent to a cloud service. No sound playback here. Stops when you leave Sound or hide this page. Headset location is operator-confirmed.</p>
+            <p class="sound-source-note">YAMNet sound recognition starts automatically with the microphone and stops with it.</p>
+            <p id="soundRecognitionState" role="status" data-state="idle">Start microphone to run YAMNet automatically.</p><p id="soundRecognitionResult">No current sound classification.</p>
+            <p class="sound-privacy">Waveform analysis stays in the browser. Loud-sound alerts save only the source, relative level, threshold and time in this laptop's alert history. YAMNet recognition sends short audio frames only to this laptop's local server; audio is not saved or sent to a cloud service. No sound playback here. Stops when you leave Sound or hide this page. Headset location is operator-confirmed.</p>
             <small>Recognition suggests sound events, not words or confirmed survivors. Scores and live accuracy require evaluation.</small>
             <small>Relative signal level, uncalibrated. Activity does not identify voices or people.</small>
           </section>

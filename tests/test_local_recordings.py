@@ -157,6 +157,42 @@ class LocalRecordingTests(unittest.TestCase):
         self.assertEqual(file_path.read_bytes(), MP4)
         self.assertEqual(self.store.list("operator-a")["pending_count"], 0)
 
+    def test_automatic_name_matches_local_file_download_and_cloud_retries(self):
+        for source, label in (("main", "Main"), ("nightvision", "NightVision")):
+            with self.subTest(source=source):
+                filename = f"BIMBot_{label}_2026-11-12_14-30-05_a1b2c3d4.mp4"
+                recording = self.post(filename=filename, source=source).get_json()["recording"]
+                self.assertEqual(recording["name"], filename)
+                self.assertEqual(self.post(filename=filename, source=source).get_json()["recording"]["id"], recording["id"])
+                path = self.directory / "recordings" / "operator-a" / recording["id"] / filename
+                self.assertEqual(path.read_bytes(), MP4)
+                with self.client.get(recording["download_url"], headers=self.headers) as response:
+                    self.assertEqual(response.data, MP4)
+                    self.assertIn(f"filename={filename}", response.headers["Content-Disposition"])
+                self.uploader.side_effect = [ConnectionError("offline"), None]
+                with patch("features.local_recordings.time.time", return_value=100):
+                    self.assertEqual(self.store.sync_once(), 1)
+                restarted = LocalRecordings(self.directory, self.uploader)
+                with patch("features.local_recordings.time.time", return_value=131):
+                    self.assertEqual(restarted.sync_once(), 1)
+                self.assertEqual(self.uploader.call_args_list[-2].args, self.uploader.call_args_list[-1].args)
+                self.assertEqual(self.uploader.call_args.args, ("operator-a", filename, path.resolve()))
+
+    def test_automatic_names_keep_separate_clips_and_concurrent_retries(self):
+        filename = "BIMBot_Main_2026-11-12_14-30-05_a1b2c3d4.mp4"
+        other = LocalRecordings(self.directory, self.uploader)
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            first = pool.submit(self.save, filename=filename)
+            second = pool.submit(other.save, "operator-a", self.video(), filename, "main")
+            results = [first.result(timeout=3), second.result(timeout=3)]
+        self.assertEqual(results[0]["id"], results[1]["id"])
+        self.assertEqual(len(self.files()), 1)
+        different = self.save(filename=filename.replace("a1b2c3d4", "e5f6a7b8"), data=MP4[:-1] + b"x")
+        self.assertNotEqual(different["id"], results[0]["id"])
+        self.assertEqual(len(self.files()), 2)
+        self.assertEqual(self.post(filename=filename, data=MP4[:-1] + b"x").status_code, 409)
+        self.assertEqual(self.post(filename=filename, source="nightvision").status_code, 400)
+
     def test_sync_batch_is_at_most_three_and_does_not_repeat_synced_clips(self):
         for number in range(4):
             self.save(filename=f"clip-{number}.mp4")

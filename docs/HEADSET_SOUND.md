@@ -1,9 +1,26 @@
 # Bluetooth headset sound and recognition
 
-Updated November 3, 2026, Asia/Manila. The operator confirms an available
+Updated November 13, 2026, Asia/Manila. YAMNet starts automatically whenever
+**Start microphone** successfully opens the selected input. There is no separate
+recognition enable switch. Starting a microphone remains an explicit operator
+action; page load, Sound selection and device discovery do not start recognition.
+Stop, input changes/loss, leaving Sound, hidden page and session end cancel
+recognition, including pending startup and late results. If the model is
+unavailable or inference fails, a visible error directs the operator to stop and
+restart the microphone after correcting the issue; levels remain available.
+
+The operator confirms an available
 Bluetooth headset with microphone and earpiece. Its model, pairing, placement,
 range and live sound performance remain unverified. One headset is one robot
 input; the Original/Spare camera microphone cards remain unavailable.
+
+November 13 software verification: five sound-classifier and 50 dashboard
+Python checks pass. The generated-audio headset and microphone browser suites
+pass, including automatic startup, one pipeline per input session, cancellation
+of delayed readiness/classification replies, model failures and cleanup. The
+loud-sound suite passes 21 checks at each of 320/390/768/1440 pixels. The cached
+YAMNet model loads successfully with checksum/shape validation. These checks
+open no real microphone and do not establish live sound-event accuracy.
 
 Use the in-app [stationary testing guide](http://localhost:5050/testing#sound)
 for the full operator sequence. Pair through Mac System Settings → Bluetooth,
@@ -19,8 +36,8 @@ While the selected microphone is listening, a signal at or above the
 a **Sound alert** under Mission tools & history → Alert history. The default is
 20% relative RMS signal; adjust it above the observed background level for the
 selected input. This threshold is separate from the 3% activity indicator. It
-is not a calibrated decibel limit or evidence of a survivor. YAMNet is optional
-and is not needed for a loud-sound alert.
+is not a calibrated decibel limit or evidence of a survivor. Loud-sound alerts
+use this threshold independently of YAMNet's sound-event classifications.
 
 Continuous noise produces one alert. Another requires at least one second
 below the loud threshold and at least ten seconds since the preceding alert.
@@ -41,9 +58,9 @@ authentication, same-origin checks, offline sessions and persistent cooldown.
 320, 390, 768 and 1440 pixels. These checks open no real microphone and do not
 establish live headset accuracy, an appropriate field threshold or robot range.
 
-Waveform and relative RMS/peak analysis stay in the browser. The optional
-**Enable local YAMNet sound recognition** control is off until selected after
-microphone startup. It sends bounded0.975-second mono16kHz float32 frames only
+Waveform and relative RMS/peak analysis stay in the browser. YAMNet recognition
+starts automatically with the microphone, reusing that exact selected input.
+It sends bounded0.975-second mono16kHz float32 frames only
 to this laptop's authenticated local server. Raw audio is not saved or sent to
 cloud services. The AudioWorklet continuously resamples actual input; it does
 not concatenate disconnected analyser snapshots. A silent output keeps the
@@ -74,8 +91,8 @@ Setup is explicit. Dashboard startup never downloads a model or accesses audio.
 Runtime checksum/shape validation and a single nonqueued inference lock bound
 processing. The protected API accepts only62400bytes of finite float32 PCM at
 16kHz; wrong formats fail. Late responses after Stop/source change are ignored;
-results expire rather than remaining current. Recognition can be stopped while
-leaving the waveform input active; stopping the input clears recognition too.
+results expire rather than remaining current. Stopping the microphone clears
+recognition too. Restarting the microphone starts a fresh recognition session.
 
 ## Separate two-way audio mode
 
