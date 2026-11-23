@@ -176,6 +176,7 @@ class LiveCamera:
         self.updated_at = self.detected_at = None
         self.detections = []
         self.arrivals.clear()
+        self.inference_ms = None
         self.video_processing_ms = None
         self.skipped_video_frames = 0
         self.error, self.analysis_error = message, None
@@ -337,12 +338,17 @@ class LiveCamera:
             next_analysis = began + self.INFERENCE_INTERVAL
             try:
                 result = self.analyze(image)
+                elapsed_ms = (time.monotonic() - began) * 1000
                 deferred = None
                 with self.condition:
-                    if generation != self.generation or not 0 <= time.time() - received_at < self.RESULT_TTL:
+                    if generation != self.generation:
+                        continue
+                    self.inference_ms = elapsed_ms
+                    if not 0 <= time.time() - received_at < self.RESULT_TTL:
+                        self.analysis_error = 'Detection finished after the freshness limit.'
+                        self.condition.notify_all()
                         continue
                     self.detections, self.detected_at = list(result), received_at
-                    self.inference_ms = (time.monotonic() - began) * 1000
                     self.analysis_error = None
                     # Commit state while fenced; run any returned evidence I/O
                     # after releasing the frame lock.

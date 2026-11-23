@@ -1,10 +1,14 @@
 """Shared person analysis with independent temporal state for each camera."""
+import logging
 import math
 import time
 
 from .live_camera import LiveCamera
 from .person_tracking import PersonTracker, match_boxes, valid_box, usable_keypoints, person_region_motion
 from .survivor_observations import SurvivorObservations
+
+
+logger = logging.getLogger(__name__)
 
 
 class PersonAnalysis:
@@ -14,6 +18,7 @@ class PersonAnalysis:
         self.person_tracker = PersonTracker(max_gap=LiveCamera.RESULT_TTL)
         self.survivor_observations = SurvivorObservations()
         self.stationary_timers = {}
+        self.pose_failed = False
 
     def reset(self):
         self.prev_frame = self.motion_generation = None
@@ -29,7 +34,6 @@ class PersonAnalysis:
         gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
         gray = cv.GaussianBlur(gray, (21, 21), 0)
         det_results = detector(frame, classes=[14], conf=0.25)
-        pose_results = pose_model(frame, conf=0.25)
 
         def bounded_box(box):
             value = valid_box(box.xyxy[0].tolist())
@@ -44,17 +48,29 @@ class PersonAnalysis:
             if bounds is not None and math.isfinite(confidence) and 0 <= confidence <= 1:
                 people.append((bounds, confidence))
         poses = []
-        pose_result = pose_results[0]
-        if pose_result.keypoints is not None and pose_result.boxes is not None:
-            points, confidence = pose_result.keypoints.xy, pose_result.keypoints.conf
-            for index, box in enumerate(pose_result.boxes):
-                bounds = bounded_box(box)
-                if bounds is not None:
-                    joints = (usable_keypoints(points[index].tolist(), confidence[index].tolist())
-                              if confidence is not None and index < len(points) and index < len(confidence) else None)
-                    upper = (usable_keypoints(points[index].tolist(), confidence[index].tolist(), required=(5, 6, 9, 10))
-                             if confidence is not None and index < len(points) and index < len(confidence) else None)
-                    poses.append((bounds, joints, upper))
+        if people:
+            try:
+                pose_result = pose_model(frame, conf=0.25)[0]
+                if pose_result.keypoints is not None and pose_result.boxes is not None:
+                    points, confidence = pose_result.keypoints.xy, pose_result.keypoints.conf
+                    for index, box in enumerate(pose_result.boxes):
+                        bounds = bounded_box(box)
+                        if bounds is None:
+                            continue
+                        joints = upper = None
+                        if confidence is not None and index < len(points) and index < len(confidence):
+                            xy, scores = points[index].tolist(), confidence[index].tolist()
+                            joints = usable_keypoints(xy, scores)
+                            upper = usable_keypoints(xy, scores, required=(5, 6, 9, 10))
+                        poses.append((bounds, joints, upper))
+            except Exception as exc:
+                poses.clear()
+                if not self.pose_failed:
+                    logger.warning('%s pose analysis failed (%s). Keeping person boxes.',
+                                   self.source, type(exc).__name__)
+                self.pose_failed = True
+            else:
+                self.pose_failed = False
         boxes = [item[0] for item in people]
         pose_matches = match_boxes(boxes, [item[0] for item in poses])
 

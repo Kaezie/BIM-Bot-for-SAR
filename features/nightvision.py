@@ -17,14 +17,17 @@ class NightVision(LiveCamera):
         if self.detector is None:
             self.detector = self.model_factory()
         if self.person_analysis is not None:
-            if self.pose_model is None:
-                self.pose_model = self.pose_factory()
             # The spare view has no calibrated pixel registration to thermal.
-            return self.person_analysis.analyze(frame, self, self.detector, self.pose_model)
+            return self.person_analysis.analyze(frame, self, self.detector, self._estimate_pose)
         result = self.detector(frame, classes=[14], conf=0.25, verbose=False)[0]
         return [{'confidence': float(box.conf.item()),
                  'box': [float(v) for v in box.xyxy[0].tolist()],
                  'source': 'nightvision'} for box in result.boxes]
+
+    def _estimate_pose(self, frame, *, conf):
+        if self.pose_model is None:
+            self.pose_model = self.pose_factory()
+        return self.pose_model(frame, conf=conf)
 
     def _draw(self, frame, detections, age):
         if self.person_analysis is not None:

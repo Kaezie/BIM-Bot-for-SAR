@@ -386,6 +386,10 @@ class LiveCameraTests(unittest.TestCase):
         release.set(); worker.join(timeout=1)
         self.assertIsNone(camera.detected_at)
         accepted.assert_not_called()
+        status = camera.status()
+        self.assertTrue(status['connected'])
+        self.assertIsNotNone(status['inference_ms'])
+        self.assertIn('freshness', status['analysis_error'])
 
     def test_two_viewers_share_one_reader_and_last_close_releases_response(self):
         camera = self.make()

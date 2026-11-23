@@ -530,6 +530,21 @@ class DashboardTests(unittest.TestCase):
         self.assertTrue(all(d['pose_matched'] for d in detections))
         self.assertTrue(all(d['consciousness'] == 'Unknown' for d in detections))
 
+    def test_main_pose_inference_failure_keeps_person_box(self):
+        box = (10, 30, 70, 110)
+        detector = MagicMock(return_value=self.generated_model_result([box]))
+        pose = MagicMock(side_effect=RuntimeError('Pose backend failed'))
+        frame = np.zeros((140, 240, 3), np.uint8)
+        with self.pipeline_inputs(detection_model=detector, pose_model=pose, cv2=cv2,
+                                  get_thermal_frame=lambda: None, prev_frame=None, motion_generation=None,
+                                  person_tracker=self.module.PersonTracker(), stationary_timers={}):
+            detections = self.module.analyze_main_frame(frame)
+            annotated = self.module.render_main_frame(frame.copy(), detections, .1)
+        self.assertEqual(detections[0]['box'], list(box))
+        self.assertFalse(detections[0]['pose_matched'])
+        self.assertEqual(detections[0]['pose'], 'unknown')
+        self.assertEqual(annotated[80, 10].tolist(), [0, 255, 0])
+
     def test_main_pipeline_reorder_keeps_ids_and_independent_motion_and_timers(self):
         import cv2
         import numpy as np
@@ -681,6 +696,21 @@ class DashboardTests(unittest.TestCase):
             self.assertTrue(all(item['thermal_alive'] == 'No thermal camera' for item in results))
             self.assertTrue(all(item['track_id'] != original['track_id'] for item, original in zip(results, main)))
             self.assertIsNot(night.person_analysis.stationary_timers, self.module.main_analysis.stationary_timers)
+
+    def test_night_pose_load_failure_keeps_person_box_and_can_recover(self):
+        box = (10, 30, 70, 110)
+        detector = MagicMock(return_value=self.generated_model_result([box]))
+        pose = MagicMock(return_value=self.generated_model_result([box], [False]))
+        factory = MagicMock(side_effect=[RuntimeError('Pose checkpoint could not load'), pose])
+        frame = np.zeros((140, 240, 3), np.uint8)
+        with self.night_inputs(detector, None) as night, patch.object(night, 'pose_factory', factory):
+            first = night._detect(frame)[0]
+            recovered = night._detect(frame)[0]
+        self.assertEqual(first['box'], list(box))
+        self.assertEqual(first['source'], 'nightvision')
+        self.assertFalse(first['pose_matched'])
+        self.assertTrue(recovered['pose_matched'])
+        self.assertEqual(first['track_id'], recovered['track_id'])
 
     def test_night_reset_clears_only_its_own_timers_and_main_result_is_unchanged(self):
         model = MagicMock(return_value=self.generated_model_result([(10, 10, 70, 110)], [True]))
