@@ -1,4 +1,4 @@
-"""Durable laptop MP4 copies and an owner-scoped cloud retry queue.
+"""Durable laptop evidence files and an owner-scoped cloud retry queue.
 
 The uploader callback receives (verified_owner_id, immutable_name, Path) and must
 use that same cloud key with upsert on every retry. It must bound network time.
@@ -7,6 +7,8 @@ No credentials or user access tokens are stored in this module's database.
 from contextlib import contextmanager
 from datetime import datetime, timezone
 import hashlib
+from io import BytesIO
+import json
 import os
 from pathlib import Path
 import re
@@ -22,10 +24,38 @@ from werkzeug.utils import secure_filename
 
 OWNER = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}\Z")
 RECORDING_ID = re.compile(r"[a-f0-9]{32}\Z")
-AUTOMATIC_NAME = re.compile(r"BIMBot_(?P<source>Main|NightVision)_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}_[a-f0-9]{8}\.mp4\Z")
+AUTOMATIC_NAME = re.compile(r"BIMBot_(?P<source>Main|NightVision|Screen)_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}_[a-f0-9]{8}\.mp4\Z")
+REPORT_NAME = re.compile(r"BIMBot_Report_[a-f0-9]{32}\.json\Z")
+VIDEO_SOURCES = {"main": "Main", "nightvision": "NightVision", "screen": "Screen"}
+MAX_REPORT_BYTES = 2 * 1024 * 1024
+LOCAL_MESSAGE = "Screen recording saved on this laptop."
 PENDING_MESSAGE = "Saved on this laptop. Waiting to upload to Supabase."
 RETRY_MESSAGE = "Saved on this laptop. Cloud upload will retry when a connection is available."
 SYNCED_MESSAGE = "Saved on this laptop and uploaded to Supabase."
+
+
+def mission_report_text(report):
+    """Render the saved snapshot, including nested values, as UTF-8 text."""
+    def fields(section, indent=""):
+        entries = section.items() if isinstance(section, dict) else enumerate(section, start=1)
+        for key, value in entries:
+            label = key.replace("_", " ").capitalize() if isinstance(key, str) else str(key)
+            if isinstance(value, (dict, list)) and value:
+                yield indent + label
+                yield from fields(value, indent + "  ")
+                continue
+            if value is None:
+                value = "Not recorded"
+            elif isinstance(value, (dict, list)):
+                value = "None"
+            elif isinstance(value, bool):
+                value = "Yes" if value else "No"
+            first, *continuation = str(value).split("\n")
+            yield f"{indent}{label} — {first}"
+            for line in continuation:
+                yield indent + "  " + line
+
+    return "BIM-Bot Mission Report\n\n" + "\n".join(fields(report)) + "\n"
 
 
 class LocalRecordingError(Exception):
@@ -109,13 +139,13 @@ class LocalRecordings:
     def _display_name(name):
         # Existing clips retain their names. New clips keep their private ID in
         # a local subfolder, with one readable filename on disk and in Storage.
-        if RECORDING_ID.fullmatch(name[:32]) and name[32:33] == "_" and AUTOMATIC_NAME.fullmatch(name[33:]):
+        if RECORDING_ID.fullmatch(name[:32]) and name[32:33] == "_" and (AUTOMATIC_NAME.fullmatch(name[33:]) or REPORT_NAME.fullmatch(name[33:])):
             return name[33:]
         return name
 
     def _file_path(self, owner, name):
         self._owner(owner)
-        if self._filename(name) != name:
+        if not REPORT_NAME.fullmatch(self._display_name(name)) and self._filename(name) != name:
             raise LocalRecordingError("Recording not found.", 404)
         owner_dir = (self.files_dir / owner).resolve()
         if owner_dir.parent != self.files_dir.resolve():
@@ -154,17 +184,17 @@ class LocalRecordings:
         with self._database() as db:
             db.execute("""INSERT INTO recordings
                 (id, owner, name, source, size, created_at, sync_state, message, client_filename, sha256)
-                VALUES (:id, :owner, :name, :source, :size, :created_at, 'pending', :message, :client_filename, :sha256)""", row)
+                VALUES (:id, :owner, :name, :source, :size, :created_at, :sync_state, :message, :client_filename, :sha256)""", row)
 
-    def _duplicate(self, owner, filename, source, size, digest):
+    def _duplicate(self, owner, filename, source, size=None, digest=None):
         with self._database() as db:
             row = db.execute("SELECT * FROM recordings WHERE owner=? AND client_filename=?", (owner, filename)).fetchone()
         if row is None:
             return None
-        if row["sha256"] != digest or row["size"] != size or row["source"] != source:
+        if row["source"] != source or (source != "report" and (row["sha256"] != digest or row["size"] != size)):
             raise LocalRecordingError("That recording filename already belongs to different video data. Choose a new filename.", 409)
         path = self._file_path(owner, row["name"])
-        if not path.is_file() or path.stat().st_size != size:
+        if not path.is_file() or path.stat().st_size != row["size"]:
             raise LocalRecordingError("The existing local copy is unavailable. Choose a new recording filename.", 409)
         return dict(row)
 
@@ -180,18 +210,32 @@ class LocalRecordings:
     def save(self, owner, video, filename=None, source="main"):
         """Stream to disk first; acknowledge only after a durable metadata commit."""
         owner = self._owner(owner)
-        if source not in {"main", "nightvision"}:
-            raise LocalRecordingError("Recording source must be main or nightvision.")
+        if source not in VIDEO_SOURCES:
+            raise LocalRecordingError("Recording source must be main, nightvision, or screen.")
         if video is None or not getattr(video, "stream", None):
             raise LocalRecordingError("A nonempty MP4 video is required.")
         original = self._filename(filename or video.filename)
         automatic = AUTOMATIC_NAME.fullmatch(original)
-        if automatic and automatic["source"] != {"main": "Main", "nightvision": "NightVision"}[source]:
+        if automatic and automatic["source"] != VIDEO_SOURCES[source]:
             raise LocalRecordingError("The recording filename must match its camera source.")
         # Validate the multipart filename too, even when a display name is provided.
         self._filename(video.filename)
         if video.mimetype not in {"video/mp4", "application/mp4"}:
             raise LocalRecordingError("Upload an MP4 video with its video/mp4 content type.", 415)
+        return self._save_file(owner, original, source, video.stream, self.max_bytes)
+
+    def save_report(self, owner, request_id, build_report):
+        owner = self._owner(owner)
+        if not isinstance(request_id, str) or not RECORDING_ID.fullmatch(request_id):
+            raise LocalRecordingError("A valid report save ID is required.")
+        name = f"BIMBot_Report_{request_id}.json"
+        existing = self._duplicate(owner, name, "report")
+        if existing is not None:
+            return self._public(existing)
+        report = json.dumps(build_report(owner), ensure_ascii=False, indent=2, allow_nan=False).encode("utf-8") + b"\n"
+        return self._save_file(owner, name, "report", BytesIO(report), MAX_REPORT_BYTES)
+
+    def _save_file(self, owner, original, source, stream, limit):
         recording_id = uuid4().hex
         name = recording_id + "_" + original
         # The generated prefix can exceed the input's 180-character limit.
@@ -207,13 +251,13 @@ class LocalRecordings:
                 pending_path = Path(handle.name)
                 size, header, digest = 0, bytearray(), hashlib.sha256()
                 while True:
-                    chunk = video.stream.read(min(64 * 1024, self.max_bytes - size + 1))
+                    chunk = stream.read(min(64 * 1024, limit - size + 1))
                     if not chunk:
                         break
                     size += len(chunk)
-                    if size > self.max_bytes:
-                        raise LocalRecordingError("The recording exceeds the local file size limit.", 413)
-                    if len(header) < 64:
+                    if size > limit:
+                        raise LocalRecordingError("The file exceeds the local save limit.", 413)
+                    if source != "report" and len(header) < 64:
                         header.extend(chunk[:64 - len(header)])
                     if len(header) >= 8 and header[4:8] != b"ftyp":
                         raise LocalRecordingError("The recording must contain an MP4 container, not another video format.")
@@ -221,21 +265,24 @@ class LocalRecordings:
                     handle.write(chunk)
                 if not size:
                     raise LocalRecordingError("A nonempty MP4 video is required.")
-                self._validate_mp4(header, size)
+                if source != "report":
+                    self._validate_mp4(header, size)
                 handle.flush()
                 os.fsync(handle.fileno())
             checksum = digest.hexdigest()
             existing = self._duplicate(owner, original, source, size, checksum)
             if existing is not None:
                 pending_path.unlink()
-                self._wake.set()
+                if source != "screen":
+                    self._wake.set()
                 return self._public(existing)
             os.replace(pending_path, final_path)
             installed = True
             self._sync_directory(final_path.parent)
             row = {"id": recording_id, "owner": owner, "name": name, "source": source,
-                   "size": size, "created_at": time.time(), "message": PENDING_MESSAGE,
-                   "sync_state": "pending", "client_filename": original, "sha256": checksum}
+                   "size": size, "created_at": time.time(),
+                   "message": LOCAL_MESSAGE if source == "screen" else PENDING_MESSAGE,
+                   "sync_state": "local_only" if source == "screen" else "pending", "client_filename": original, "sha256": checksum}
             try:
                 self._insert_record(row)
             except sqlite3.IntegrityError:
@@ -252,33 +299,38 @@ class LocalRecordings:
             if installed:
                 final_path.unlink(missing_ok=True)
             raise
-        self._wake.set()
+        if source != "screen":
+            self._wake.set()
         return self._public(row)
 
     @staticmethod
     def _public(row):
+        collection = "mission-reports" if row["source"] == "report" else "local-recordings"
         return {"id": row["id"], "name": LocalRecordings._display_name(row["name"]), "source": row["source"], "size": row["size"],
                 "created_at": datetime.fromtimestamp(row["created_at"], timezone.utc).isoformat().replace("+00:00", "Z"),
-                "sync_state": "synced" if row["sync_state"] == "synced" else "pending",
-                "message": row["message"], "download_url": "/api/local-recordings/" + row["id"] + "/file"}
+                "sync_state": row["sync_state"] if row["sync_state"] in {"synced", "local_only"} else "pending",
+                "message": row["message"], "download_url": f"/api/{collection}/{row['id']}/file"}
 
-    def list(self, owner, offset=0):
+    def list(self, owner, offset=0, *, reports=False):
         owner = self._owner(owner)
         if not isinstance(offset, int) or isinstance(offset, bool) or not 0 <= offset <= 1_000_000_000:
             raise LocalRecordingError("Recording offset must be a nonnegative integer.")
         with self._database() as db:
-            rows = db.execute("SELECT * FROM recordings WHERE owner=? ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?",
-                              (owner, self.PAGE_SIZE + 1, offset)).fetchall()
-            pending = db.execute("SELECT COUNT(*) FROM recordings WHERE owner=? AND sync_state!='synced'", (owner,)).fetchone()[0]
+            rows = db.execute("""SELECT * FROM recordings WHERE owner=? AND (source='report')=?
+                              ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?""",
+                              (owner, reports, self.PAGE_SIZE + 1, offset)).fetchall()
+            pending = db.execute("""SELECT COUNT(*) FROM recordings WHERE owner=? AND (source='report')=?
+                                 AND sync_state IN ('pending','syncing')""", (owner, reports)).fetchone()[0]
         return {"recordings": [self._public(row) for row in rows[:self.PAGE_SIZE]],
                 "has_more": len(rows) > self.PAGE_SIZE, "pending_count": pending}
 
-    def get(self, owner, recording_id):
+    def get(self, owner, recording_id, *, reports=False):
         owner = self._owner(owner)
         if not isinstance(recording_id, str) or not RECORDING_ID.fullmatch(recording_id):
             raise LocalRecordingError("Recording not found.", 404)
         with self._database() as db:
-            row = db.execute("SELECT * FROM recordings WHERE id=? AND owner=?", (recording_id, owner)).fetchone()
+            row = db.execute("SELECT * FROM recordings WHERE id=? AND owner=? AND (source='report')=?",
+                             (recording_id, owner, reports)).fetchone()
         if row is None:
             raise LocalRecordingError("Recording not found.", 404)
         return row
@@ -390,6 +442,18 @@ class LocalRecordings:
         if self._thread is not None and self._thread is not threading.current_thread():
             self._thread.join(timeout=timeout)
 
+    def download(self, owner, record_id, *, reports=False):
+        row = self.get(owner, record_id, reports=reports)
+        path = self._file_path(row["owner"], row["name"])
+        if not path.is_file():
+            raise LocalRecordingError("The local evidence file is unavailable.", 404)
+        mime = "application/json" if reports else "video/mp4"
+        response = send_file(path, mimetype=mime, as_attachment=True,
+                             download_name=self._display_name(row["name"]), conditional=True, max_age=0)
+        response.headers["Cache-Control"] = "private, no-store"
+        response.vary.add("Cookie")
+        return response
+
     def register(self, app, require_auth):
         @app.errorhandler(LocalRecordingError)
         def local_recording_error(error):
@@ -420,14 +484,7 @@ class LocalRecordings:
         @app.get("/api/local-recordings/<recording_id>/file")
         @require_auth
         def download_local_recording(recording_id):
-            row = self.get(owner(), recording_id)
-            path = self._file_path(row["owner"], row["name"])
-            if not path.is_file():
-                raise LocalRecordingError("The local recording file is unavailable.", 404)
-            response = send_file(path, mimetype="video/mp4", as_attachment=True, download_name=self._display_name(row["name"]), conditional=True, max_age=0)
-            response.headers["Cache-Control"] = "private, no-store"
-            response.vary.add("Cookie")
-            return response
+            return self.download(owner(), recording_id)
 
         @app.post("/api/local-recordings/sync")
         @require_auth

@@ -1,21 +1,18 @@
 # SAR base with the integrated UI
 
-October 30 review handoff: the original UI merge is already present in shared
-`main` at `9c24366407dadb078360bf11d776e9b605103c4e` (PR #1). The subsequent
-camera, sensor, audio, tracking and movement-recorder updates are being prepared
-on `codex/robot-integration-review` for groupmate confirmation. They do not
-establish completed hardware acceptance. See [review handoff](REVIEW_HANDOFF.md).
-The source/import notes below describe the earlier integration stage.
+The original UI merge landed in `main` at
+`9c24366407dadb078360bf11d776e9b605103c4e` (PR #1). The
+[October 30 review handoff](REVIEW_HANDOFF.md) records the subsequent camera,
+sensor, audio, tracking, and movement updates and their verification scope.
 
 ## Sources
 
 - Main repository: `https://github.com/Kaezie/BIM-Bot-for-SAR.git`, commit
   `0e73906a02f582a8f070041da12c754aa324a7e2` (SAR ver 2).
-- Frontend source: `/Users/christine/Desktop/BIMBOT/NEW-BIMBOT-UI`, including its
-  current local files. `MERGE_SOURCES.json` records the 44 initially imported
+- Frontend source: the separate `NEW-BIMBOT-UI` checkout.
+  `MERGE_SOURCES.json` records the 44 initially imported
   source fingerprints; some imported backend files were subsequently removed.
-- Integrated copy: `/Users/christine/Documents/ChatGPT/BIM-BOT/BIM-Bot-for-SAR`,
-  branch `codex/merge-ui-sar`. Changes are local and uncommitted; nothing is pushed.
+- The integration was initially prepared on `codex/merge-ui-sar`.
 - The original UI checkout and original SAR model weights remain unchanged.
 
 ## Corrected integration direction
@@ -85,7 +82,6 @@ to avoid treating video bytes as temperature data.
 
 The local `.env` was copied privately and history copied using SQLite backup.
 Both stay ignored. No cloud settings, live data, or original UI files were changed.
-`ngrok_tunnel.py` remains from SAR and is not started during verification.
 
 ## Verification
 

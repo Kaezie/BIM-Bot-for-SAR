@@ -10,9 +10,8 @@ independent software work, stationary hardware checks and panel questions while
 movement testing is on hold. The [panel audit](docs/PANEL_REQUIREMENTS_AUDIT.md)
 records requirement evidence and remaining gaps.
 
-For the October 30 review, start with the [groupmate handoff](docs/REVIEW_HANDOFF.md).
-It records setup, the installed firmware versus source defaults, software checks,
-and the hardware acceptance items that remain open before merging.
+The [integration handoff](docs/REVIEW_HANDOFF.md) records the October 30 review
+and lists repeatable software and hardware checks.
 
 ## Project layout
 
@@ -38,10 +37,9 @@ labelled, with unavailable or stale readings cleared. On another tab, **Connect
 main detector** starts the original camera without leaving that view; an existing
 main stream continues across tabs. Manual Disconnect is preserved. The sensor
 readings use the original full-screen console: floating instruments flank the
-image on desktop, with compact strips on phones. The dark teal theme, pill
-controls and full-width bottom tabs are retained. Thermal and sound
-still need their own configured hardware/data endpoints; showing their status
-does not install them or align thermal readings with a camera image.
+image on desktop, with compact strips on phones. Network thermal and sound
+telemetry use their own configured endpoints. The thermal scene range is a
+separate readout alongside the camera image.
 The alternative UI camera worker, heat-risk calculator, preprocessing/pose
 matcher, ML hazard classifier, and duplicate HTML/backend copies were removed.
 The old SAR `index.html` is replaced by the Jinja dashboard, with one frontend
@@ -49,24 +47,29 @@ script per page and shared auth initialization.
 
 ## Run locally
 
-Create a virtual environment, install `requirements.txt`, and configure `.env`
-using `.env.example` and [Supabase setup](docs/SUPABASE_SETUP.md). Then run:
+From the root of this checkout, set up a virtual environment. On macOS or Linux:
+
+```sh
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+```
+
+For PowerShell, use the [Windows guide](docs/WINDOWS_SETUP.md).
+Copy `.env.example` to `.env` on a new checkout. Fill in the project values
+from [Supabase setup](docs/SUPABASE_SETUP.md) and set `PORT=5050` to match the
+examples in the guides. Then run:
 
 ```sh
 python app.py
 ```
 
-On this machine, the existing UI environment can run the integrated project:
+Open `http://localhost:5050/login` while online. The Flask default and the
+example file use port 5000. If you keep that port or choose another, use the same
+hostname and port in the browser and in the Supabase redirect allow-list.
+Restart Flask after editing `.env`.
 
-```sh
-cd /Users/christine/Documents/ChatGPT/BIM-BOT/BIM-Bot-for-SAR
-/Users/christine/Desktop/BIMBOT/NEW-BIMBOT-UI/.venv-1/bin/python app.py
-```
-
-The VS Code workspace uses that existing environment for Run Python File and
-the `BIM-BOT: Run Flask server` debug configuration. Set `PORT=5050` in `.env`
-if macOS AirPlay Receiver occupies the default port 5000, then open
-`http://localhost:5050`.
+For the robot with Night Vision hosting Wi-Fi, follow the [Night-hosted demo guide](docs/NIGHT_HOSTED_DEMO.md).
 
 Both original model files must be available. SAR uses person class 14 and
 confidence 0.25, as in its original detector call. Model paths resolve from the
@@ -88,7 +91,7 @@ New clips are named automatically using camera source and recording start time
 in Philippine time, for example `BIMBot_Main_2026-11-13_14-30-05_a1b2c3d4.mp4`.
 Local files, downloads and queued cloud uploads retain the same basename;
 existing clips retain their earlier names.
-The copied local `.env`, local recording/session data, and SQLite history are ignored by Git. The two original
+The local `.env`, recording/session data, and SQLite history are ignored by Git. The two original
 SAR model files remain tracked; new model artifacts are ignored.
 
 `THERMAL_URL` is SAR's future thermal video stream. `THERMAL_DATA_URL` is a separate
@@ -98,10 +101,10 @@ use the contracts in [Frontend integration](docs/FEATURE_INTEGRATION.md).
 
 ## Verification and preview
 
-See [Night camera setup](docs/NIGHT_VISION_SETUP.md) for the second-camera
-network, viewing/recording/detection support, automatic white-light control and
-pending hardware checks. The white light requires the updated spare firmware;
-it provides visible illumination and does not establish infrared night vision.
+See [Night camera setup](docs/NIGHT_VISION_SETUP.md) for video, detection,
+recording and the GPIO4 white light, [spare camera power](docs/SPARE_CAMERA_POWER.md)
+for supply and mounting, and [thermal setup](docs/THERMAL_SENSOR_SETUP.md) for
+the MLX90640 wiring and dashboard endpoint.
 
 ```sh
 python -m unittest discover -s tests -p 'test_*.py'
@@ -137,20 +140,20 @@ capture, recognition accuracy, simultaneous inputs and audibility need testing.
 See [headset setup](docs/HEADSET_SOUND.md) and
 [two-way routing](docs/SURVIVOR_COMMUNICATION.md).
 
-For internal testing only, open
-[localhost:5050/testing](http://localhost:5050/testing) for ordered stationary
+Open [the guided test page](http://localhost:5050/testing) for ordered stationary
 checks, readiness checks that start no devices, and downloadable operator
 observations. The main-camera pipeline now adds temporary tracks, independent
 image motion, image-inactivity duration and candidate waving/help gestures.
 These observations do not validate age, injury, consciousness or entrapment.
-Movement stays on hold and no firmware upload is required for this update.
+Use the existing installed firmware for the stationary checks. Physical movement
+testing remains on hold.
 
-The October 28 connection update retains Main/Night across monitoring sections,
+The dashboard retains Main/Night connections across monitoring sections,
 retries brief image-request failures within one viewer and pauses unused hidden
-browser tabs. Thermal preserves all32×24pixels on a lightweight canvas with
+browser tabs. Thermal preserves all 32×24 pixels on a lightweight canvas with
 bounded polling. Recent readings retain their original expiry during a retry.
-The current close/rapid-movement regression is tracked separately from earlier
-brief acceptance; see [connection investigation](docs/CAMERA_PERFORMANCE.md).
+Earlier connection trials and their results are recorded in
+[camera performance](docs/CAMERA_PERFORMANCE.md).
 
 Optional sound runtime and assets are set up separately using
 `requirements-sound.txt` and `scripts/setup_sound_model.py`; verified assets
@@ -165,16 +168,14 @@ No receiver or indoor tracker is connected; this is software preparation, not li
 tracking. GPS alone does not provide reliable indoor room/floor location. See
 [Position integration](docs/POSITION_INTEGRATION.md) for the fix/freshness contract.
 
-**Mission tools & history → Recorded movement** prepares the partner-proposed
-command/duration display, replay status and JSON export. Recording-only Uno
-firmware was uploaded and independently readback-verified; fresh USB telemetry
-was checked with motor power off. The bridge is now stopped during the movement
-hold, and physical IR route recording remains pending. Optional bridge settings
-are blank in the example. The full supplied Uno source is adapted in
-`firmware/robot_movement/`; a localhost USB serial bridge and local trace archives
-are implemented. Return remains disabled. See
-[Uno USB setup](docs/UNO_MOVEMENT_SETUP.md) and [Movement feasibility](docs/MOVEMENT_INTEGRATION.md). Command history is not
-GPS, measured displacement or verified return to base.
+**Mission tools & history → Recorded movement** shows recorded command
+durations, replay status and JSON export through an optional USB serial bridge.
+The October 27 recording-only upload was readback-verified with motor power
+off. The November 8 source supports explicitly started exploration and has not
+been verified on the installed Uno. Timed return is disabled by default. See
+[Uno USB setup](docs/UNO_MOVEMENT_SETUP.md) and
+[movement feasibility](docs/MOVEMENT_INTEGRATION.md) for the separate test and
+source records. The command history measures command duration only.
 
 The [October 27 panel requirements audit](docs/PANEL_REQUIREMENTS_AUDIT.md)
 lists every legible requested feature, current evidence and remaining gaps.

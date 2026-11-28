@@ -77,10 +77,9 @@ model smoke checks only.
 
 ## Local model setup
 
-The existing .venv-1 environment now contains ai-edge-litert2.3.0. Verified
-Google model/label assets and TensorFlow source license are in ignored
-local_data/models/yamnet with source URLs and SHA-256 hashes. No camera or
-Uno firmware change is needed. To reproduce setup in the project environment:
+Install the pinned LiteRT runtime and download the verified model, labels and
+license from your project environment. The setup script stores the assets and
+their SHA-256 hashes under ignored `local_data/models/yamnet`.
 
 ```sh
 python -m pip install -r requirements-sound.txt

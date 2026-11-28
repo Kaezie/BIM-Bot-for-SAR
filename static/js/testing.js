@@ -47,7 +47,7 @@ async function checkDashboardRecording(){
   if(!$('testingRecordingState')||!testingSession)return;
   try{
     const state=await testingApi('/api/system-check/recording');
-    $('testingRecordingState').textContent=state.running?`Recording normal dashboard: ${state.samples} samples so far. Keep the dashboard visible for the full minute.`:state.saved?`Saved locally: ${state.samples} normal-dashboard samples. Return to chat for analysis.`:state.error||'No dashboard recording saved yet.';
+    $('testingRecordingState').textContent=state.running?`Recording normal dashboard: ${state.samples} samples so far. Keep the dashboard visible for the full minute.`:state.saved?`Saved locally: ${state.samples} normal-dashboard samples.`:state.error||'No dashboard recording saved yet.';
     if(state.running)setTimeout(checkDashboardRecording,2000);
   }catch{$('testingRecordingState').textContent='Sign in before starting/checking the dashboard recording.';}
 }
@@ -66,7 +66,7 @@ $('testingSaveDiagnostics').onclick=async()=>{
   try{
     const data=await testingApi('/api/system-check',{method:'POST'}),report=data.report;
     if(!data.saved||!report)throw new Error('Snapshot unavailable');
-    $('testingDiagnosticResult').textContent=`Saved locally. Mac IP: ${report.network.ipv4||'unavailable'}; robot subnet: ${report.network.robot_subnet?'yes':'no'}. DHT: ${report.sensor.fresh?'fresh':'unavailable'}; thermal: ${report.thermal.fresh?'fresh':'unavailable'}; Main: ${report.cameras.main.connected?'connected':'not connected'}; Night: ${report.cameras.nightvision.connected?'connected':'not connected'}. You can return to chat after saving.`;
+    $('testingDiagnosticResult').textContent=`Saved locally. Laptop IP: ${report.network.ipv4||'unavailable'}; robot subnet: ${report.network.robot_subnet?'yes':'no'}. DHT: ${report.sensor.fresh?'fresh':'unavailable'}; thermal: ${report.thermal.fresh?'fresh':'unavailable'}; Main: ${report.cameras.main.connected?'connected':'not connected'}; Night: ${report.cameras.nightvision.connected?'connected':'not connected'}.`;
   }catch(error){$('testingDiagnosticResult').textContent=`Not saved: ${error.message}. Sign in online first, then repeat on ESP32_CAM.`;}
   finally{$('testingSaveDiagnostics').disabled=false;}
 };

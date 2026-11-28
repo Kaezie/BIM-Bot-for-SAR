@@ -1,23 +1,18 @@
 # Conservative camera and sensor profile
 
-Latest October29 DHT stage: original DHT is operator-confirmed reconnected; its
-existing2s reader is restored at.1/dht. Nightlatestverified.2/8FPSfirmware retained.
-RuntimePID13200/5050,180scombinedtracearmed; thermal/motorURLs remainblank. Actual
-DHTreadings andlongcombinedstability PENDING.274Pythonchecks pass. Existingidentity
-GET now retains typedpublicfirmwareprofile in diagnostics without extra requests.
-[Stage evidence](verification/dht_restore_stage_2026-10-29.json).
+The current app uses the `conservative-2` settings in the
+[shared transport profile](../features/monitoring_profile.py). The timing
+table below summarizes the current browser and backend behavior. The October
+28–29 trials are dated evidence. For normal operation, use the
+[camera setup](NIGHT_VISION_SETUP.md) and [thermal setup](THERMAL_SENSOR_SETUP.md).
 
-Latest October29: Night firmware application has now been uploaded and
-independently verified against flash, after a device-verified full4MB backup.
-NewNight target8FPS,failedjoin retry3s,streamsendtimeout5s; QVGA/JPEG12 and existing
-thermalenabled/refresh3 retained. Defaulttransmitpower retained (earlier8.5dBm
-proposal removed BEFOREupload). Mainfirmware untouched. DashboardPID9960/5050
-serves200 and300strace isarmed; runtimeprofile/livevideo acceptance PENDING on
-ESP32_CAM. Sensors remain software-paused during this separate camera phase.
-See [upload proof](verification/night_fresh2_upload_2026-10-29.json).
-Earlier source-only/not-uploaded entries below describe historical stages.
+## October 28–29 trial history
 
-Updated October 29, 2026. Active checkout: BIM-Bot-for-SAR.
+The October 29 spare upload was readback-verified with an 8 FPS target,
+QVGA/JPEG quality 12, platform-default transmit power, and thermal enabled at
+refresh code 3. The short October 30 capture recorded fresh thermal and DHT
+samples. [Spare upload](verification/night_fresh2_upload_2026-10-29.json) ·
+[Thermal and DHT restoration](verification/thermal_restoration_result_2026-10-30.json)
 
 Latest operator accepts quality20 latency but still reports reconnection. In the
 recorded180s, source generation/errors and browser releases do not change:
@@ -27,11 +22,9 @@ Underlying frame-delivery pauses remain unresolved; keep quality/rates and image
 expiry unchanged. This window does not exclude later actual reconnects. See
 [quality20 result](verification/quality20_main_result_2026-10-29.json).
 
-Current readback confirms original quality20, framesize6/pixformat4/xclk20.
-Dashboard PID3095 on5050 is independently running; localhost /login and / return200.
-The temporary gated launcher is retired/deleted. Three-minute Main-only trace is
-armed; live video acceptance remains pending. Earlier waiting status below is
-historical. See [readback and readiness](verification/original_quality20_and_dashboard_readiness_2026-10-29.json).
+The October 29 readback confirmed original JPEG quality 20, framesize 6,
+pixformat 4 and xclk 20. Flask's login and dashboard routes responded after
+restart. See [readback and readiness](verification/original_quality20_and_dashboard_readiness_2026-10-29.json).
 
 Latest sharing-off trial FAILED: operator corrects the result to "no improvement
 at all". The 300 s trace records 909 frames and six new source errors, with no
@@ -56,13 +49,9 @@ Transport10s, picture5s and all rates remain unchanged. Corrected-parser live
 acceptance and underlying source/radio/supply diagnosis are pending. See
 [parser recovery evidence](verification/recovered_frame_parser_2026-10-28.json).
 
-The current candidate is `conservative-2` in
-[the shared profile](../features/monitoring_profile.py). Its only timing change
-from candidate1 is a 10-second upstream socket read timeout, independent of the
-unchanged 5-second picture freshness. All delivery, inference and sensor rates
-remain fixed. All260 Python checks pass, including a6s realHTTP pause test and an old5s
-negative control that fails as expected. Candidate2 is loaded on5050
-(PID37928/exec75718); five-minute live Main acceptance is pending.
+The `conservative-2` change raised the upstream socket read timeout from 5 to
+10 seconds and kept picture freshness at 5 seconds. Software verification
+included a six-second HTTP pause and a comparison with the old timeout.
 
 The original on new robot batteries produced6 complete pictures/~40s and TCP,
 header and body timeouts. On the visually checked USB base, it produced647
@@ -90,7 +79,7 @@ Evidence:
 | Viewer lease |8s; explicit/hidden/session cleanup stays immediate |
 | Video / model-result freshness | Existing5s /2s |
 | DHT / thermal freshness | Existing10s /5s |
-| White light | Explicit On requests its existing lease |
+| White light | Renewable lease requested while Night is in use, with manual On/Off controls |
 
 An expired image clears and the UI says Waiting while its viewer remains.
 Candidate2 additionally lets the source socket survive a pause beyond picture
@@ -99,7 +88,7 @@ authorization checks and generation fences remain. No old image or detection is
 made fresh to conceal a transport gap. Latest-only video and inference slots
 prevent queued model work from holding video publication.
 
-Current physical comparison: ORIGINAL camera on its USB base only, robot master
+During the October 28 USB comparison: original camera on its USB base only, robot master
 OFF, all FIVE original jumper leads detached; spare OFF with all SIX leads
 detached. DHT and thermal are physically disconnected. Process-only SENSOR_URL,
 NIGHTVISION_CAMERA_URL and THERMAL_DATA_URL are deliberately blank. Their missing

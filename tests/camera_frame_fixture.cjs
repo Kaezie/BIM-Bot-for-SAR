@@ -30,11 +30,12 @@ function cameraFrameFixture(frame, options = {}) {
         if (options.fail?.(source)) return await route.abort();
         await new Promise(resolve=>setTimeout(resolve,options.delayMs ?? 35));
         const sequence=++sequences[source];
+        const reply=options.frameFor?.(source,sequence);
         return await route.fulfill({contentType:'image/jpeg',headers:{
           'Cache-Control':'no-store',
           'X-Camera-Sequence':String(sequence),'X-Camera-Generation':'1',
-          'X-Camera-Received-At':String(Date.now()/1000),'X-Camera-Age-Ms':'0',
-        },body:frame});
+          'X-Camera-Received-At':String(Date.now()/1000),'X-Camera-Age-Ms':String(reply?.ageMs ?? 0),
+        },body:reply?.body ?? frame});
       } finally {
         active.set(viewer,active.get(viewer)-1);
       }

@@ -1,24 +1,28 @@
 """Internal, operator-triggered snapshots; no camera/device activation."""
 from datetime import datetime, timezone
-from ipaddress import ip_address, ip_network
+from ipaddress import IPv4Address, ip_network
 import json
 import os
 from pathlib import Path
-import subprocess
+from socket import AF_INET, SOCK_DGRAM, socket
 import tempfile
 import time
 import threading
 from .monitoring_profile import PROFILE
 
 
+ROBOT_SUBNET = ip_network('192.168.4.0/24')
+
+
 def robot_network():
+    """Report the source address the OS routes toward the original camera."""
     try:
-        result = subprocess.run(['ipconfig', 'getifaddr', 'en0'], capture_output=True,
-                                text=True, timeout=1)
-        address = ip_address(result.stdout.strip())
-        return {'ipv4': str(address) if address.version == 4 else None,
-                'robot_subnet': address.version == 4 and address in ip_network('192.168.4.0/24')}
-    except (OSError, ValueError, subprocess.TimeoutExpired):
+        # UDP connect selects a local route and address without sending data.
+        with socket(AF_INET, SOCK_DGRAM) as route:
+            route.connect(('192.168.4.1', 81))
+            address = IPv4Address(route.getsockname()[0])
+        return {'ipv4': str(address), 'robot_subnet': address in ROBOT_SUBNET}
+    except (OSError, ValueError):
         return {'ipv4': None, 'robot_subnet': False}
 
 

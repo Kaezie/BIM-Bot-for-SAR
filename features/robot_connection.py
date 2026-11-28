@@ -5,7 +5,7 @@ The original AP and this computer are excluded. Custom/disabled endpoints stay
 under their explicit configuration; discovered addresses are runtime state.
 """
 from concurrent.futures import ThreadPoolExecutor
-from ipaddress import ip_address, ip_network
+from ipaddress import ip_address
 import json
 import re
 import threading
@@ -14,10 +14,9 @@ from urllib.parse import urlsplit
 
 import requests
 
-from .system_diagnostics import robot_network
+from .system_diagnostics import ROBOT_SUBNET, robot_network
 
 
-NETWORK = ip_network('192.168.4.0/24')
 FIRMWARE = 'bimbot-nightvision/2'
 
 
@@ -25,7 +24,7 @@ def endpoint_host(url, port, path):
     try:
         value = urlsplit(url or '')
         address = ip_address(value.hostname or '')
-        if (value.scheme == 'http' and address in NETWORK and 2 <= int(str(address).rsplit('.', 1)[1]) <= 254
+        if (value.scheme == 'http' and address in ROBOT_SUBNET and 2 <= int(str(address).rsplit('.', 1)[1]) <= 254
                 and (value.port or 80) == port and value.path == path
                 and value.username is None and value.password is None and not value.query and not value.fragment):
             return str(address)
@@ -98,7 +97,7 @@ class SpareDiscovery:
         network = self.network()
         own = network.get('ipv4')
         try:
-            on_robot = network.get('robot_subnet') is True and ip_address(own) in NETWORK
+            on_robot = network.get('robot_subnet') is True and ip_address(own) in ROBOT_SUBNET
         except (ValueError, TypeError):
             on_robot = False
         if not on_robot:

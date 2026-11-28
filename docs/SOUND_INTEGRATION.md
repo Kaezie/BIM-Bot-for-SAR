@@ -128,8 +128,8 @@ end-to-end robot compatibility and audio capture remain unverified.
 The operator identifies the camera with the sticker as **Original** and the
 one without the sticker as **Spare**. The supplied front photographs are:
 
-- [Original, IMG_7553.HEIC](/Users/christine/Downloads/IMG_7553.HEIC)
-- [Spare, IMG_7552.HEIC](/Users/christine/Downloads/IMG_7552.HEIC)
+- Original, `IMG_7553.HEIC`
+- Spare, `IMG_7552.HEIC`
 
 They show the familiar ESP32-CAM/OV2640 layout and flash LED, with no visible
 microphone. Only the fronts were photographed. The operator subsequently
@@ -195,10 +195,6 @@ network credentials were used; the real secret header was excluded entirely.
 - No GPIO, USB/serial device, robot endpoint, Wi-Fi setting or microphone was
   accessed. Dynamic memory, actual I2S initialization, boot reliability, sound
   quality and camera/thermal performance under audio load remain unverified.
-
-Local evidence: `/private/tmp/bimbot-audio-feasibility-5gzk0xnj/result.json`.
-The temporary sources and placeholder binary may disappear with temporary-file
-cleanup; the evidence above records only a software build result.
 
 ## Integration sequence and remaining input
 

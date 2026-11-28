@@ -14,10 +14,11 @@ const path=require('node:path');
       await page.goto('http://127.0.0.1:5059/player-fixture');
       await page.addScriptTag({path:process.env.BIMBOT_PLAYER_SCRIPT||path.join(__dirname,'../static/js/live_camera_player.js')});
       await page.evaluate(()=>{
-        window.frameResponse=(sequence,generation=1,age=0)=>new Response(`${generation}:${sequence}`,{
+        window.frameResponse=(sequence,generation=1,age=0,streamId)=>new Response(`${generation}:${sequence}`,{
           status:200,headers:{'Content-Type':'image/jpeg','X-Camera-Sequence':String(sequence),
             'X-Camera-Generation':String(generation),'X-Camera-Received-At':String(Date.now()/1000-age/1000),
-            'X-Camera-Age-Ms':String(age),'Cache-Control':'no-store'},
+            'X-Camera-Age-Ms':String(age),'Cache-Control':'no-store',
+            ...(streamId ? {'X-Camera-Stream-Id':streamId} : {})},
         });
         window.frameAsset=(identity,closed)=>{
           const image=document.createElement('canvas');image.width=32;image.height=24;image.identity=identity;
@@ -86,6 +87,41 @@ const path=require('node:path');
     });
     assert.deepEqual(ordered.painted,['1:5','2:1'],'Duplicate sequences and older generations must never repaint');
     assert.equal(ordered.loads,1,'Only the first successful paint announces the connection');
+    await page.close();
+
+    page=await fixturePage();
+    const restarted=await page.evaluate(async()=>{
+      const canvas=document.getElementById('feed'),context=canvas.getContext('2d'),painted=[];
+      const draw=context.drawImage.bind(context);context.drawImage=(image,...args)=>{painted.push(image.identity);draw(image,...args);};
+      const first='a'.repeat(32),second='b'.repeat(32);
+      const replies=[
+        frameResponse(25,4,0,first),
+        new Response(null,{status:503}),
+        frameResponse(1,0,0,second),
+        frameResponse(1,0,0,second),
+        frameResponse(2,0,0,second),
+      ];
+      const viewers=new Set(),sentStreamIds=[];
+      let gets=0,deletes=0;
+      const player=new BIMLiveFramePlayer(canvas,{source:'main',retryIntervalMs:15,
+        fetchImpl:async(_url,options)=>{
+          if(options.method==='DELETE'){deletes++;return new Response(null,{status:204});}
+          const headers=new Headers(options.headers);
+          viewers.add(headers.get('X-Camera-Viewer'));
+          sentStreamIds.push(headers.get('X-Camera-Stream-Id'));
+          return replies[gets++]||new Response(null,{status:204});
+        },
+        decode:async blob=>frameAsset(await blob.text(),()=>{}),
+      }).start();
+      await until(()=>gets>=6);
+      const result={painted,viewers:viewers.size,deletes,sentStreamIds:sentStreamIds.slice(0,6)};
+      player.stop();
+      return result;
+    });
+    assert.deepEqual(restarted,{
+      painted:['4:25','0:1','0:2'],viewers:1,deletes:0,
+      sentStreamIds:[null,'a'.repeat(32),'a'.repeat(32),'b'.repeat(32),'b'.repeat(32),'b'.repeat(32)],
+    },'A restarted server must recover on the same viewer even when frame counters reset');
     await page.close();
 
     page=await fixturePage();
@@ -168,17 +204,27 @@ const path=require('node:path');
 
     page=await fixturePage();
     const stale=await page.evaluate(async()=>{
-      const canvas=document.getElementById('feed');let paints=0;
-      canvas.addEventListener('load',()=>paints++);
-      const failed=new Promise(resolve=>canvas.addEventListener('error',resolve,{once:true}));
-      const player=new BIMLiveFramePlayer(canvas,{source:'main',fetchImpl:async(_url,options)=>
-        options.method==='DELETE'?new Response(null,{status:204}):frameResponse(1,1,6000),
-        decode:async blob=>frameAsset(await blob.text(),()=>{}),
+      const canvas=document.getElementById('feed'),viewers=new Set(),decoded=[];
+      let waits=0,loads=0,deletes=0;
+      canvas.addEventListener('waiting',()=>waits++);
+      canvas.addEventListener('load',()=>loads++);
+      const player=new BIMLiveFramePlayer(canvas,{source:'main',startupGraceMs:40,retryIntervalMs:15,
+        fetchImpl:async(_url,options)=>{
+          if(options.method==='DELETE'){deletes++;return new Response(null,{status:204});}
+          viewers.add(new Headers(options.headers).get('X-Camera-Viewer'));
+          return waits ? frameResponse(2) : frameResponse(1,1,6000);
+        },
+        decode:async blob=>{
+          const identity=await blob.text();decoded.push(identity);
+          return frameAsset(identity,()=>{});
+        },
       }).start();
-      await Promise.race([failed,new Promise((_,reject)=>setTimeout(()=>reject(new Error('Stale response was accepted')),1000))]);
-      player.stop();return {paints,viewer:canvas.getAttribute('data-viewer')};
+      await until(()=>canvas.dataset.frameSequence==='2');
+      const result={decoded,waits,loads,deletes,viewers:viewers.size};
+      player.stop();return result;
     });
-    assert.deepEqual(stale,{paints:0,viewer:null},'An already stale JPEG must never become Live');
+    assert.deepEqual(stale,{decoded:['1:2'],waits:1,loads:1,deletes:0,viewers:1},
+      'Expired startup responses must be skipped without replacing the viewer');
     await page.close();
 
     page=await fixturePage();

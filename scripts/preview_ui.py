@@ -19,7 +19,8 @@ def monitoring_profile_context():
 
 @app.route('/')
 def dashboard():
-    return render_template('dashboard.html', supabase_url='https://example.supabase.co', supabase_anon_key='preview')
+    return render_template('dashboard.html', supabase_url='https://example.supabase.co',
+                           supabase_anon_key='preview', night_light_auto_on=True)
 
 
 @app.route('/login')

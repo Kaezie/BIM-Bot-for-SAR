@@ -16,10 +16,27 @@ const assert = require('node:assert/strict');
     }), 'base64');
     let sensorValue=28,thermalValue=24,sensorFailed=false,thermalFailed=false;
     let failMain = true, mainLive = true, nightLive = true, mainRequests = 0, holdDevices = false, releaseDevices, devicesHeld;
+    let frameFault;
     const cameraFrames=cameraFrameFixture(frame,{
       fail:source=>source==='main' && failMain,
       onOpen:source=>{if(source==='main')mainRequests++;},
+      frameFor(source,sequence) {
+        if (frameFault?.source !== source) return;
+        const {reply, resolve}=frameFault;
+        frameFault=undefined;
+        resolve(sequence);
+        return reply;
+      },
     });
+    async function checkSkippedFrame(source,id,reply) {
+      const canvas=page.locator(`#${id}`);
+      const viewer=await canvas.getAttribute('data-viewer');
+      const skipped=await new Promise(resolve=>{frameFault={source,reply,resolve};});
+      await page.waitForFunction(({id,skipped})=>
+        Number(document.getElementById(id).dataset.frameSequence)>skipped,{id,skipped},{timeout:5000});
+      assert.equal(await canvas.getAttribute('data-viewer'),viewer,`${source} should keep the same subscription`);
+      assert(!cameraFrames.deletes.some(entry=>entry.viewer===viewer),`${source} should skip the bad frame without a DELETE`);
+    }
     function holdDeviceResponse() {
       holdDevices=true; releaseDevices=undefined;
       return new Promise(resolve=>devicesHeld=resolve);
@@ -87,6 +104,8 @@ const assert = require('node:assert/strict');
     await page.locator('#tab-nightvision').click();
     await page.waitForFunction(()=>document.getElementById('availability-nightvision').textContent==='Live');
     const connectedNightSource = await page.locator('#nvStream').getAttribute('data-viewer');
+    await checkSkippedFrame('nightvision','nvStream',{ageMs:5000});
+    await checkSkippedFrame('nightvision','nvStream',{body:Buffer.from('Invalid JPEG')});
     assert(releaseDevices,'The fixture must hold the earlier Night idle status response');
     releaseDevices();
     await page.evaluate(()=>window.heldNightCheck);
@@ -99,6 +118,8 @@ const assert = require('node:assert/strict');
     failMain=false;
     await page.waitForFunction(()=>document.getElementById('availability-main').textContent==='Live',null,{timeout:10000});
     assert.equal(mainRequests,1,'Initial frame delay must recover without replacing its reader');
+    await checkSkippedFrame('main','camStream',{ageMs:5000});
+    await checkSkippedFrame('main','camStream',{body:Buffer.from('Invalid JPEG')});
 
     // A browser may retain its last painted MJPEG image without an error event.
     mainLive=false;failMain=true;
@@ -187,7 +208,7 @@ const assert = require('node:assert/strict');
     }
     assert.deepEqual(errors,[]);
     cameraFrames.assertSerial();
-    console.log('PASS: Main automatic recovery, stale-frame clearing, background retry, retained Night stream, manual Disconnect, Main/Night idle-response fencing and session cancellation.');
+    console.log('PASS: Main and Night retained their subscriptions across expired and corrupt JPEGs. Recovery, freshness, manual Disconnect and session cancellation also passed.');
   } finally {
     await browser.close();
   }
