@@ -1,12 +1,13 @@
 # October 30, 2026 integration review
 
-This branch contains the integrated SAR updates for groupmate review and robot
-integration testing. The operator authorizes publishing the review branch and
-pull request. Merging into `main`, flashing firmware and declaring requirements
-complete remain separate decisions. The groupmate will check the remaining
-completion items and verify hardware/software interaction.
+This handoff records the October 30 integration review and provides setup
+commands and a hardware acceptance checklist.
 
 ## Set up a separate review checkout
+
+Windows users should follow [Windows setup and Google sign-in](WINDOWS_SETUP.md)
+for PowerShell commands and the reported example-Supabase-address error. The
+commands below use a macOS/Linux shell.
 
 ```sh
 git clone --branch codex/robot-integration-review https://github.com/insignechristine16-glitch/BIM-Bot-for-SAR.git bimbot-review
@@ -50,17 +51,20 @@ bridge merely because the branch was checked out.
 - Firmware sources, native checks, backend/browser tests and setup/limitation
   records. The separate NEW-BIMBOT-UI prototype is not this review target.
 
-## Installed state and source defaults
+## October 30 hardware record and source defaults
 
 | Component | Last verified state | Review boundary |
 | --- | --- | --- |
 | Main camera | Original firmware retained; volatile JPEG quality 20 applied/read back | Power cycling can restore quality 10. Included original-camera source tuning has not been flashed. Do not upload it as a routine setup step. |
 | Spare/Night camera | October 29 application upload and independent device verification; `retry/2`, `fresh/2`, target 8 FPS, thermal enabled with refresh code 3 | Source defaults deliberately keep thermal off and refresh code 2. Reproducing the installed thermal build requires explicit `BIMBOT_THERMAL_ENABLED=1` and `BIMBOT_THERMAL_REFRESH_RATE=3` build definitions after the documented hardware prerequisites. No upload is required to test an already configured robot. |
-| Uno | Recording-only firmware uploaded/readback verified; fresh telemetry checked with motor power off | USB bridge currently stopped, physical route tests pending, `BIMBOT_SUPERVISED_RETURN=0`. Preserve the movement hold until the operator resumes with the remote. |
+| Uno | Recording-only firmware uploaded/readback verified; fresh telemetry checked with motor power off | The November 8 source revision supports explicitly started exploration. See [Uno setup](UNO_MOVEMENT_SETUP.md) for the source and verification history. Timed return defaults to disabled. |
 | DHT and thermal | Fresh real data restored in short October 29–30 checks | Calibration and sustained combined-load acceptance remain pending. |
 | Headset | Bluetooth mic/earpiece availability operator-confirmed; software/model checks passed | Real pairing, robot mounting, source capture, range, recognition and two-direction audibility not yet accepted. |
 
-Addresses retained in setup notes are last known, not guarantees after restart.
+On November 16 the operator reported that the cameras and sensors worked on
+the intended robot supply without laptop USB power. The report provides a
+functional observation. Sustained combined-load and calibration checks remain
+open. Confirm current camera addresses after a restart.
 Do not guess pins or substitute the ultrasonic reference for the supplied Uno
 sketch. Read the camera, thermal and Uno setup documents before hardware changes.
 
@@ -101,7 +105,7 @@ Native firmware checks use simulated hardware; they do not prove physical
 navigation or electrical performance. Current review results are recorded in
 [the software check summary](verification/review_readiness_2026-10-30.json).
 
-## Groupmate acceptance before merge
+## Hardware acceptance checklist
 
 - [ ] Confirm configuration and model availability on a clean review checkout.
 - [ ] Observe both camera feeds and fresh DHT/thermal data together for at least
@@ -118,9 +122,7 @@ navigation or electrical performance. Current review results are recorded in
   obstacle response, lease/USB loss and actual route capture. Assess supervised
   return separately only after prerequisites; record drift rather than claiming
   guaranteed arrival.
-- [ ] Resolve panel YOLOv8 wording versus current YOLOv12s detector/YOLO11s pose,
-  GPS/map substitution, unclear Route wording and disaster-scenario scope.
-- [ ] Record test conditions, pass/fail/untested status and evidence before merge.
+- [ ] Record test conditions, pass/fail/untested status and evidence.
 
 No GPS/local tracker or validated hidden-human detector is installed. Movement
 history is not measured position. Age, injury, consciousness and entrapment

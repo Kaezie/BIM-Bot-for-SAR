@@ -5,7 +5,9 @@ The separate `NEW-BIMBOT-UI` checkout does not automatically receive these chang
 
 ## Before joining the robot network
 
-1. Start the SAR Flask app, then open `http://localhost:5050` on this laptop.
+1. Start the SAR Flask app and open it on the laptop. The setup examples use
+   `http://localhost:5050`. If Flask prints a different port, use that port
+   consistently with the [Supabase redirect setup](SUPABASE_SETUP.md#local-app-redirect).
 2. With internet available, choose **Sign in with Google**. Google is the only
    sign-in option; the old `/signup` address redirects to `/login`.
 3. After the dashboard opens, join the robot's **ESP32_CAM** Wi-Fi. Keep using

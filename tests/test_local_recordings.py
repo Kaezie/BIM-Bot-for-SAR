@@ -59,6 +59,23 @@ class LocalRecordingTests(unittest.TestCase):
     def files(self):
         return list(self.store.files_dir.rglob("*.mp4")) + list(self.store.files_dir.rglob("*.part"))
 
+    def test_report_snapshot_survives_retry_and_only_reports_queue_for_cloud(self):
+        first = self.store.save_report("operator-a", "c" * 32, lambda owner: {"owner": owner, "events": [1]})
+        again = self.store.save_report("operator-a", "c" * 32, lambda owner: self.fail("Rebuilt a saved snapshot"))
+        self.assertEqual(again, first)
+        self.assertEqual(self.store.list("operator-b", reports=True)["recordings"], [])
+        self.assertEqual(self.store.list("operator-a", reports=True)["pending_count"], 1)
+        screen_name = "BIMBot_Screen_2026-11-26_14-20-00_4abcd123.mp4"
+        screen = self.save(filename=screen_name, source="screen")
+        self.assertEqual(screen["sync_state"], "local_only")
+        self.assertEqual(self.store.list("operator-a")["pending_count"], 0)
+        self.assertEqual(self.store.list("operator-a")["recordings"], [screen])
+        self.assertEqual(self.store.sync_once(), 1)
+        owner, name, path = self.uploader.call_args.args
+        self.assertEqual((owner, name), ("operator-a", first["name"]))
+        self.assertIn(b'"events"', path.read_bytes())
+        self.assertEqual(self.store.list("operator-a", reports=True)["pending_count"], 0)
+
     def test_offline_save_returns_only_after_local_file_and_queue_are_durable(self):
         response = self.post(source="nightvision")
         self.assertEqual(response.status_code, 201)

@@ -16,7 +16,9 @@ from flask import Flask, jsonify, request
 from .movement import identifier, validate_trace
 
 STATES = dict(I='idle', C='recording', S='stopped', R='returning', P='replay_complete', X='cancelled', E='fault')
-ACTIONS = {'return':('RETURN','R'), 'stop':('STOP','S'), 'heartbeat':('KEEP','K')}
+OBSERVATION_SLOWDOWN = 'observation_slowdown'
+ACTIONS = {'return':('RETURN','R'), 'stop':('STOP','S'), 'heartbeat':('KEEP','K'),
+           OBSERVATION_SLOWDOWN:('SLOW','L')}
 
 
 class BridgeError(Exception):
@@ -24,8 +26,9 @@ class BridgeError(Exception):
 
 
 class SerialMovementBridge:
-    def __init__(self, serial_port, *, allow_return=False, record_directory=None, clock=time.monotonic):
+    def __init__(self, serial_port, *, allow_return=False, allow_observation=False, record_directory=None, clock=time.monotonic):
         self.port, self.allow_return, self.clock = serial_port, allow_return, clock
+        self.allow_observation = allow_observation
         self.directory = Path(record_directory) if record_directory else None
         self.lock = threading.RLock()
         self.changed = threading.Condition(self.lock)
@@ -87,7 +90,7 @@ class SerialMovementBridge:
             return
         if words[0]=='A':
             try:
-                if len(words)!=7 or words[1] not in ('R','S','K') or words[4] not in STATES or words[5] not in ('0','1'):
+                if len(words)!=7 or words[1] not in ('R','S','K','L') or words[4] not in STATES or words[5] not in ('0','1'):
                     raise ValueError()
                 identifier(words[2],'command_id')
                 if len(words[3])!=8 or any(c not in '0123456789abcdef' for c in words[3]):raise ValueError()
@@ -175,8 +178,13 @@ class SerialMovementBridge:
             data['storage_available']=self.error!='record_storage_failed'
             return data
 
-    def command(self, action, command_id, trace_id, timeout=2):
+    def command(self, action, command_id, trace_id, timeout=2, *, count=None):
         if not isinstance(action,str) or action not in ACTIONS: raise BridgeError('Unsupported movement action.')
+        slowdown = action == OBSERVATION_SLOWDOWN
+        if slowdown and not self.allow_observation:
+            raise BridgeError('Detection slowdown is disabled.')
+        if slowdown and (type(count) is not int or not 1 <= count <= 4):
+            raise BridgeError('Expected 1 to 4 detected people.')
         try: identifier(command_id,'command_id'); identifier(trace_id,'trace_id')
         except ValueError as exc: raise BridgeError('Invalid command identifiers.') from exc
         if len(command_id)!=32 or any(c not in '0123456789abcdef' for c in command_id): raise BridgeError('Expected a hexadecimal command ID.')
@@ -185,6 +193,10 @@ class SerialMovementBridge:
             if action!='stop':
                 data=self.snapshot()
                 if data['trace_id']!=trace_id: raise BridgeError('Controller trace changed.')
+                if slowdown and data['sample_age_ms'] >= 2000:
+                    raise BridgeError('Detection slowdown requires fresh controller telemetry.')
+                if slowdown and (data['state'] != 'recording' or data['current_move'] != 'F'):
+                    raise BridgeError('Detection slowdown requires current forward motion.')
                 if action=='return' and not data['return_ready']: raise BridgeError('Supervised return is not enabled or ready.')
                 if action=='heartbeat' and (data['state']!='returning' or data['command_id']!=command_id): raise BridgeError('No matching active return.')
                 counter=trace_id.rsplit('-',1)[1]
@@ -192,13 +204,15 @@ class SerialMovementBridge:
             with self.lock:
                 nonce=secrets.token_hex(4)
                 sent=self.clock()
-            self.write(f'{verb} {command_id}'+(f' {counter}' if action=='return' else '')+f' {nonce}')
+            include_counter = action == 'return' or slowdown
+            line = f'{verb} {command_id}' + (f' {counter}' if include_counter else '') + f' {nonce}'
+            self.write(line + (f' {count}' if slowdown else ''))
             deadline=time.monotonic()+timeout
             with self.changed:
                 while True:
                     ack=self.acknowledgements.get((code,command_id,nonce))
                     if ack and ack['at']>=sent:
-                        expected='stopped' if action=='stop' else 'returning'
+                        expected='recording' if slowdown else 'stopped' if action=='stop' else 'returning'
                         if not ack['accepted'] or ack['state']!=expected or (counter is not None and str(ack['counter'])!=counter):
                             raise BridgeError('Controller rejected the command or did not confirm the expected state.')
                         self.pending=None; self.last_sent=-100
@@ -261,6 +275,10 @@ def create_bridge_app(bridge, control_key=''):
             return jsonify(error='Movement control is disabled or unauthorized.'),403
         data=request.get_json(silent=True)
         if not isinstance(data,dict): return jsonify(error='Expected a JSON movement command.'),400
-        try: return jsonify(bridge.command(data.get('action'),data.get('command_id'),data.get('trace_id')))
+        try:
+            args = (data.get('action'), data.get('command_id'), data.get('trace_id'))
+            if args[0] == OBSERVATION_SLOWDOWN:
+                return jsonify(bridge.command(*args, count=data.get('count')))
+            return jsonify(bridge.command(*args))
         except BridgeError as error: return jsonify(error=str(error)),502
     return app

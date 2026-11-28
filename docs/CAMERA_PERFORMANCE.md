@@ -1,25 +1,10 @@
 # Camera streaming and performance
 
-Latest October29: Night firmware application has now been uploaded and
-independently verified against flash, after a device-verified full4MB backup.
-NewNight target8FPS,failedjoin retry3s,streamsendtimeout5s; QVGA/JPEG12 and existing
-thermalenabled/refresh3 retained. Defaulttransmitpower retained (earlier8.5dBm
-proposal removed BEFOREupload). Mainfirmware untouched. DashboardPID9960/5050
-serves200 and300strace isarmed; runtimeprofile/livevideo acceptance PENDING on
-ESP32_CAM. Sensors remain software-paused during this separate camera phase.
-See [upload proof](verification/night_fresh2_upload_2026-10-29.json).
-Earlier source-only/not-uploaded entries below describe historical stages.
-
-Latest October28 status: conservative-1 is deployed and software-verified
-(257Python checks,8browser suites); live acceptance remains pending. See
-[the fixed camera/sensor profile](CONSERVATIVE_PROFILE.md) for exact settings,
-source-expiry recovery and unchanged firmware/model boundaries. Current physical
-comparison has original on robot battery and isolated spare on USB, all6spare
-robot/thermal jumpers detached. Thermal reads are intentionally paused. Master
-is ON with wheels raised; robot USB unplugged. Restore/test thermal separately
-before accepting the full system. Earlier entries below describe prior stages.
-
-Updated 2026-10-29. Applies to the active BIM-Bot-for-SAR checkout.
+This page records the October camera transport and power trials in
+`BIM-Bot-for-SAR`. For current instructions, use the
+[Night camera setup](NIGHT_VISION_SETUP.md), [thermal setup](THERMAL_SENSOR_SETUP.md)
+and [shared app profile](CONSERVATIVE_PROFILE.md). Process settings and power
+arrangements mentioned in individual trials apply to those dated checks.
 
 ## October 29 power diagnosis and firmware source changes (not uploaded)
 
@@ -266,13 +251,11 @@ obsolete source images, and measures maximum reception-to-paint189.8ms
 (p95186.2ms). First/last six-frame mean ages153.6/162.2ms show no accumulating
 backlog. One request spans fetch/body/decode/paint; stop leaves zero leases and
 clients. This fixture replaces ingestion with direct generated publication and
-does not measure radio or physical exposure latency. The normal SAR server
-PID32353 on5050 serves the exact player/dashboard/CSS with no-cache; readiness
-routes return200 and the frame endpoint returns401/no-store without auth. This change
-cannot remove pauses that already occur before a JPEG reaches the laptop; actual
-robot-powered delay after deployment still needs operator confirmation.
+measures software delivery and paint timing. The Flask readiness routes
+returned HTTP 200 and the frame endpoint returned HTTP 401 with `no-store`
+without authentication. Robot-powered delay requires a separate measurement.
 
-## Current firmware rollback, October 21
+## October 21 firmware rollback
 
 The operator reports the lower-traffic update makes both videos much slower and
 less stable when the spare is powered from P9, and explicitly requests the
@@ -330,8 +313,8 @@ confirmed **“the latency is good now.”** The issue is resolved to the operat
 satisfaction; no numerical hardware delay/FPS or separate Main-connected
 comparison result was supplied. Preserve the accepted configuration. No further
 firmware, quality or frame-rate change was made.
-The updated app is active as PID 22258/session 97507 on port 5050; root/login and
-normal GET `/api/local-session` respond 200 without inspecting session data.
+At the time of the restart, the dashboard, login, and session routes returned
+HTTP 200.
 
 The browser stream now sends the next part's complete MIME headers immediately
 after each JPEG. Real Chrome testing found that the previous framing waited for
@@ -388,9 +371,8 @@ thermal OFF using existing local settings, 1,029,657 bytes flash/59,144 bytes
 globals; thermal ON using placeholder settings, 1,050,165/81,488 bytes. Existing
 private values were not inspected or copied. The OFF build was uploaded with
 verification to the same user-identified USB spare `/dev/cu.usbserial-110`:
-exit0, four verified flash regions. Thermal remains OFF. The active SAR server
-was restarted on port 5050 as PID21513 (exec session43988); root/login and normal
-GET `/api/local-session` return HTTP200 without reading session response data.
+exit0, four verified flash regions. That build kept thermal off. The dashboard,
+login, and session routes returned HTTP 200 after restart.
 Filtered startup after upload confirms thermal acquisition disabled and a fresh
 join reporting `http://192.168.4.3:81/stream`, hotspot -63 dBm/channel1. This is a
 successful startup/Wi-Fi result, separate from a decoded video or latency test.

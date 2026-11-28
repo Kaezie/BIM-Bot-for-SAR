@@ -160,6 +160,8 @@ class DashboardTests(unittest.TestCase):
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(response.mimetype, 'image/jpeg')
                 self.assertEqual(response.data, frame['jpeg'])
+                camera = self.module.main_camera if source == 'main' else self.module.nightvision
+                self.assertEqual(response.headers['X-Camera-Stream-Id'], camera.stream_id)
                 self.assertEqual(response.headers['X-Camera-Sequence'], '42')
                 self.assertEqual(response.headers['X-Camera-Generation'], '3')
                 self.assertEqual(float(response.headers['X-Camera-Received-At']), 123.5)
@@ -172,6 +174,19 @@ class DashboardTests(unittest.TestCase):
             response = self.client.get('/api/camera-frame/main', headers=headers)
             self.assertEqual(response.status_code, 204)
             main.assert_called_once_with(('operator-b', self.viewer_id), sequence=39, generation=3)
+
+    def test_current_image_rejects_an_old_server_cursor_even_when_counters_match(self):
+        camera = self.module.main_camera
+        frame = {'state': 'frame', 'jpeg': b'generated-jpeg', 'sequence': 1,
+                 'generation': 0, 'received_at': 123.5, 'age_ms': 12.75}
+        headers = {**self.headers, 'X-Camera-Viewer': self.viewer_id,
+                   'X-Camera-Stream-Id': 'a' * 32, 'X-Camera-Sequence': '1',
+                   'X-Camera-Generation': '0'}
+        with patch.object(camera, 'snapshot', return_value=frame) as snapshot:
+            response = self.client.get('/api/camera-frame/main', headers=headers)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.headers['X-Camera-Stream-Id'], camera.stream_id)
+            snapshot.assert_called_once_with(('operator-a', self.viewer_id), sequence=-1, generation=-1)
 
     def test_current_image_validation_never_starts_hardware(self):
         valid = {**self.headers, 'X-Camera-Viewer': self.viewer_id}
@@ -486,6 +501,104 @@ class DashboardTests(unittest.TestCase):
                 self.assertEqual(self.module.calculate_risk(temperature, 50)[0], expected)
         self.assertIn('other hazards are not assessed', self.module.calculate_risk(25, 50)[4])
 
+    def test_person_box_uses_fresh_dht_for_both_cameras(self):
+        frame = np.zeros((240, 320, 3), np.uint8)
+        person = {'box': [240, 3, 315, 210], 'confidence': .94, 'track_number': 7,
+                  'pose': 'upright', 'motion_observed': True}
+        for heat_f, age, error, title, label in (
+            (79, 1, None, 'Track 7 94%', 'Below heat warning'),
+            (80, 1, None, 'CHECK | Track 7 94%', 'Caution'),
+            (90, 2, 'timeout', 'CHECK | Track 7 94%', 'Extreme caution'),
+            (103, 1, None, 'ALERT | Track 7 94%', 'Danger'),
+            (125, 1, None, 'ALERT | Track 7 94%', 'Extreme danger'),
+            (125, 10, None, 'Track 7 94%', 'Reading unavailable'),
+            (125, 1, 'invalid_payload', 'Track 7 94%', 'Reading unavailable'),
+        ):
+            heat_c = (heat_f - 32) * 5 / 9
+            reading = {'heat_band': self.module.classify_heat_band(heat_c, 'Low Risk'),
+                       'heat_index': heat_c, 'updated_at': 1000 - age}
+            with self.subTest(heat=heat_f, age=age, error=error), \
+                 patch.object(self.module.time, 'time', return_value=1000), \
+                 patch.object(self.module, 'latest_sensor_data', reading), \
+                 patch.dict(self.module.sensor_health, error_code=error):
+                response = self.client.get('/api/sensor-data', headers=self.headers).json
+                self.assertEqual(response['heat_alert']['label'], label)
+                for renderer, component, cv_attribute in (
+                    (self.module.render_main_frame, self.module, 'cv2'),
+                    (self.module.nightvision._draw, self.module.nightvision, 'cv'),
+                ):
+                    with patch.object(component, cv_attribute, cv2), \
+                         patch.object(cv2, 'putText', wraps=cv2.putText) as put_text:
+                        renderer(frame.copy(), [person], .2)
+                    drawn = [call.args for call in put_text.call_args_list]
+                    self.assertEqual([args[1] for args in drawn[:4]],
+                        [title, 'Movement observed', f'Heat: {label}', 'Excavation: See area status'])
+                    self.assertIn('Heat only | Verify hazards', drawn[-1][1])
+                    for _, line, (x, y), font, scale, _, thickness, *_ in drawn:
+                        size, baseline = cv2.getTextSize(line, font, scale, thickness)
+                        self.assertLessEqual(x + size[0], frame.shape[1])
+                        self.assertLessEqual(y + baseline, frame.shape[0])
+                        self.assertGreaterEqual(y - size[1], 0)
+
+    def test_heat_band_preserves_severe_temperature_override_and_missing_readings(self):
+        self.assertEqual(self.module.classify_heat_band(36, 'Severe Risk'), 'danger')
+        for missing in (None, float('nan'), float('inf'), True):
+            self.assertEqual(self.module.classify_heat_band(missing, 'Severe Risk'), 'unavailable')
+        for fahrenheit, band in ((79.9, 'below_warning'), (89.9, 'caution'),
+                                 (102.9, 'extreme_caution'), (124.9, 'danger')):
+            with self.subTest(fahrenheit=fahrenheit):
+                self.assertEqual(self.module.classify_heat_band((fahrenheit - 32) * 5 / 9, 'Low Risk'), band)
+
+    def test_person_box_describes_lying_and_stillness_without_claiming_entrapment(self):
+        frame = np.zeros((240, 320, 3), np.uint8)
+        person = {'box': [20, 105, 110, 180], 'confidence': .94, 'track_number': 7, 'pose': 'lying',
+                  'motion_observed': False, 'consciousness': 'Unconscious/Unresponsive',
+                  'trapped': 'Possibly Trapped', 'gesture': 'Unknown'}
+        with patch.object(self.module, 'current_overlay_heat_risk', return_value='below_warning'), \
+             patch.object(self.module, 'cv2', cv2):
+            for detection, expected in (
+                (person, ['ALERT | Track 7 94%', 'Lying still. Check responsiveness.', 'Check for visible debris.']),
+                ({**person, 'motion_observed': None}, ['CHECK | Track 7 94%', 'Lying posture. Verify condition.']),
+                ({**person, 'pose': 'upright'}, ['CHECK | Track 7 94%', 'Little image motion. Verify condition.', 'Check for visible debris.']),
+                ({**person, 'pose': 'upright', 'motion_observed': True, 'consciousness': 'Conscious'},
+                    ['Track 7 94%', 'Movement observed']),
+            ):
+                with self.subTest(detection=detection), patch.object(cv2, 'putText', wraps=cv2.putText) as put_text:
+                    annotated = self.module.render_main_frame(frame.copy(), [detection], .2)
+                    lines = [call.args[1] for call in put_text.call_args_list]
+                    self.assertEqual(lines[:-1], expected + ['Heat: Below heat warning', 'Excavation: See area status'])
+                    self.assertTrue(np.any(annotated))
+            with patch.object(cv2, 'putText', wraps=cv2.putText) as put_text:
+                self.module.render_main_frame(frame.copy(), [{**person, 'last_seen_seconds': 1.2}], .2)
+            self.assertEqual([call.args[1] for call in put_text.call_args_list], ['Person last seen 1.2s ago'])
+
+    def test_live_consciousness_requires_a_current_track_and_an_operator_report(self):
+        app = self.module
+        track = {'track_id': 'main-1', 'box': [20, 95, 110, 180], 'confidence': .96}
+        headers = {**self.headers, 'Origin': 'http://localhost'}
+        payload = {'source': 'main', 'track_id': 'main-1', 'status': 'Unconscious'}
+        now = time.time()
+        with patch.multiple(app.main_camera, updated_at=now, detected_at=now, detections=[track], error=None), \
+             patch.object(app.main_analysis, 'reported_consciousness', {}):
+            self.assertEqual(self.client.post('/api/person-consciousness', json=payload).status_code, 401)
+            self.assertEqual(self.client.post('/api/person-consciousness', headers=self.headers, json=payload).status_code, 403)
+            self.assertEqual(self.client.post('/api/person-consciousness', headers=headers,
+                json={**payload, 'track_id': 'old'}).status_code, 409)
+            self.assertEqual(self.client.post('/api/person-consciousness', headers=headers, json=payload).status_code, 200)
+            self.assertEqual(app.main_analysis.reported_consciousness['main-1'][0], 'Unconscious')
+            self.assertNotIn('main-1', app.nightvision.person_analysis.reported_consciousness)
+            for condition in ('Conscious', 'Unconscious'):
+                reported = {**track, 'consciousness': condition, 'consciousness_method': 'operator_reported'}
+                for render, component, cv_attribute in (
+                    (app.render_main_frame, app, 'cv2'), (app.nightvision._draw, app.nightvision, 'cv'),
+                ):
+                    with patch.object(component, cv_attribute, cv2), patch.object(cv2, 'putText', wraps=cv2.putText) as put_text:
+                        render(np.zeros((240, 320, 3), np.uint8), [reported], .2)
+                    self.assertIn(condition, [call.args[1] for call in put_text.call_args_list])
+            self.assertEqual(self.client.post('/api/person-consciousness', headers=headers,
+                json={**payload, 'status': 'Unknown'}).status_code, 200)
+            self.assertNotIn('main-1', app.main_analysis.reported_consciousness)
+
     def test_missing_dht_field_never_refreshes_sensor_history(self):
         response = MagicMock(status_code=200);response.json.return_value = {'temp_c': 25}
         with patch.object(self.module.sensor_http, 'get', return_value=response), \
@@ -500,6 +613,11 @@ class DashboardTests(unittest.TestCase):
             self.assertEqual(response.status_code, 200)
             self.assertIn('Movement is on hold', response.get_data(as_text=True))
             workers.assert_not_called()
+
+    def test_dashboard_enables_automatic_light_on_night_entry(self):
+        response = self.client.get('/')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('id="nightCameraControls" data-auto-light="true"', response.get_data(as_text=True))
 
     @staticmethod
     def generated_model_result(boxes, lying=None, confidence=1):
@@ -543,7 +661,51 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(detections[0]['box'], list(box))
         self.assertFalse(detections[0]['pose_matched'])
         self.assertEqual(detections[0]['pose'], 'unknown')
-        self.assertEqual(annotated[80, 10].tolist(), [0, 255, 0])
+        self.assertEqual(detections[0]['posture'], 'unknown')
+        self.assertEqual(annotated[80, 10].tolist(), [245, 210, 120])
+
+    def test_person_pipeline_separates_standing_fallen_and_uncertain_postures(self):
+        boxes = [(10, 10, 55, 120), (70, 40, 94, 95), (110, 69, 213, 115), (230, 35, 278, 121)]
+        detector = MagicMock(return_value=self.generated_model_result(boxes))
+        results = self.generated_model_result(boxes, [False] * len(boxes))
+        keypoints = results[0].keypoints
+        for index, (x1, y1, x2, y2) in enumerate(boxes):
+            width, height = x2 - x1, y2 - y1
+            for joint, progression in [(5, .2), (6, .2), (11, .48), (12, .48),
+                                       (13, .67), (14, .67), (15, .9), (16, .9)]:
+                across = .35 if joint in (5, 11, 13, 15) else .65
+                x, y = (progression, across) if index == 2 else (across, progression)
+                keypoints.xy[index, joint] = x1 + width * x, y1 + height * y
+        keypoints.conf[2, 15:] = .15  # The horizontal torso is visible.
+        keypoints.conf[3, 13:] = .15  # An upright torso alone cannot establish standing.
+        pose = MagicMock(return_value=results)
+        with self.pipeline_inputs(detection_model=detector, pose_model=pose, cv2=cv2,
+                                  get_thermal_frame=lambda: None, prev_frame=None, motion_generation=None,
+                                  person_tracker=self.module.PersonTracker(), stationary_timers={}):
+            detections = self.module.analyze_main_frame(np.zeros((140, 300, 3), np.uint8))
+        self.assertEqual([person['posture'] for person in detections], ['standing', 'standing', 'fallen', 'unknown'])
+        self.assertEqual([person['box'] for person in detections], list(map(list, boxes)))
+        self.assertTrue(all(person['consciousness'] == 'Unknown' for person in detections))
+
+    def test_main_light_uses_fresh_raw_video_without_inference(self):
+        alerts = self.module.DetectionAlerts()
+        camera = self.module.LiveCamera('fixture', None, cv2, np, observe_frame=self.module.observe_main_light,
+                                        on_clear=self.module.clear_main_result)
+        now = time.time()
+        dark = cv2.imencode('.jpg', np.zeros((24, 32, 3), np.uint8))[1].tobytes()
+        bright = cv2.imencode('.jpg', np.full((24, 32, 3), 180, np.uint8))[1].tobytes()
+        with patch.object(self.module, 'detection_alerts', alerts), patch.object(self.module, 'main_camera', camera):
+            self.assertTrue(camera.publish(dark, received_at=now - 1.2))
+            self.assertIsNone(alerts.snapshot(now)['light_state'])
+            self.assertFalse(camera.publish(bright, generation=camera.generation - 1, received_at=now - .5))
+            self.assertTrue(camera.publish(dark, received_at=now))
+            self.module.clear_main_result()
+            self.assertEqual(alerts.snapshot(now)['light_state'], 'dark')
+            self.assertIsNone(camera.analysis_thread)
+            self.assertIsNone(alerts.snapshot(now + 2)['light_state'])
+            with camera.condition:
+                camera._clear_locked()
+            self.assertIsNone(alerts.snapshot(now)['light_state'])
 
     def test_main_pipeline_reorder_keeps_ids_and_independent_motion_and_timers(self):
         import cv2
@@ -883,6 +1045,85 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(self.client.post('/api/mission/stop').status_code, 401)
         self.assertEqual(self.client.post('/api/survivor-events/id/review', json={'verification':'confirmed'}).status_code, 401)
         self.assertEqual(self.client.get('/api/situational-report', headers=self.headers).status_code, 200)
+
+    def test_saved_mission_report_is_local_owner_scoped_and_uploads_as_text(self):
+        self.assertEqual(self.client.post('/api/mission-reports', json={'save_id':'e'*32}).status_code, 401)
+        response = self.client.post('/api/mission-reports', json={'save_id':'e'*32}, headers=self.headers)
+        self.assertEqual(response.status_code, 201)
+        report = response.json['report']
+        self.assertEqual(report['sync_state'], 'pending')
+        self.storage.upload.assert_not_called()
+        local = self.client.get(report['download_url'], headers=self.headers)
+        self.assertEqual(local.mimetype, 'application/json')
+        self.assertTrue(local.json['requires_human_verification'])
+        self.assertIsNone(local.json['excavation_assessment'])
+        local.close()
+        self.assertIn(report, self.client.get('/api/mission-reports', headers=self.headers).json['reports'])
+        self.assertEqual(self.client.get('/api/local-recordings/' + report['id'] + '/file', headers=self.headers).status_code, 404)
+        other = types.SimpleNamespace(id='operator-b', app_metadata={'providers':['google']})
+        with patch.object(self.module, '_verify_token', return_value=other):
+            self.assertEqual(self.client.get(report['download_url'], headers=self.headers).status_code, 404)
+        store = self.module.local_recordings
+        saved = store.get('operator-a', report['id'], reports=True)
+        self.module.upload_local_recording('operator-a', report['name'], store._file_path('operator-a', saved['name']))
+        key, content, options = self.storage.upload.call_args.args
+        self.assertEqual(key, 'operator-a/reports/' + report['name'].removesuffix('.json') + '.txt')
+        self.assertEqual(options, {'content-type':'text/plain', 'upsert':'true'})
+        self.assertIn('Requires human verification — Yes', content.decode('utf-8'))
+
+    def test_mission_report_freezes_reported_excavation_in_local_json_and_cloud_text(self):
+        assessment = {'area': ' East bay ', 'lead': ' Lead 1 ', 'decision': 'danger', 'at': 1700000000.125}
+        payload = {'save_id': 'f' * 32, 'excavation_assessment': assessment}
+        response = self.client.post('/api/mission-reports', json=payload, headers=self.headers)
+        self.assertEqual(response.status_code, 201)
+        report = response.json['report']
+        self.assertEqual(report['sync_state'], 'pending')
+        self.storage.upload.assert_not_called()
+        with self.client.get(report['download_url'], headers=self.headers) as local:
+            data = local.get_data()
+        self.assertEqual(json.loads(data)['excavation_assessment'], {
+            'area': 'East bay', 'rescue_lead': 'Lead 1', 'decision': 'danger',
+            'decision_label': 'Extreme danger · Do not excavate',
+            'recorded_at': '2023-11-14T22:13:20.125+00:00',
+            'source': 'operator_reported_rescue_lead_decision',
+        })
+
+        payload['excavation_assessment'] = {**assessment, 'area': 'West bay', 'decision': 'hold'}
+        retry = self.client.post('/api/mission-reports', json=payload, headers=self.headers)
+        self.assertEqual(retry.json['report']['id'], report['id'])
+        with self.client.get(report['download_url'], headers=self.headers) as local:
+            self.assertEqual(local.get_data(), data)
+
+        uploaded = {}
+        def capture_upload(key, file, options):
+            uploaded[key] = (file if isinstance(file, bytes) else file.read(), options)
+        with patch.object(self.module, 'supabase_admin_client') as storage_client:
+            storage_client.storage.from_.return_value.upload.side_effect = capture_upload
+            self.module.local_recordings.sync_once()
+        key = 'operator-a/reports/' + report['name'].removesuffix('.json') + '.txt'
+        content, options = uploaded[key]
+        self.assertEqual(options, {'content-type':'text/plain','upsert':'true'})
+        self.assertIn(
+            'Excavation assessment\n'
+            '  Area — East bay\n'
+            '  Rescue lead — Lead 1\n'
+            '  Decision — danger\n'
+            '  Decision label — Extreme danger · Do not excavate\n'
+            '  Recorded at — 2023-11-14T22:13:20.125+00:00\n'
+            '  Source — operator_reported_rescue_lead_decision',
+            content.decode('utf-8'),
+        )
+        self.assertNotIn('West bay', content.decode('utf-8'))
+
+    def test_mission_report_rejects_malformed_excavation_metadata(self):
+        assessment = {'area': 'East bay', 'lead': 'Lead 1', 'decision': 'hold', 'at': 1700000000}
+        for invalid in ([], {**assessment, 'lead': ' '}, {**assessment, 'decision': 'safe'},
+                        {**assessment, 'at': True}, {**assessment, 'at': -1}, {**assessment, 'area': 'x' * 121}):
+            with self.subTest(invalid=invalid):
+                response = self.client.post('/api/mission-reports',
+                                            json={'save_id':'c'*32, 'excavation_assessment': invalid},
+                                            headers=self.headers)
+                self.assertEqual(response.status_code, 400)
 
     def test_library_is_scoped_to_verified_user(self):
         self.storage.list.return_value = [{'id':'clip','name':'clip.webm','metadata':{'size':12},'created_at':'2026-09-30'}]

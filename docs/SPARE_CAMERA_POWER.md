@@ -1,34 +1,26 @@
 # Powering the spare camera from the robot
 
-Latest October28 status: conservative-1 is deployed and software-verified
-(257Python checks,8browser suites); live acceptance remains pending. See
-[the fixed camera/sensor profile](CONSERVATIVE_PROFILE.md) for exact settings,
-source-expiry recovery and unchanged firmware/model boundaries. Current physical
-comparison has original on robot battery and isolated spare on USB, all6spare
-robot/thermal jumpers detached. Thermal reads are intentionally paused. Master
-is ON with wheels raised; robot USB unplugged. Restore/test thermal separately
-before accepting the full system. Earlier entries below describe prior stages.
+The operator reported on November 16 that the cameras and sensors worked on
+the intended robot power supply without laptop USB power. The exact repair,
+test duration and under-load measurements were not recorded. Keep the existing
+power wiring for routine checks; verify labels and supply capacity before
+changing it. The October 28 isolation test below describes an earlier
+troubleshooting option. [Thermal wiring and checks](THERMAL_SENSOR_SETUP.md)
 
-## October 28 separate-supply diagnosis in progress
+## October 28 separate-supply test
 
-The current connection failure remains unresolved. Main also fails when Night
-and thermal requests are paused, and direct original-camera requests fail while
-the dashboard process is stopped. An independent supply comparison is the next
-physical isolation; previous unloaded voltage readings are not a present load
-acceptance. A multimeter is currently unavailable.
+In the October 28 investigation, Main failed with Night and thermal requests
+paused and also failed during direct requests with Flask stopped. The following
+separate-supply procedure is useful for isolating a similar failure.
 
-The operator confirms IMG_7574.MOV shows the free-standing large-lens board as
-the spare/night camera, while the original remains in its black bracket. They
-confirm the USB base/cable are available and ALL SIX spare jumper connections
-have been removed with the master OFF and USB unplugged. Original wiring and
-the spare's camera ribbon are unchanged. USB-base alignment is pending; do not
-assume a power-on comparison has happened.
+The operator identified the free-standing large-lens board in `IMG_7574.MOV`
+as the spare and the black-bracket board as Main. During the test, all six
+spare jumper connections were removed with the master off and USB unplugged.
+Preserve the original wiring and the spare's ribbon during this check.
 
-For this test only, the app has THERMAL_DATA_URL blank at process launch, with
-Night enabled and motor command URLs blank. Persistent .env and firmware are
-unchanged. Thermal is physically disconnected and intentionally unavailable;
-it must not be counted as a sensor failure during this comparison. Metadata
-capture is armed for120seconds after the first valid user-started video frame.
+For this comparison, thermal remains disconnected and unavailable. Leave
+motor command URLs blank and use the test page's **Save system diagnostic
+snapshot** if you need camera or DHT timing.
 
 Before any power, match actual camera/base 5V/GND labels, all socket positions,
 and orientation with power disconnected. Leave all six robot/thermal leads OFF
@@ -38,17 +30,17 @@ only for the isolated spare. Do not use Arduino Upload, serial tools, IO0/BOOT,
 or alter the original firmware for this test.
 
 After sign-in while internet is available, join ESP32_CAM, refresh the normal
-dashboard, connect Main then Night, and retain the page/network until the timed
-capture finishes. Keep the white camera light off for the initial comparison.
+dashboard and connect Main then Night. Keep the white camera light off for the
+initial comparison.
 Record Main/Night source availability and DHT separately. Do not infer a fully
 repaired supply from one successful run: thermal load is also removed, and this
 comparison does not distinguish regulator margin, sensor load or a contact fault.
 
 Before eventual restoration, turn OFF and unplug USB/base first. Reconnection
-must use actual labels and the retained mapping: camera-power red to5V, white
-to adjacentGND; thermal red to3V3, black to the otherGND, yellowSDA toIO14 and
-blueSCL toIO13. These are earlier operator-confirmed assignments, not newly
-verified hidden endpoints in IMG_7574. The thermal PS-to-P5GND lead stays separate.
+must use actual labels and the previously documented mapping. The red and
+white power leads go to spare 5V and adjacent GND. Thermal uses spare 3V3
+(red), the other GND (black), GPIO14/SDA (yellow), and GPIO13/SCL (blue).
+The thermal PS-to-P5 GND lead stays separate.
 Do not reconnect robot supply to a spare still seated/powered on its USB base.
 Verify restored wiring before normal thermal/full-load testing.
 
@@ -59,7 +51,7 @@ Updated 2026-10-21: a Sanwa CD800a is now available. User video shows stable
 the video labels/contact are obscured. Capacity and thermal/transient margin
 remain untested. This supersedes the earlier no-meter/no-reading status.
 
-## Current decision
+## Earlier supply measurements and candidate headers
 
 Subsequent `IMG_7496.MOV` shows positive 4.97–4.98 V DC at the contacted pair
 in steady sampled views13.7–24.6s. It follows the P9 second-row check; exact labels
@@ -67,14 +59,15 @@ are obscured, so retain that attribution as contextual. This supports a bounded
 stationary trial from the measured VCC/GND pair, preserving original power and
 removing spare USB/base first. It does not establish permanent combined capacity.
 
-Latest comparison, 2026-10-21: USB-powered spare video now works, with
+In the October 21 comparison, USB-powered spare video worked, with
 independent 320x240 JPEG decoding. Robot-powered P5 has produced approximately
 3.28 V at spare 3V3, but the operator reports video still fails after another
 restart. A changed DHCP address remains possible. The operator identifies P9 as
 the original camera power source; this does not establish P9 voltage, a separate
 supply or capacity for both cameras. Preserve the original connection; verify
 a free VCC/GND pair and its DC voltage/polarity before any alternate-header trial.
-No P9 pin assignment or wiring change has been made.
+Later trials used a P9 power pair. Refer to the [recorded thermal wiring](THERMAL_SENSOR_SETUP.md#check-the-running-system)
+and confirm the installed labels before any change.
 
 Keep the spare camera on its existing ESP32-CAM-MB USB supply until the robot's
 regulated power output and spare load capacity have been verified. A USB power
@@ -91,8 +84,8 @@ header or regulator leg has been assigned for a new wire in this guide.
 
 ### Later close-up: candidate header P5
 
-The user's later [Unknown-4.jpeg](/Users/christine/Downloads/Unknown-4.jpeg)
-shows **P5 IIC** at the right edge above P6/P7. Its visible labels in the photo's
+The close-up of the shield shows **P5 IIC** at the right edge above P6/P7.
+Its visible labels in the photo's
 orientation are **GND**, **VCC**, **SDA**, **SCL**, top to bottom. This identifies
 the candidate header and pin positions. The later 4.98 V DC reading is consistent
 with nominal 5 V at operator-confirmed P5 VCC, but does not demonstrate spare
@@ -163,8 +156,8 @@ when turned over.
 | Arduino data/motor/sensor signal | No connection needed for Wi-Fi video |
 
 The separate camera header marked VCC is selectable between 3.3 V and 5 V in the
-manufacturer reference schematic; it is not the connection used here. Leave
-3V3, VCC, GPIO0 and serial pins unconnected for this installation. GPIO0 must
+manufacturer reference schematic. Leave VCC, GPIO0 and serial pins unconnected
+for this installation. Use 3V3 only as documented for the thermal module. GPIO0 must
 not be grounded during normal boot. Keep the original camera's DHT GPIO13,
 3V3 and GND connections intact.
 
@@ -214,8 +207,7 @@ spare currently has only its white flash LED and no separate IR illuminator.
 - [Ai-Thinker original V1.6 schematic, preserved by Seeed](https://github.com/SeeedDocument/forum_doc/blob/master/reg/ESP32_CAM_V1.6.pdf)
 - [Ai-Thinker original product specification, preserved PDF](https://raw.githubusercontent.com/raphaelbs/esp32-cam-ai-thinker/master/assets/ESP32-CAM_Product_Specification.pdf)
 - [TI LM1085 reference datasheet](https://www.ti.com/lit/ds/symlink/lm1085.pdf)
-- [Robot camera photograph](/Users/christine/Downloads/IMG_7399.HEIC)
-- [Robot shield/regulator photograph](/Users/christine/Downloads/IMG_7401.HEIC)
+- Robot camera and shield photographs `IMG_7399.HEIC` and `IMG_7401.HEIC`.
 
 The reference regulator datasheet explains the power/thermal considerations;
 the photographed device is HGSEMI-branded, and its complete board wiring and

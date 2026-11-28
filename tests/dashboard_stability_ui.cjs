@@ -77,6 +77,7 @@ const assert=require('node:assert/strict');
     await page.evaluate(()=>{Object.defineProperty(document,'visibilityState',{configurable:true,value:'visible'});document.dispatchEvent(new Event('visibilitychange'));});
     await page.waitForFunction(()=>document.getElementById('availability-main').textContent==='Live'&&document.getElementById('availability-nightvision').textContent==='Live');
     assert.deepEqual(opens,{main:2,nightvision:2});
+    await page.evaluate(()=>{delete document.visibilityState;});
     await page.locator('#tab-nightvision').click();await page.locator('#disconnectBtn').click();
     assert.equal(await page.locator('#nvStream').getAttribute('data-viewer'),null);
     for(const feed of ['thermal','main','nightvision'])await page.locator('#tab-'+feed).click();

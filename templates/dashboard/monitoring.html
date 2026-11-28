@@ -2,18 +2,22 @@
   <article class="card camera-card">
     {% include "dashboard/survivor_summary.html" %}
     <div class="card-top view-channel">
-      <div><p class="eyebrow">VIEW CHANNEL</p><h2 id="feedTitle">Main camera</h2></div>
+      <div><p class="eyebrow">VIEW CHANNEL</p><h2 id="feedTitle">Main camera</h2>
+        <a class="camera-excavation-status" id="cameraExcavationStatus" href="#excavationAssessment" hidden></a></div>
       <span class="pill" id="cameraStatus">Disconnected</span>
     </div>
-    <div class="night-camera-status" id="nightCameraControls" hidden>
-      <p class="night-detection-summary control-hint"><span id="nvDetectionStatus">Night-camera detections require verification.</span> <a href="#nightSurvivorDetails" id="nvDetailsLink">View person details</a></p>
+    <div class="night-camera-status" id="nightCameraControls"{% if night_light_auto_on %} data-auto-light="true"{% endif %} hidden>
+      <div class="night-detection-summary control-hint">
+        <span id="nvDetectionStatus">Night-camera detections require verification.</span> <a href="#nightSurvivorDetails" id="nvDetailsLink">View person details</a>
+        <p class="posture-counts"><span>Standing survivors <strong id="nightPosture-standing">—</strong></span><span>Fallen figures <strong id="nightPosture-fallen">—</strong></span><span>Posture unclear <strong id="nightPosture-unknown">—</strong></span></p>
+      </div>
       <div class="night-light-controls" aria-label="Spare camera white light">
         <div class="night-light-buttons">
           <button id="nvLightOnBtn" aria-pressed="false" disabled>White light on</button>
           <button id="nvLightOffBtn" aria-pressed="false" disabled>White light off</button>
         </div>
         <p id="nvLightStatus" role="status" data-state="idle">White light is not requested. Select On when needed.</p>
-        <small>Visible white light · enable when needed; turns off when leaving unless this camera is recording.</small>
+        <small>{% if night_light_auto_on %}Turns on when you enter Night Vision. Choose White light off to override for this visit.{% else %}Use White light on when needed.{% endif %} The light turns off when you leave unless this camera is recording.</small>
       </div>
     </div>
     <div class="feed-stage">
@@ -86,11 +90,13 @@
     <div class="camera-controls">
       <button class="primary" id="connectBtn">📡 Connect</button>
       <button id="disconnectBtn" hidden>Disconnect</button>
-      <button class="record-btn" id="recordBtn" disabled>● Record</button>
+      <button class="record-btn" id="recordBtn" disabled>● Record camera</button>
+      <button type="button" id="recordScreenBtn" disabled>Record screen</button>
       <button class="danger-btn" id="stopBtn" hidden>■ Stop</button>
       <button id="refreshBtn">↻ Refresh</button>
     </div>
-    <p class="control-hint" id="recordingHint">Recordings save on this laptop first and sync when internet returns. Keep this page open until saved.</p>
+    <p class="control-hint" id="recordingHint">Choose Record screen to capture the dashboard and visible alerts. Screen clips save to this laptop.</p>
+    <p id="screenRecordState" class="control-hint" role="status" hidden></p>
     <div class="feed-tabs" role="tablist" aria-label="Monitoring source">
       <button role="tab" id="tab-main" aria-controls="panel-main" aria-selected="true" data-feed="main">Main camera<small id="availability-main">Disconnected</small></button>
       <button role="tab" id="tab-nightvision" aria-controls="panel-nightvision" aria-selected="false" tabindex="-1" data-feed="nightvision">Night vision<small id="availability-nightvision">Checking</small></button>

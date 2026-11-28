@@ -8,7 +8,9 @@ from requests.exceptions import Timeout, ConnectionError, HTTPError
 from urllib3.exceptions import ReadTimeoutError, ProtocolError, NewConnectionError
 import threading
 import time
+from uuid import uuid4
 from .monitoring_profile import PROFILE
+from .person_tracking import intersection_over_union
 
 
 class LiveCamera:
@@ -19,6 +21,7 @@ class LiveCamera:
     READ_TIMEOUT = PROFILE['upstream_read_timeout_seconds']
     RESULT_TTL = 2
     OVERLAY_TTL = 1
+    BOX_HOLD_TTL = 1.8
     SNAPSHOT_LEASE = PROFILE['snapshot_lease_seconds']
     SNAPSHOT_WAIT = .75
     MAX_SNAPSHOT_VIEWERS = 128
@@ -28,18 +31,21 @@ class LiveCamera:
     INVALID_FRAME_GRACE = VIDEO_TTL
 
     def __init__(self, url, http, cv, np, analyze=None, render=None,
-                 on_result=None, on_clear=None, source='main'):
+                 on_result=None, on_clear=None, source='main', observe_frame=None):
         self.url, self.http, self.cv, self.np = url, http, cv, np
         self.analyze, self.render = analyze, render
         self.on_result, self.on_clear, self.source = on_result, on_clear, source
+        self.observe_frame = observe_frame
         self.condition = threading.Condition()
         self.clients = 0
         self.thread = self.analysis_thread = self.response = None
         self.video_thread = None
         self.frame = self.pending = self.video_pending = None
+        self.stream_id = uuid4().hex
         self.sequence = self.generation = 0
         self.updated_at = self.detected_at = None
         self.detections = []
+        self.recent_boxes = {}
         self.error = self.analysis_error = None
         self.inference_ms = None
         self.video_processing_ms = None
@@ -175,6 +181,7 @@ class LiveCamera:
         self.frame = self.pending = self.video_pending = None
         self.updated_at = self.detected_at = None
         self.detections = []
+        self.recent_boxes.clear()
         self.arrivals.clear()
         self.inference_ms = None
         self.video_processing_ms = None
@@ -222,13 +229,19 @@ class LiveCamera:
         with self.condition:
             if generation != self.generation:
                 return False
-            age = time.time() - self.detected_at if self.detected_at else None
+            now = time.time()
+            age = now - self.detected_at if self.detected_at else None
             overlay = list(self.detections) if age is not None and 0 <= age < self.OVERLAY_TTL else []
+            visible = {det.get('track_id') for det in overlay}
+            for track_id, (det, seen_at, shape) in self.recent_boxes.items():
+                held_age = now - seen_at
+                if track_id not in visible and shape == decoded.shape[:2] and 0 <= held_age < self.BOX_HOLD_TTL:
+                    overlay.append({**det, 'last_seen_seconds': held_age})
         # Reuse the camera JPEG unless drawing an overlay on THIS current image.
         output = jpeg
         if overlay and self.render:
             try:
-                image = self.render(decoded.copy(), overlay, age)
+                image = self.render(decoded.copy(), overlay, age if age is not None else 0.)
                 ok, encoded = self.cv.imencode('.jpg', image, [self.cv.IMWRITE_JPEG_QUALITY, 80])
                 if ok:
                     output = encoded.tobytes()
@@ -242,6 +255,11 @@ class LiveCamera:
             self.sequence += 1
             self.arrivals.append(time.monotonic())
             self.error = None
+            if self.observe_frame is not None:
+                try:
+                    self.observe_frame(decoded, received_at)
+                except Exception:
+                    pass  # Frame observations must never interrupt live video.
             if infer and self.analyze:
                 self.pending = (decoded, received_at, generation)
                 if self.analysis_thread is None:
@@ -349,6 +367,7 @@ class LiveCamera:
                         self.condition.notify_all()
                         continue
                     self.detections, self.detected_at = list(result), received_at
+                    self._update_recent_boxes(received_at, getattr(image, 'shape', ())[:2])
                     self.analysis_error = None
                     # Commit state while fenced; run any returned evidence I/O
                     # after releasing the frame lock.
@@ -361,10 +380,23 @@ class LiveCamera:
                 with self.condition:
                     if generation == self.generation:
                         self.detections, self.detected_at = [], None
+                        self.recent_boxes.clear()
                         self.analysis_error = 'Detection unavailable; live video continues.'
                         if self.on_clear:
                             self.on_clear()
                         self.condition.notify_all()
+
+    def _update_recent_boxes(self, received_at, shape):
+        # Retention is for drawing only. Counts and evidence use the latest analysis.
+        current = {det['track_id']: det for det in self.detections if det.get('track_id') and det.get('box')}
+        self.recent_boxes = {
+            track_id: (det, seen_at, previous_shape)
+            for track_id, (det, seen_at, previous_shape) in self.recent_boxes.items()
+            if (track_id not in current and shape == previous_shape
+                and 0 <= received_at - seen_at < self.BOX_HOLD_TTL
+                and not any(intersection_over_union(det['box'], live['box']) >= .3 for live in current.values()))
+        }
+        self.recent_boxes.update({track_id: (det, received_at, shape) for track_id, det in current.items()})
 
     def _active(self):
         with self.condition:

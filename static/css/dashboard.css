@@ -677,7 +677,12 @@ footer {
 #survivorSource { grid-column: 1; grid-row: 2; color: var(--muted); }
 #survivorCard .muted { grid-column: 2; grid-row: 2; }
 #survivorHint { grid-column: 1 / span 2; grid-row: 3; color: var(--muted); }
-#survivorCard.is-alert { border-color: #ba574e; box-shadow: inset 3px 0 var(--red); }
+.posture-counts { display: flex; flex-wrap: wrap; gap: 2px 14px; margin: 3px 0 0; }
+#survivorCard .posture-counts { grid-column: 1 / -1; grid-row: 4; }
+.posture-counts span { white-space: nowrap; }
+.posture-counts strong { margin-left: 2px; font-variant-numeric: tabular-nums; }
+#survivorCard.is-alert { background: linear-gradient(110deg,#541e2a,#2b1521); border-color: #f77b84; box-shadow: inset 4px 0 #ff6976; color: #fff0f1; }
+#survivorCard.is-alert :is(.sensor-source,.muted,.pill) { color: #ffc8ce; }
 #sharedDetectionConnect { grid-column: 2; grid-row: 1; justify-self: end; min-height: 30px; padding: 4px 12px; font-size: .65rem; border-radius: 30px; }
 .telemetry-rail { display: contents; }
 .sensors-card { position: absolute; top: 120px; left: 18px; width: 155px; min-width: 0; padding: 0; background: transparent; border: 0; box-shadow: none; }
@@ -793,14 +798,38 @@ footer {
   .monitor-grid[data-active-feed=thermal] { min-height: 0; }
 }
 .notice { position: fixed; top: 75px; left: 50%; transform: translateX(-50%); z-index: 25; width: min(540px,calc(100% - 32px)); background: #2d2b1c; color: #e8d4a2; border-color: #6e6038; box-shadow: 0 8px 40px #0008; }
-.dashboard-notices { position: fixed; top: 75px; left: 50%; transform: translateX(-50%); z-index: 25; width: min(540px,calc(100% - 32px)); display: grid; gap: 8px; pointer-events: none; }
-.dashboard-notices > * { pointer-events: auto; }
-.dashboard-notices .notice { position: static; transform: none; width: auto; margin: 0; }
+.dashboard-toasts { position: fixed; inset: auto auto 78px 18px; z-index: 25; width: min(360px,calc(100% - 36px)); display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+.dashboard-toasts .notice { position: relative; inset: auto; transform: none; width: auto; margin: 0; }
+.dashboard-toasts > :not([hidden]) { position: relative; }
+.dashboard-toasts :is(button,a) { pointer-events: auto; }
+.dashboard-toasts .person-alert { order: -2; background: linear-gradient(125deg,#561b2a,#34111f); color: #fff0f1; border-color: #fb7988; border-left: 4px solid #ff5369; box-shadow: 0 8px 28px #0009; }
+.person-alert strong { color: #fff; }
+.person-alert small { color: #ffc7d0; }
+.dashboard-toasts > :has(.dismiss-popup) { padding-right: 46px; }
+.dashboard-toasts .dismiss-popup { position: absolute; top: 6px; right: 6px; display: grid; place-items: center; width: 32px; height: 32px; min-height: 0; padding: 0; color: inherit; background: transparent; border: 1px solid transparent; border-radius: 8px; font-size: 1.15rem; line-height: 1; cursor: pointer; }
+.dashboard-toasts .dismiss-popup:is(:hover,:focus-visible) { border-color: currentColor; }
+.consciousness-actions { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 5px; }
+.consciousness-actions button { padding: 5px 9px; }
+@media(max-width:600px) {
+  .dashboard-toasts { left: 10px; width: min(280px,calc(100% - 20px)); gap: 5px; max-height: 47dvh; overflow-y: auto; overscroll-behavior: contain; }
+  .dashboard-toasts .sound-alert { padding: 9px 40px 9px 10px; flex-wrap: wrap; font-size: .76rem; }
+  .dashboard-toasts .sound-alert > div { flex-basis: 100%; }
+}
 .sound-alert { display: flex; align-items: flex-start; gap: 12px; padding: 14px 18px; border: 1px solid #ca7850; border-radius: 12px; background: #38251e; color: #ffdab9; box-shadow: 0 8px 40px #0008; font-size: .85rem; line-height: 1.5; }
 .sound-alert > div { flex: 1; min-width: 0; }
 .sound-alert p { margin: 5px 0; overflow-wrap: anywhere; }
 .sound-alert small { color: #e0ba9c; }
 .sound-alert button { flex-shrink: 0; padding: 6px 9px; font-size: .75rem; }
+#heatNotice[data-severity=info],#excavationNotice[data-severity=info] { background: #102a30; border-color: #407280; color: #d5edf0; }
+#heatNotice[data-severity=info] small { color: #a8ced1; }
+#heatNotice[data-severity=warning],#excavationNotice[data-severity=warning] { background: #30291d; border-color: #8c7046; color: #f1d9a8; }
+#heatNotice p:empty { display: none; }
+#excavationAssessmentLink { flex-shrink: 0; font-size: .75rem; }
+.camera-excavation-status { display: block; margin: 4px 0 0; font-size: .62rem; color: var(--muted); max-width: min(300px,calc(100vw - 110px)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.excavation-assessment { margin: 20px 0; padding-block: 12px; border-block: 1px solid var(--line); scroll-margin-top: 20px; }
+.excavation-fields { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,210px),1fr)); gap: 10px; }
+.excavation-fields label { display: flex; flex-direction: column; min-width: 0; }
+.excavation-fields input,.excavation-fields select { width: 100%; }
 .mission-tools { border-top: 1px solid var(--line); background: #001719; }
 .mission-tools>summary { padding: 18px 24px; font-size: .85rem; color: var(--muted); }
 .mission-tools>summary span { float: right; font-size: .75rem; font-weight: 400; }
@@ -821,10 +850,10 @@ dialog { background: var(--surface); }
   #survivorCard { position: static; grid-area: summary; min-height: 80px; padding: 10px 12px; gap: 4px 10px; }
   #survivorCard .metric { font-size: 1.8rem; }
   #survivorCard .card-top { gap: 5px; }
-  #survivorCard .muted { grid-column: 1 / span 2; grid-row: 4; }
+  #survivorCard .muted { grid-column: 1 / span 2; grid-row: 5; }
   #survivorSource { grid-column: 1 / span 2; }
   #survivorHint { grid-row: 3; }
-  #sharedDetectionConnect { grid-row: 5; grid-column: 1 / span 2; justify-self: start; }
+  #sharedDetectionConnect { grid-row: 6; grid-column: 1 / span 2; justify-self: start; }
   .sensors-card { position: static; grid-area: environment; width: auto; }
   .sensors-card>.card-top { display: inline-flex; margin: 0; gap: 8px; }
   .sensors-card>.sensor-source { display: inline; margin-left: 8px; }
@@ -878,3 +907,8 @@ dialog { background: var(--surface); }
 }
 #trendChart line { stroke: var(--line); }
 #trendChart polyline { stroke: var(--green); }
+
+/* Detection notices share the existing dashboard alert styling. */
+.low-light-notice:not([hidden]) { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
+.low-light-notice p { margin: 0; }
+.low-light-notice button { min-height: 2.75rem; }

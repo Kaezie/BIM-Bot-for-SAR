@@ -7,19 +7,46 @@
   <a class="skip-link" href="#main">Skip to dashboard</a>
   {% include "dashboard/header.html" %}
   <main id="main" class="workspace">
-    <div class="dashboard-notices">
+    <div class="dashboard-toasts">
       <div id="notice" class="notice" role="status" hidden></div>
       <div id="soundAlert" class="sound-alert" role="alert" aria-atomic="true" hidden>
         <div><strong>Loud sound detected</strong><p id="soundAlertText"></p><small id="soundAlertSaveState" role="status"></small></div>
         <button id="dismissSoundAlert" type="button" aria-label="Dismiss loud-sound alert">Dismiss</button>
       </div>
+      <section id="personNotice" class="sound-alert person-alert" aria-label="Person detection alert" hidden>
+        <div><strong id="personNoticeTitle" role="alert"></strong><p id="personNoticeText"></p><small id="personNoticePause" role="status"></small></div>
+        <button class="dismiss-popup" type="button" data-dismiss-popup="personNotice" aria-label="Dismiss Main camera notification">×</button>
+      </section>
+      <section id="nightPersonNotice" class="sound-alert person-alert" aria-label="Night Vision survivor alert" hidden>
+        <div><strong id="nightPersonNoticeTitle" role="alert"></strong><p id="nightPersonNoticeText"></p></div>
+        <button class="dismiss-popup" type="button" data-dismiss-popup="nightPersonNotice" aria-label="Dismiss Night Vision notification">×</button>
+      </section>
+      <section id="excavationNotice" class="sound-alert" aria-label="Excavation assessment" hidden>
+        <div><strong id="excavationNoticeTitle" role="status">Excavation · Not assessed</strong>
+          <p id="excavationNoticeDetails">Wait for the rescue lead’s on-site assessment before excavating.</p></div>
+        <a id="excavationAssessmentLink" href="#excavationAssessment">Record decision</a>
+        <button class="dismiss-popup" type="button" data-dismiss-popup="excavationNotice" aria-label="Dismiss excavation notification">×</button>
+      </section>
+      <section id="heatNotice" class="sound-alert" aria-label="Heat screening" hidden>
+        <div><strong id="heatNoticeTitle" role="alert">Alert · severe heat reading</strong><p id="heatNoticeText"></p>
+          <p id="heatNoticeGuidance"></p><small>Heat screening only. Confirm site safety before search or excavation.</small>
+          <p id="emergencyResponse" role="status" hidden>Notify the designated rescue lead and follow the exercise’s emergency response procedure.</p>
+        </div>
+        <button type="button" id="emergencyResponseButton" aria-expanded="false" aria-controls="emergencyResponse">Emergency response</button>
+        <button class="dismiss-popup" type="button" data-dismiss-popup="heatNotice" aria-label="Dismiss heat notification">×</button>
+      </section>
+      <section id="darkNotice" class="notice low-light-notice" aria-label="Low light" hidden>
+        <p role="status">Main camera image is very dark. Open Night Vision to check visibility.</p>
+        <button type="button" id="openNightFromNotice">Open Night Vision</button>
+        <button class="dismiss-popup" type="button" data-dismiss-popup="darkNotice" aria-label="Dismiss low-light notification">×</button>
+      </section>
     </div>
     {% include "dashboard/monitoring.html" %}
     <details class="mission-tools" id="missionTools">
-      <summary>Mission tools &amp; history <span>Mission control · Verification · Recordings</span></summary>
+      <summary>Mission tools &amp; history <span>Mission report · Recordings</span></summary>
       <div class="tools-content">
         <nav class="section-nav" aria-label="Dashboard sections">
-          <a href="#recordedMovement">Movement history</a><a href="#robotPosition">Robot position</a><a href="#mission">Mission &amp; verification</a><a href="#communication">Survivor communication</a><a href="#alerts">Alert history</a><a href="#trends">Sensor trends</a><a href="#recordings">Recordings</a>
+          <a href="#recordedMovement">Movement history</a><a href="#robotPosition">Robot position</a><a href="#mission">Mission report</a><a href="#communication">Survivor communication</a><a href="#alerts">Alert history</a><a href="#trends">Sensor trends</a><a href="#recordings">Recordings</a>
         </nav>
         {% include "dashboard/survivors.html" %}
         {% include "dashboard/movement.html" %}

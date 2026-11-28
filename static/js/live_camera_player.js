@@ -28,6 +28,7 @@
       this.controller = new AbortController();
       this.sequence = -1;
       this.generation = -1;
+      this.streamId = null;
       this.presented = false;
       this.waiting = false;
       this.startupDeadline = performance.now() + this.startupGraceMs;
@@ -99,7 +100,8 @@
           response = await this.fetchImpl(`/api/camera-frame/${this.source}`, {
             credentials: 'same-origin', cache: 'no-store', signal: request.signal,
             headers: {...this.getHeaders(), 'X-Camera-Viewer': viewer,
-              'X-Camera-Sequence': String(this.sequence), 'X-Camera-Generation': String(this.generation)}
+              'X-Camera-Sequence': String(this.sequence), 'X-Camera-Generation': String(this.generation),
+              ...(this.streamId ? {'X-Camera-Stream-Id': this.streamId} : {})}
           });
           if (!this.active(epoch, viewer)) return;
           if (response.status === 401) {
@@ -138,45 +140,61 @@
           const generation = integerHeader(response, 'X-Camera-Generation');
           const rawAge = response.headers.get('X-Camera-Age-Ms');
           const age = rawAge === null || rawAge.trim() === '' ? NaN : Number(rawAge);
-          if (!Number.isFinite(age) || age < 0 || age >= 5000) throw new Error('Stale camera image');
-          if (generation > this.generation || (generation === this.generation && sequence > this.sequence)) {
-            const render = !this.presented || this.waiting || this.shouldRender();
+          if (!Number.isFinite(age) || age < 0) throw new Error('Invalid camera image age');
+          if (age >= 5000) {
+            await this.wait(this.retryIntervalMs);
+            continue;
+          }
+          const streamId = response.headers.get('X-Camera-Stream-Id');
+          const restarted = streamId && streamId !== this.streamId;
+          if (restarted || generation > this.generation || (generation === this.generation && sequence > this.sequence)) {
+            const render = restarted || !this.presented || this.waiting || this.shouldRender();
             if (!render) {
               const effectiveAge = age + performance.now() - began;
               if (effectiveAge >= 5000) {this.waitForFrame(epoch);await this.wait(this.retryIntervalMs);continue;}
               this.sequence = sequence; this.generation = generation;
+              if (streamId) this.streamId = streamId;
               clearTimeout(this.freshnessTimer);
               this.freshnessTimer = setTimeout(() => this.waitForFrame(epoch), 5000-effectiveAge);
               this.canvas.dispatchEvent(new Event('fresh'));
             } else {
-            let decoded;
-            try {
-              decoded = await this.decode(blob);
-              if (!this.active(epoch, viewer)) return;
-              const image = decoded.image || decoded;
-              const width = decoded.width || image.naturalWidth || image.width;
-              const height = decoded.height || image.naturalHeight || image.height;
-              if (!(width > 0 && height > 0)) throw new Error('Empty camera image');
-              // Include time spent transferring/decoding this response. A slow
-              // decoder cannot renew an image beyond its reception deadline.
-              const effectiveAge = age + performance.now() - began;
-              if (effectiveAge >= 5000) {decoded?.close?.();decoded=null;this.waitForFrame(epoch);await this.wait(this.retryIntervalMs);continue;}
-              if (this.canvas.width !== width) this.canvas.width = width;
-              if (this.canvas.height !== height) this.canvas.height = height;
-              this.canvas.getContext('2d', {alpha: false}).drawImage(image, 0, 0);
-              this.sequence = sequence;
-              this.generation = generation;
-              this.canvas.dataset.frameSequence = String(sequence);
-              this.canvas.dataset.frameGeneration = String(generation);
-              clearTimeout(this.freshnessTimer);
-              this.freshnessTimer = setTimeout(() => this.waitForFrame(epoch), 5000 - effectiveAge);
-              if (!this.presented || this.waiting) {
-                this.presented = true;
-                this.waiting = false;
-                this.canvas.dispatchEvent(new Event('load'));
+              let decoded;
+              try {
+                decoded = await this.decode(blob);
+              } catch {
+                if (!this.active(epoch, viewer)) return;
+                // Keep polling the same viewer if a single JPEG cannot decode.
+                // Freshness still expires on the last successfully drawn frame.
+                await this.wait(this.retryIntervalMs);
+                continue;
               }
-              this.canvas.dispatchEvent(new Event('fresh'));
-            } finally { decoded?.close?.(); }
+              try {
+                if (!this.active(epoch, viewer)) return;
+                const image = decoded.image || decoded;
+                const width = decoded.width || image.naturalWidth || image.width;
+                const height = decoded.height || image.naturalHeight || image.height;
+                if (!(width > 0 && height > 0)) throw new Error('Empty camera image');
+                // Include time spent transferring/decoding this response. A slow
+                // decoder cannot renew an image beyond its reception deadline.
+                const effectiveAge = age + performance.now() - began;
+                if (effectiveAge >= 5000) {decoded?.close?.();decoded=null;this.waitForFrame(epoch);await this.wait(this.retryIntervalMs);continue;}
+                if (this.canvas.width !== width) this.canvas.width = width;
+                if (this.canvas.height !== height) this.canvas.height = height;
+                this.canvas.getContext('2d', {alpha: false}).drawImage(image, 0, 0);
+                this.sequence = sequence;
+                this.generation = generation;
+                if (streamId) this.streamId = streamId;
+                this.canvas.dataset.frameSequence = String(sequence);
+                this.canvas.dataset.frameGeneration = String(generation);
+                clearTimeout(this.freshnessTimer);
+                this.freshnessTimer = setTimeout(() => this.waitForFrame(epoch), 5000 - effectiveAge);
+                if (!this.presented || this.waiting) {
+                  this.presented = true;
+                  this.waiting = false;
+                  this.canvas.dispatchEvent(new Event('load'));
+                }
+                this.canvas.dispatchEvent(new Event('fresh'));
+              } finally { decoded?.close?.(); }
             }
           }
         }

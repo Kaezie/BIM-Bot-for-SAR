@@ -38,7 +38,7 @@ const assert = require('node:assert/strict');
       let data = {};
       if (path==='/api/sensor-data') data={fresh:mode!=='stale',updated_at:updated,temperature:36,humidity:72,heat_index:43,danger_level:'Danger',interpretation:'Fixture heat warning',method:'threshold',confidence:.8,probabilities:{low:.1,moderate:.8,severe:.1}};
       if (path==='/api/survivors') data={available:true,updated_at:updated,survivors_found:detected,detections:detected?[{confidence:.94,age:'Adult',consciousness:'Unknown',injury:'Unknown',trapped:'Unknown',pose:'upright',thermal_alive:'No thermal camera',thermal_injury:'No thermal camera'}]:[]};
-      if (path==='/api/device-status') data={nightvision:true,main_status:{connected:mainRequests>0},nightvision_status:{connected:true,detection_enabled:true,detections_available:true,detections:[{source:'nightvision',confidence:.8}],message:'Fixture night camera ready'}};
+      if (path==='/api/device-status') data={nightvision:true,main_status:{connected:mainRequests>0},nightvision_status:{connected:true,detection_enabled:true,person_analysis_enabled:true,detected_at:updated,detections_available:true,detections:[{source:'nightvision',confidence:.8}],message:'Fixture night camera ready'}};
       if (path==='/api/nightvision/light') {
         if(route.request().method()==='POST') lightEnabled=route.request().postDataJSON().enabled;
         data={supported:true,available:true,firmware:'bimbot-nightvision/2',illumination:{enabled:lightEnabled,brightness:lightEnabled?32:0,lease_ms:15000}};
@@ -56,6 +56,7 @@ const assert = require('node:assert/strict');
     const shared = ['#survivorCard','.sensors-card','#riskCard','#mainThermalReading','#soundSummary'];
     const overlaps = (a,b) => a.x < b.x+b.width-1 && a.x+a.width > b.x+1 && a.y < b.y+b.height-1 && a.y+a.height > b.y+1;
     async function checkSharedLayout(width, feed, height=1050) {
+      if(feed==='nightvision') await page.waitForFunction(()=>document.getElementById('nvDetectionStatus').textContent.includes('1 possible person'));
       await page.evaluate(()=>scrollTo(0,0));
       assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`Horizontal overflow at ${width}px on ${feed}`);
       const imageBox = await page.locator('.feed-stage').boundingBox();
@@ -66,8 +67,8 @@ const assert = require('node:assert/strict');
         const environmentBox=await page.locator('.sensors-card').boundingBox();
         const instrumentsBox=await page.locator('#riskCard').boundingBox();
         assert(Math.abs(consoleBox.x)<=1 && Math.abs(consoleBox.width-width)<=1,'The original camera console must span the desktop viewport');
-        assert(Math.abs(consoleBox.y-(headerBox.y+headerBox.height))<=1,'The console must begin directly below the app header');
-        assert(Math.abs(consoleBox.y+consoleBox.height-height)<=1,`The desktop console must fit below the header without a tall page of cards: ${JSON.stringify({consoleBox,headerBox})}`);
+        assert(Math.abs(consoleBox.y-(headerBox.y+headerBox.height))<=1,'Fixed alerts must leave the console directly below the header');
+        assert(Math.abs(consoleBox.y+consoleBox.height-height)<=1,`Fixed alerts must preserve the desktop console height: ${JSON.stringify({consoleBox,headerBox})}`);
         assert(Math.abs(tabsBox.x-consoleBox.x)<=1 && Math.abs(tabsBox.width-consoleBox.width)<=1,'The original feed tabs must remain full width');
         assert(Math.abs(tabsBox.y+tabsBox.height-consoleBox.y-consoleBox.height)<=1,'Feed tabs must remain at the bottom edge of the console');
         assert(environmentBox.x+environmentBox.width<=imageBox.x+1,'Environment HUD must stay to the left of the central feed');

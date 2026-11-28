@@ -20,17 +20,19 @@ analysis, and heat-risk calculation. The UI consumes those results. See
 - `GET /api/thermal`: original thermal-availability status.
 - `POST /toggle_recording`: original start/stop recording status.
 
-All require the UI user's verified Supabase token. Browser API calls send a Bearer
-header; image streams send `access_token` in the query string.
+The dashboard uses a verified local session cookie after Google sign-in.
+Protected APIs also support a verified Google-linked Supabase Bearer token.
+The current camera-frame route uses the cookie or Authorization header.
 
 ## Additional UI support
 
-- `/api/upload-to-storage`, `/api/recordings`, `/api/recordings/link`: per-user
-  recording uploads/library/signed links using the existing private bucket.
+- `/api/local-recordings`: local MP4 save, listing, download and sync queue.
+  Existing cloud-only clips are listed through `/api/recordings` and opened
+  through `/api/recordings/link`. [Recording workflow](OFFLINE_RECORDING.md)
 - `/api/history`: persisted SAR sensor samples and risk/detection alerts.
 - `/api/mission`, `/api/mission/start`, `/api/mission/stop`: mission controls with
   operator ownership and acknowledged robot commands.
-- `/api/survivor-events` and `/<id>/review`: SAR snapshots and separate operator reviews.
+- `/api/survivor-events` and `/api/survivor-events/<id>/review`: SAR snapshots and separate operator reviews.
 - `/api/situational-report`: current SAR results and mission evidence as JSON.
 - `/api/device-status`, `/nightvision_feed`, `/api/thermal-data`, `/api/sound-data`:
   optional frontend device panels.
@@ -57,69 +59,17 @@ external-link click. Robot observation position is distinct from survivor
 coordinates. Hardware acquisition, firmware bridge and indoor tracking remain
 unimplemented/unverified. See [Position integration](POSITION_INTEGRATION.md).
 
-### Separate Original and Spare sound views
+### Sound sources
 
-Microphone procurement and hardware work are on hold at the operator's October25
-request while GPS/position support is prepared. Existing optional laptop analysis
-remains off unless the operator starts it.
-
-Current constraint, October 25: no budget for additional hardware, with a
-November 2026 defense. The operator confirms sound detection is required in the
-approved thesis scope. Inventory existing or borrowed real audio inputs first;
-no purchase, source substitution or removal of the requirement is authorized by
-this constraint. Candidate phone/headset inputs remain unverified. Any alternative
-must identify its actual location/source, and two views require independent inputs.
-
-Requested October 25: the Sound section should show the original camera's
-microphone and the spare camera's microphone as separate visual sources.
-This is a requirement awaiting added microphone hardware, not implemented live
-dual-camera audio. The current `SOUND_URL` contract is a single optional sensor
-endpoint and must not be duplicated or relabelled as two real microphones.
-
-After the front-photo review, the operator identifies the sticker camera as
-Original and the camera without a sticker as Spare, and confirms having no
-separate microphones beyond the shown hardware. Neither photographed board has
-a visible microphone. The earlier report of hearing robot sound during live
-viewing does not establish an audio input. The current recorder in
-`static/js/dashboard.js` uses only `recordCanvas.captureStream(30)`; neither
-checkout requests or adds a microphone track. The current spare firmware
-publishes JPEG video and thermal data, with no audio acquisition or transport.
-No personal recording or new microphone capture was used for this audit.
-
-Once microphone hardware is added and verified, implement two labelled channels:
-
-- Original camera microphone: independent activity/level and freshness.
-- Spare camera microphone: independent activity/level and freshness.
-- Draw a waveform only when actual audio samples are available. A digital
-  sound-trigger module alone cannot provide a genuine waveform.
-- Show unavailable/configuration-pending states independently; one missing
-  source must not be replaced by the other source or by generated activity.
-- Label uncalibrated amplitude as relative level; claim sound-pressure dB only
-  with an appropriate calibration. Voice/tapping recognition needs separate
-  implementation and validation.
-
-The operator selected investigating microphones on the existing cameras. A
-software-only build combining the complete spare source, enabled thermal
-profile4 and explicit I2S1 receiver APIs passes with placeholder credentials.
-It assigns no microphone pins and was not uploaded. Three signal GPIOs are
-needed, and the spare's remaining header pins have boot or UART restrictions.
-Original source is now located in the operator-supplied `pineappleapi/bimbot`
-repository: `BIM-BOT_arduino_setup/ESPCAM.ino`, release commit
-`ff1947f6a2f6347de9d05d39ed44cab31698ceef`. It specifies AP mode and DHT11 on
-GPIO13, with no microphone/audio path. See [Original source audit](ORIGINAL_CAMERA_SOURCE.md).
-No exact installed-firmware comparison or original upload was made. See
-[Sound integration investigation](SOUND_INTEGRATION.md) for the resource audit,
-build evidence, hardware criteria and remaining inputs. Preserve original
-camera/DHT and spare camera/thermal/light operation. Leave existing wiring
-unchanged until the exact microphone model and the selected camera's pin use
-are checked.
-Only the laptop is available under the current budget. The optional Laptop
-microphone view is labelled as a local demonstration and requires manual Start
-and browser permission. Analysis stays in the browser: no audio upload, saving
-or addition to video recordings. Camera inputs remain unavailable and local
-sound must not become remote telemetry. Page load/tab selection requests no
-microphone. Raw audio recording/playback is a separate feature; the robot-
-position sound requirement remains unresolved.
+The Sound tab supports the selected laptop microphone or a headset mounted on
+the robot. Local YAMNet recognition starts with the selected microphone when
+its optional runtime and model are installed. The separate two-way audio
+controls route the headset microphone and earpiece through the laptop.
+Camera microphone cards require independent inputs, and the current ESP32
+camera firmware supplies video and sensor data. Keep optional `SOUND_URL`
+telemetry separate from laptop or headset audio. Saved clips are video-only.
+[Headset setup](HEADSET_SOUND.md) · [Two-way audio](SURVIVOR_COMMUNICATION.md) ·
+[Camera audio design notes](SOUND_INTEGRATION.md)
 
 `ROBOT_URL` returns current status, for example:
 

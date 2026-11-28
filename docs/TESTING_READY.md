@@ -1,58 +1,27 @@
 # Stationary software readiness and testing
 
-Latest October28 status: conservative-1 is deployed and software-verified
-(257Python checks,8browser suites); live acceptance remains pending. See
-[the fixed camera/sensor profile](CONSERVATIVE_PROFILE.md) for exact settings,
-source-expiry recovery and unchanged firmware/model boundaries. Current physical
-comparison has original on robot battery and isolated spare on USB, all6spare
-robot/thermal jumpers detached. Thermal reads are intentionally paused. Master
-is ON with wheels raised; robot USB unplugged. Restore/test thermal separately
-before accepting the full system. Earlier entries below describe prior stages.
+Open [the guided test page](http://localhost:5050/testing) directly. The
+instructions are visible before sign-in. To run readiness checks, sign in with
+Google while online and then join `ESP32_CAM` when ready to test the cameras and
+sensors. The readiness button reads status without starting a camera or
+microphone. Download your observations before reloading the page.
 
-Current connection blocker, October 28: Main fails even with Night/Thermal
-requests paused, and direct camera reads fail while the dashboard is stopped.
-A power reset is only briefly helpful. Full dashboard is restored; physical
-stability is not accepted. See CAMERA_PERFORMANCE.md and the connection diagnosis
-JSON. The operator has ONE master switch and no multimeter currently available;
-wheels are securely raised for stationary powered checks. Movement remains on
-hold. Identify current power connections before supply testing; retain firmware.
+Use the installed wiring and firmware for stationary checks. The October 30
+capture recorded fresh thermal and DHT samples during a short robot-network
+window. On November 16 the operator reported that the cameras and sensors
+worked on robot power without laptop USB power. Calibration and sustained
+operation remain separate checks. [Thermal and DHT result](verification/thermal_restoration_result_2026-10-30.json)
 
-Updated October 28, 2026, Asia/Manila. The operator requests proceeding through
-the remaining software tasks and supplying a thorough testing guide. They
-confirm an available **Bluetooth headset with microphone and earpiece**. Its
-model, connection, placement, range and audibility remain unverified.
-
-The operator guide is internal supporting material, available directly at
-**http://localhost:5050/testing**. Per the operator's October 28 instruction,
-it is omitted from dashboard, communication and sign-in navigation; it is not
-a panel requirement. Readiness checks require sign-in
-but the instructions are readable without it. These checks do not request
-camera/microphone access. Operator pass/fail/unclear entries remain in page
-memory until explicitly downloaded; untested items stay untested.
-
-For camera/sensor failures, the internal guide now includes **Save system
-diagnostic snapshot**. Use it while connected to ESP32_CAM after checking the
-dashboard. It saves cached camera timings, DHT/thermal freshness and Mac IPv4
-locally; it does not start a camera or capture images/audio. The saved file is
-`local_data/diagnostics/latest_system_check.json`. This remains available after
-returning to internet for chat. A snapshot is diagnostic evidence, not completed
-hardware acceptance. See [recovery investigation](CAMERA_PERFORMANCE.md).
-
-For camera timing, use the separate **Start both camera test feeds** button on
-that internal page. Both videos stay visible there while you save a snapshot.
-It starts only on an explicit click, uses the production authenticated readers,
-and releases them on Stop, hiding or leaving the page. Use normal room lighting;
-it does not change the camera light. This internal tool is absent from product
-navigation.
-
-For the normal-dashboard section-switching problem, **Record 60-second dashboard
-check** records cached connection history while you use Main, Night and Thermal
-on the normal page. A one-shot debug launch can instead start this automatically
-after valid video arrives, so no guide button is needed. The partial/final file
-is `local_data/diagnostics/normal_dashboard_check.json`; it contains health/timing
-and error counters, not images or identities. Robot-subnet observations remain
-separate from later internet/chat observations. A brief guide test does not
-establish stability in this workflow. See [current stability work](CAMERA_PERFORMANCE.md).
+For a connection problem, use **Save system diagnostic snapshot** while
+connected to `ESP32_CAM`. It saves cached timing, sensor freshness and the
+laptop's network address in
+`local_data/diagnostics/latest_system_check.json` without recording images or
+audio. To check both camera readers, select **Start both camera test feeds**
+with room lights on, then stop the feeds when the check is complete.
+Use **Record 60-second dashboard check** to record connection health while
+switching between Main, Night and Thermal on the normal dashboard.
+That check writes `local_data/diagnostics/normal_dashboard_check.json`.
+[Camera connection evidence](CAMERA_PERFORMANCE.md)
 
 ## Ready for controlled testing
 
@@ -84,9 +53,8 @@ or Main mission evidence. Thermal is not registered to the Night image. See
 ## Sound implementation and setup
 
 `features/sound_classifier.py` uses the official local YAMNet model with the
-LiteRT CompiledModel CPU API. The current project `.venv-1` contains
-`ai-edge-litert==2.3.0`; setup can be reproduced with `requirements-sound.txt`
-and `scripts/setup_sound_model.py`. Model/label/license files are stored under
+LiteRT CompiledModel CPU API. Follow [headset setup](HEADSET_SOUND.md#local-model-setup)
+to install the optional runtime and model. Model/label/license files are stored under
 ignored `local_data/models/yamnet`; URLs, sizes and SHA-256 hashes are retained.
 Startup never downloads a model. Runtime checksums and input/output dimensions
 are checked before inference.

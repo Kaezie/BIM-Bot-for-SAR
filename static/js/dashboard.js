@@ -2,6 +2,7 @@
 const $ = id => document.getElementById(id);
 const client = window.BIM_AUTH;
 const monitoringProfile = JSON.parse(document.getElementById('bim-monitoring-profile')?.textContent || '{}');
+const nightLightAutoOnEntry = $('nightCameraControls')?.dataset.autoLight === 'true';
 // A cached older template can coexist with current scripts during a reload.
 if($('thermalGrid')?.tagName!=='CANVAS'){
   const old=$('thermalGrid');
@@ -13,12 +14,13 @@ let mainRequested = false, mainRetryTimeout;
 let mainWaiting = false, nightWaiting = false;
 let nvRequested = false, nvManual = false;
 let nvConfigured = false, nvConnected = false, nvConnecting = false, nvRetryAt = 0, nvTimeout, nvFailureMessage = '', recordingSource = null;
+let autoNightHandled = false, mainBrightSince = null;
 let lastThermalAt = null;
 let lastThermalSequence = null;
 let thermalFlight = null, thermalExpiry, sensorFlight, deviceFlight, refreshFlight, detectionFlight;
 let thermalPixels, latestThermalFrame;
 let lastSoundAt = null;
-let nightDetectionExpiry;
+let nightDetectionExpiry, nightNoticeExpiry, nightObservation;
 let positionFlight, positionExpiry;
 function positionUnavailable(state, message) {
   clearTimeout(positionExpiry);
@@ -58,7 +60,8 @@ function soundUnavailable(message) {
   show('soundMeter', false); show('soundClass', false); $('soundMeter').value = 0;
 }
 const recordable = () => selectedFeed === 'main' ? cameraConnected : selectedFeed === 'nightvision' && nvConnected;
-let recorder, recordingStream, drawTimer, clockTimer, recordingStarted, pendingClip, savedClip, uploading = false;
+let recorder, recordingStream, drawTimer, clockTimer, pendingClip, savedClip, uploading = false;
+let choosingScreen = false;
 let libraryLoading = false, syncRequested = false, endingSession = false;
 let nvLightPreference = false, nvLightDesired = false, nvLightConfirmed = null, nvLightState = 'idle';
 let nvLightPending = false, nvLightQueued = false, nvLightRevision = 0, nvLightUsed = false, nvLightPaused = false;
@@ -67,6 +70,22 @@ let nvLightMessage = 'White light is not requested. Select On when needed.';
 let samples = [], recordingOffset = 0, historySignature = '', lastSensorAt = null, lastDetectionAt = null;
 const text = (id, value) => { if ($(id).textContent !== String(value)) $(id).textContent = value; };
 const show = (id, visible) => { $(id).toggleAttribute('hidden', !visible); };
+function popup(id, key) {
+  const card = $(id);
+  if (!card) return;
+  if (card.dataset.popupKey !== key) {
+    card.dataset.popupKey = key;
+    delete card.dataset.dismissed;
+  }
+  show(id, !!key && !card.dataset.dismissed);
+}
+document.querySelectorAll('[data-dismiss-popup]').forEach(button => {
+  button.addEventListener('click', () => {
+    const card = $(button.dataset.dismissPopup);
+    card.dataset.dismissed = 'true';
+    card.hidden = true;
+  });
+});
 laptopSound = window.BIMLaptopSound && $('laptopSoundStart') ? new window.BIMLaptopSound({
   canStart: () => !!session && !endingSession && selectedFeed === 'sound' && document.visibilityState !== 'hidden',
   onState: () => {updateSoundAvailability();soundRecognition?.syncInput();},
@@ -122,7 +141,13 @@ for(const [id,source] of [['camStream','main'],['nvStream','nightvision']]){
     }
   });
 }
-function notify(message) { text('notice', message); show('notice', !!message); }
+let noticeTimeout;
+function notify(message) {
+  clearTimeout(noticeTimeout);
+  text('notice', message);
+  show('notice', !!message);
+  if (message) noticeTimeout = setTimeout(() => show('notice', false), 8000);
+}
 async function api(path, options = {}) {
   const headers = {...options.headers};
   if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
@@ -142,6 +167,9 @@ function sessionEnded(reason = 'expired') {
   duplexAudio?.stop('Stopped because your session ended.');
   updateNightLight();
   const active = recorder?.state === 'recording'; session = null;
+  excavationAssessment = null;
+  reportSaveRequest = null;
+  renderExcavationAssessment();
   thermalUnavailable('Sign in to view thermal readings');
   positionUnavailable('Sign in', 'Sign in to view robot position.');
   movementPanel?.invalidate('Sign in to view movement history.');
@@ -157,7 +185,28 @@ function sessionEnded(reason = 'expired') {
   else window.location.assign(`/login${reason === 'expired' ? '?reason=expired' : ''}`);
 }
 function element(tag, content, className) { const el = document.createElement(tag); if (content !== undefined) el.textContent = content; if (className) el.className = className; return el; }
-function survivorDetails(detection, index) {
+const postureLabels = {standing: 'Standing survivor', fallen: 'Fallen figure', unknown: 'Unclear'};
+function fallenPosture(person) {
+  return person.posture === undefined ? person.pose === 'lying' : person.posture === 'fallen';
+}
+function renderPostureCounts(source, detections) {
+  const counts = {standing: 0, fallen: 0, unknown: 0};
+  if (detections) for (const person of detections) {
+    const posture = person.posture;
+    counts[posture === 'standing' || posture === 'fallen' ? posture : 'unknown']++;
+  }
+  for (const [posture, count] of Object.entries(counts)) {
+    const id = `${source}Posture-${posture}`;
+    if ($(id)) text(id, detections ? count : '—');
+  }
+}
+function personCue(detection) {
+  if (fallenPosture(detection) && detection.motion_observed === false) return 'Alert · Lying posture and little image motion. Check responsiveness and visible obstructions.';
+  if (fallenPosture(detection)) return 'Check the observed lying posture in the camera view.';
+  if (detection.motion_observed === false) return 'Little image motion observed. Check the person’s condition.';
+  return 'Verify the person in the camera view.';
+}
+function survivorDetails(detection, index, source) {
   const row = element('li', undefined, 'survivor-event');
   const tracked = Number.isInteger(detection.track_number) && detection.track_number > 0;
   const heading = element('h3', `${tracked ? `Track ${detection.track_number}` : `Detection ${index + 1}`} · ${percent(detection.confidence)}`);
@@ -166,43 +215,114 @@ function survivorDetails(detection, index) {
   if (tracked) row.append(element('p', `Image motion: ${detection.motion_observed === true ? 'Region changed' : detection.motion_observed === false ? 'No region change observed' : 'Unknown'}`));
   if (typeof detection.gesture === 'string') row.append(element('p', `Help gesture: ${detection.gesture} · operator verification required`));
   if ('immobility_seconds' in detection) row.append(element('p', `Image inactivity: ${Number.isFinite(detection.immobility_seconds) ? detection.immobility_seconds.toFixed(1) + ' s' : 'Unknown'}`));
-  for (const [key, label] of [['age','Age'], ['consciousness','Consciousness'], ['injury','Injury'], ['trapped','Entrapment'], ['pose','Pose'], ['thermal_alive','Thermal signal'], ['thermal_injury','Thermal pattern']]) {
-    row.append(element('p', `${label}: ${typeof detection[key] === 'string' ? detection[key] : 'Unknown'}`));
+  row.append(element('p', personCue(detection)));
+  const reported = detection.consciousness_method === 'operator_reported'
+    && ['Conscious', 'Unconscious'].includes(detection.consciousness) ? detection.consciousness : null;
+  if (reported) row.append(element('p', `${reported} · Operator reported`));
+  row.append(element('p', `Age estimate: ${typeof detection.age === 'string' ? detection.age : 'Unknown'}`));
+  row.append(element('p', detection.posture === undefined ? `Pose: ${detection.pose || 'Unknown'}` :
+    `Posture: ${postureLabels[detection.posture] || postureLabels.unknown}`));
+  if (typeof detection.track_id === 'string' && detection.track_id) {
+    const actions = element('div', undefined, 'consciousness-actions');
+    actions.setAttribute('role', 'group');
+    actions.setAttribute('aria-label', 'Report on-site consciousness assessment');
+    for (const status of ['Conscious', 'Unconscious', 'Unknown']) {
+      if (status === 'Unknown' && !reported) continue;
+      const button = element('button', status === 'Unknown' ? 'Clear report' : status);
+      button.type = 'button';
+      button.setAttribute('aria-pressed', String(status === reported));
+      button.addEventListener('click', async () => {
+        button.disabled = true;
+        try {
+          await api('/api/person-consciousness', {method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({source, track_id: detection.track_id, status})});
+          notify(status === 'Unknown' ? 'Live consciousness report cleared.' : `${status} reported for this live track.`);
+          if (source === 'main') await fetchDetections();
+          else await fetchDevices();
+        } catch (error) {
+          notify(error.message);
+        } finally {
+          button.disabled = false;
+        }
+      });
+      actions.append(button);
+    }
+    row.append(actions);
   }
   return row;
 }
 function renderSurvivors(detections, fresh) {
+  renderPostureCounts('main', fresh ? detections : null);
   text('survivorDetailsState', fresh ? 'Live' : 'Unavailable');
   $('survivorDetailList').replaceChildren();
   if (!fresh || !detections.length) {
     $('survivorDetailList').append(element('li', fresh ? 'No survivors detected in the current frame.' : 'Waiting for fresh camera detections.', 'empty-row'));
     return;
   }
-  detections.forEach((detection, index) => $('survivorDetailList').append(survivorDetails(detection, index)));
+  detections.forEach((detection, index) => $('survivorDetailList').append(survivorDetails(detection, index, 'main')));
 }
-function clearNightDetections(message = 'Waiting for fresh night-camera analysis.') {
+function renderNightPersonNotice() {
+  if (!$('nightPersonNotice')) return;
+  clearTimeout(nightNoticeExpiry);
+  const age = nightObservation && Date.now() / 1000 - nightObservation.seenAt;
+  const visible = selectedFeed === 'nightvision' && nvConnected && Number.isFinite(age) && age >= 0 && age < 6;
+  if (!visible) {
+    popup('nightPersonNotice', '');
+    return;
+  }
+  const {count, seenAt, cue, live} = nightObservation;
+  const inView = live && age < 2;
+  const label = count === 1 ? 'person' : 'people';
+  text('nightPersonNoticeTitle', inView ? 'Survivor alert · Night Vision' :
+    'Recent observation · Night Vision');
+  text('nightPersonNoticeText', inView ? `${count} possible ${label} in view. ${cue || 'Verify in the Night Vision feed.'}` :
+    `${count} possible ${label} last seen at ${dateTime(seenAt)}. Check the current image.`);
+  popup('nightPersonNotice', nightObservation.key);
+  nightNoticeExpiry = setTimeout(renderNightPersonNotice, (6 - age) * 1000 + 25);
+}
+function clearNightDetections(message = 'Waiting for fresh night-camera analysis.', keepRecent = false) {
   clearTimeout(nightDetectionExpiry);
   text('nightSurvivorDetailsState', 'Unavailable');
   $('nightSurvivorDetailList').replaceChildren(element('li', message, 'empty-row'));
+  text('nvDetectionStatus', message);
+  renderPostureCounts('night', null);
+  if (keepRecent && nightObservation) nightObservation.live = false;
+  else nightObservation = null;
+  renderNightPersonNotice();
 }
 function renderNightDetections(nv, sameViewer) {
   clearTimeout(nightDetectionExpiry);
   show('nightSurvivorDetails', nvConfigured);
   const age = Date.now()/1000 - nv?.detected_at;
-  const fresh = sameViewer && nvConnected && nv?.connected && nv?.person_analysis_enabled &&
-    nv?.detections_available && Number.isFinite(nv.detected_at) && age >= 0 && age < 2;
+  const ready = sameViewer && nvConnected && nv?.connected && nv?.person_analysis_enabled && nv?.detection_enabled !== false;
+  const fresh = ready && nv.detections_available && Number.isFinite(nv.detected_at) && age >= 0 && age < 2;
   if (!fresh) {
-    clearNightDetections(nv?.detection_enabled === false ? 'Night-camera detection is disabled.' : 'Waiting for fresh night-camera analysis.');
+    clearNightDetections(nv?.detection_enabled === false ? 'Night-camera detection is disabled.' : 'Waiting for fresh night-camera analysis.', ready);
     return;
   }
   const detections = Array.isArray(nv.detections) ? nv.detections.filter(item => item.source === 'nightvision') : [];
+  renderPostureCounts('night', detections);
+  if (detections.length) {
+    const lyingStill = detections.some(item => fallenPosture(item) && item.motion_observed === false);
+    const lying = detections.some(fallenPosture);
+    const still = detections.some(item => item.motion_observed === false);
+    const cue = lyingStill ? 'Lying posture and little image motion. Check responsiveness and visible obstructions.' :
+      lying ? 'Lying posture observed. Check the live view.' :
+      still ? 'Little image motion observed. Verify the person’s condition.' : '';
+    nightObservation = {count: detections.length, seenAt: nv.detected_at, cue, live: true,
+      key: detections.map(item => item.track_id || item.track_number || 'person').sort().join(',')};
+  } else if (nightObservation) {
+    nightObservation.live = false;
+  }
+  renderNightPersonNotice();
+  text('nvDetectionStatus', detections.length ? `${detections.length} possible person detections · Night camera only · Verify in the feed.` :
+    'No people detected in the current night-camera frame.');
   text('nightSurvivorDetailsState', 'Live · Night camera');
   $('nightSurvivorDetailList').replaceChildren();
   if (!detections.length) $('nightSurvivorDetailList').append(element('li', 'No people detected in the current night-camera frame.', 'empty-row'));
-  detections.forEach((detection, index) => $('nightSurvivorDetailList').append(survivorDetails(detection, index)));
+  detections.forEach((detection, index) => $('nightSurvivorDetailList').append(survivorDetails(detection, index, 'nightvision')));
   nightDetectionExpiry = setTimeout(() => {
-    clearNightDetections('Night-camera analysis is stale. Waiting for fresh detections.');
-    text('nvDetectionStatus', 'Waiting for fresh night-camera detections.');
+    clearNightDetections('Night-camera analysis is stale. Waiting for fresh detections.', true);
   }, Math.max(0, (2-age)*1000));
 }
 function nightVisionRetryPending() {
@@ -213,6 +333,11 @@ function selectFeed(feed, connectOnSelect = false) {
   if (feed !== 'sound' && laptopSound?.active) laptopSound.stop('Stopped when you left Sound.');
   const previousFeed = selectedFeed;
   selectedFeed = feed;
+  if (previousFeed !== feed) mainBrightSince = null;
+  if (nightLightAutoOnEntry && feed === 'nightvision' && previousFeed !== feed) {
+    autoNightHandled = true;
+    nvLightPreference = true;
+  }
   if(feed==='main')mainPlayer.wake?.();
   if(feed==='nightvision')nightPlayer.wake?.();
   $('monitor').dataset.activeFeed = feed;
@@ -225,8 +350,12 @@ function selectFeed(feed, connectOnSelect = false) {
   $('sharedDetectionConnect').disabled = !session || endingSession || connecting || !!$('camStream').dataset.viewer;
   text('sharedDetectionConnect', mainWaiting ? 'Main detector waiting…' : connecting ? 'Connecting main detector…' : 'Connect main detector');
   show('nightCameraControls', feed === 'nightvision');
-  show('recordBtn', ['main', 'nightvision'].includes(feed) && recorder?.state !== 'recording');
-  $('recordBtn').disabled = !recordable() || !!pendingClip || uploading;
+  if (previousFeed !== feed) renderNightPersonNotice();
+  if (previousFeed !== feed) renderExcavationAssessment();
+  show('recordBtn', ['main', 'nightvision'].includes(feed) && !recordingSource);
+  $('recordBtn').disabled = !recordable() || !canBeginRecording();
+  const screenButton = $('recordScreenBtn');
+  if (screenButton) screenButton.disabled = !canBeginRecording() || !navigator.mediaDevices?.getDisplayMedia;
   $('connectBtn').disabled = feed === 'nightvision' ? nvConnecting : connecting;
   if (nightVisionRetryPending()) {
     text('availability-nightvision', 'Disconnected'); text('nvStatus', nvFailureMessage);
@@ -328,6 +457,7 @@ window.addEventListener('pagehide', () => {
   clearTimeout(connectTimeout); clearTimeout(mainRetryTimeout); clearTimeout(nvTimeout);
   mainPlayer.stop(); nightPlayer.stop();
   connecting = false; cameraConnected = false; nvConnecting = false; nvConnected = false;
+  clearNightDetections();
   show('camStream', false); show('nvStream', false); show('camOffline', true); show('nvEmpty', true);
   text('availability-main', 'Disconnected'); text('availability-nightvision', 'Disconnected');
 });
@@ -376,7 +506,39 @@ $('nvStream').onload = () => {
   show('nvStream', true); show('nvEmpty', false); text('availability-nightvision', 'Live'); selectFeed(selectedFeed);
 };
 $('nvStream').onerror = () => {if(nvRequested&&!endingSession)nightVisionFailed('Night camera unavailable. Check its power and Wi-Fi. Retrying…');};
+const emergencyResponseButton = $('emergencyResponseButton');
+let hasHeatAssessment = false;
+emergencyResponseButton?.addEventListener('click', () => {
+  const expanded = emergencyResponseButton.getAttribute('aria-expanded') === 'true';
+  emergencyResponseButton.setAttribute('aria-expanded', String(!expanded));
+  show('emergencyResponse', !expanded);
+});
+function collapseHeatResponse() {
+  show('emergencyResponse', false);
+  emergencyResponseButton?.setAttribute('aria-expanded', 'false');
+}
+function hideHeatNotice() {
+  if (!$('heatNotice')) return;
+  popup('heatNotice', '');
+  collapseHeatResponse();
+}
+function renderHeatAssessment(assessment, reading) {
+  const emergency = assessment.severity === 'alert';
+  const title = $('heatNoticeTitle');
+  title.setAttribute('role', emergency ? 'alert' : 'status');
+  text('heatNoticeTitle', `Heat · ${assessment.label}`);
+  text('heatNoticeText', reading ? `${reading.retrying ? 'Last reading from robot DHT11' : 'Robot DHT11'} · ${number(reading.temperature)} °C · ${number(reading.humidity)}% RH · Heat index ${number(reading.heat_index)} °C · ${dateTime(reading.updated_at)}` : '');
+  text('heatNoticeGuidance', assessment.guidance);
+  $('heatNotice').dataset.severity = assessment.severity;
+  show('emergencyResponseButton', emergency);
+  if (!emergency) collapseHeatResponse();
+  popup('heatNotice', emergency || assessment.label === 'Extreme caution' ? assessment.label : '');
+}
 function sensorUnavailable(message, state = 'Disconnected') {
+  if (hasHeatAssessment) {
+    renderHeatAssessment({label:'Reading unavailable', severity:'info',
+      guidance:'Wait for a fresh heat reading and follow site safety procedures.'});
+  } else hideHeatNotice();
   ['tempDisplay', 'humDisplay', 'hiDisplay', 'mlConfidence', 'mlMethod'].forEach(id => text(id, '—'));
   text('mlAssessment', 'Fresh environmental readings required');
   text('robotStatus', `Sensors · ${state}`); text('sensorState', state); text('riskState', state);
@@ -391,13 +553,24 @@ function fetchSensors() {
   try {
     const data = await api('/api/sensor-data', {signal: AbortSignal.timeout(2500), cache: 'no-store'});
     if (session !== currentSession || endingSession) return;
+    const assessment = $('heatNoticeTitle') && data.heat_alert;
+    hasHeatAssessment = !!assessment;
     if (!data.fresh || !data.updated_at || Date.now() / 1000 - data.updated_at > 10) { sensorUnavailable(data.updated_at ? `Last reading: ${dateTime(data.updated_at)}. Waiting for fresh data.` : data.message || 'No readings received. Check the robot connection.', data.updated_at ? 'Stale' : 'Waiting'); return; }
     lastSensorAt = data.updated_at;
+    const severe = assessment ? assessment.severity === 'alert' : data.danger_level === 'Extreme Danger' || data.risk_level === 'Severe Risk';
+    if (assessment) renderHeatAssessment(assessment, data);
+    else if ($('heatNotice')) {
+      if (severe) text('heatNoticeText', `DHT11 · ${number(data.temperature)} °C · ${number(data.humidity)}% RH · ${dateTime(data.updated_at)}`);
+      if (severe) popup('heatNotice', 'severe');
+      else hideHeatNotice();
+    }
     text('robotStatus', data.retrying?'Sensors · Updating':'Sensors · Live'); text('sensorState', data.retrying?'Retrying':'Live'); text('riskState', data.retrying?'Recent reading':'Live');
     text('tempDisplay', number(data.temperature)); text('humDisplay', number(data.humidity)); text('hiDisplay', number(data.heat_index));
-    text('riskLevel', data.danger_level || data.risk_level || 'Unknown'); text('riskText', data.interpretation || 'Assessment unavailable.');
+    text('riskLevel', assessment?.label || data.danger_level || data.risk_level || 'Unknown');
+    text('riskText', assessment ? 'DHT11 heat screening only.' : data.interpretation || 'Assessment unavailable.');
     text('hazardTime', `Updated ${dateTime(data.updated_at)}`); text('sensorNote', data.retrying ? `Last reading: ${dateTime(data.updated_at)}. Retrying connection.` : 'Readings update automatically.');
-    $('riskCard').classList.toggle('is-alert', data.danger_level === 'Extreme Danger' || data.risk_level === 'Severe Risk'); $('riskCard').classList.toggle('is-warning', ['Caution','Extreme Caution','Danger'].includes(data.danger_level) || data.risk_level === 'Moderate Risk');
+    $('riskCard').classList.toggle('is-alert', severe);
+    $('riskCard').classList.toggle('is-warning', assessment ? assessment.severity === 'warning' : ['Caution','Extreme Caution','Danger'].includes(data.danger_level) || data.risk_level === 'Moderate Risk');
     text('mlMethod', data.method === 'nws_heat_index' ? 'NOAA / NWS heat index' : data.method === 'threshold' ? 'Threshold assessment' : data.method || '—');
     text('mlAssessment', 'SAR threshold rules · preset scores');
     text('mlConfidence', percent(data.confidence));
@@ -412,6 +585,54 @@ function fetchSensors() {
   })().finally(() => { sensorFlight = null; });
   return sensorFlight;
 }
+let personNoticeExpiry, personNoticeKey = '';
+$('openNightFromNotice')?.addEventListener('click', () => {
+  if (!nightLightAutoOnEntry && !nightLightNeeded()) nvLightPreference = false;
+  selectFeed('nightvision', true);
+});
+function updateLowLight(data) {
+  const watchingMain = selectedFeed === 'main' && mainRequested && cameraConnected &&
+    document.visibilityState !== 'hidden';
+  if (watchingMain && data?.light_state === 'bright' && !nvLightDesired && !nvLightPending && nvLightConfirmed !== true) {
+    mainBrightSince ??= performance.now();
+    if (performance.now() - mainBrightSince >= 2000) autoNightHandled = false;
+  } else {
+    mainBrightSince = null;
+  }
+  if (nightLightAutoOnEntry && watchingMain && nvConfigured && !nvManual && !autoNightHandled && data?.light_state === 'dark') {
+    selectFeed('nightvision', true);
+    notify('Low light detected. Opening Night Vision.');
+  }
+  popup('darkNotice', data?.low_light === true && selectedFeed === 'main' ? 'low-light' : '');
+}
+function renderPersonNotice(data, liveCount = 0) {
+  if (!$('personNotice')) return;
+  clearTimeout(personNoticeExpiry);
+  const recent = data?.recent_observation;
+  const age = recent && Date.now() / 1000 - recent.seen_at;
+  const movement = {
+    slowing: 'Uno acknowledged a slowdown during forward exploration.',
+    unconfirmed: 'Uno slowdown is unconfirmed. Check the robot’s motion.'
+  }[data?.detection_slowdown];
+  if (!recent || !Number.isFinite(age) || age < 0 || age >= 6) {
+    personNoticeKey = '';
+    text('personNoticeTitle', movement ? 'Robot movement status' : '');
+    text('personNoticeText', '');
+    text('personNoticePause', movement || '');
+    popup('personNotice', movement ? `movement:${movement}` : '');
+    return;
+  }
+  const count = liveCount || recent.count;
+  const label = count === 1 ? 'person' : 'people';
+  const cues = Array.isArray(recent.cues) ? recent.cues : [];
+  if (liveCount) personNoticeKey = data.detections?.map(item => item.track_id || item.track_number || 'person').sort().join(',') || String(count);
+  text('personNoticeTitle', liveCount ? 'Survivor alert · Main camera' : 'Recent observation · Main camera');
+  text('personNoticeText', liveCount ? `${count} possible ${label} in view. ${cues.join(' ') || 'Verify in the camera view.'}` :
+    `${count} possible ${label} last seen at ${dateTime(recent.seen_at)}. Check the current image.`);
+  text('personNoticePause', movement || '');
+  popup('personNotice', personNoticeKey || String(count));
+  personNoticeExpiry = setTimeout(() => renderPersonNotice({detection_slowdown: data.detection_slowdown}), (6-age)*1000+25);
+}
 function fetchDetections() {
   if(detectionFlight)return detectionFlight;
   if(!session||endingSession)return Promise.resolve();
@@ -420,16 +641,18 @@ function fetchDetections() {
   try {
     const data = await api('/api/survivors');
     if(session!==currentSession||endingSession)return;
+    updateLowLight(data);
     const age=Date.now()/1000-data.updated_at;
     const fresh = data.available && data.updated_at && age>=0 && age<2;
     lastDetectionAt = fresh ? data.updated_at : null;
     const count = fresh ? data.survivors_found : null;
     text('survivorCount', count === null ? '—' : count); text('detectionState', fresh ? 'Live' : 'Unavailable');
-    text('survivorHint', !fresh ? 'Detection is unavailable. Connect the camera and check the detector.' : count > 0 ? 'Possible survivors detected. Review the live feed and SAR classifications.' : 'No survivors detected in the current frame.');
+    text('survivorHint', !fresh ? 'Detection is unavailable. Connect the camera and check the detector.' : count > 0 ? 'Verify posture and condition in the live feed.' : 'No people detected in the current frame.');
     renderSurvivors(data.detections, fresh);
+    renderPersonNotice(data, count || 0);
     text('survivorConf', fresh && data.detections.length ? percent(Math.max(...data.detections.map(item => item.confidence))) : '—');
     $('survivorCard').classList.toggle('is-alert', fresh && count > 0);
-  } catch { if(session!==currentSession||endingSession)return;renderSurvivors([], false); text('survivorCount','—'); text('survivorConf','—'); text('detectionState','Disconnected'); text('survivorHint','Could not retrieve detections. Check your connection.'); $('survivorCard').classList.remove('is-alert'); }
+  } catch { if(session!==currentSession||endingSession)return;updateLowLight(null);renderSurvivors([], false); text('survivorCount','—'); text('survivorConf','—'); text('detectionState','Disconnected'); text('survivorHint','Could not retrieve detections. Check your connection.'); $('survivorCard').classList.remove('is-alert'); renderPersonNotice(null); }
   })().finally(()=>{detectionFlight=null;});
   return detectionFlight;
 }
@@ -517,7 +740,6 @@ function fetchDevices() {
     const retrying = nightVisionRetryPending();
     text('availability-nightvision', !nvConfigured ? 'Not installed' : nvConnected ? 'Live' : nightWaiting ? 'Waiting' : nvConnecting ? 'Connecting' : retrying ? 'Disconnected' : 'Configured');
     if (!nvConnected && !nvConnecting && !nightWaiting) text('nvStatus', retrying ? nvFailureMessage : nv?.message || (nvConfigured ? 'Select this tab to connect.' : 'Night camera not configured.'));
-    text('nvDetectionStatus', nv?.detection_enabled === false ? 'Night-camera detection is disabled.' : nv?.detections_available ? `${nv.detections.length} possible person detections · Night camera only · Verify in the feed.` : 'Waiting for night-camera detections. Infrared accuracy requires verification.');
     renderNightDetections(nv, !!nightSource && $('nvStream').dataset.viewer === nightSource);
     selectFeed(selectedFeed);
   } catch {
@@ -584,15 +806,15 @@ async function loadRecordings(reset=true) {
     const data=await api(`/api/local-recordings?offset=${recordingOffset}`);
     data.recordings.forEach(clip=>{
       const row=element('li'),info=element('div',undefined,'clip-info'); row.dataset.recordingId=clip.id;
-      const source=clip.source==='nightvision'?'Night camera':'Main camera';
-      const state=clip.sync_state==='synced'?'Saved locally + in Supabase':clip.sync_state==='syncing'?'Saved locally · syncing to Supabase':'Saved locally · queued for Supabase';
+      const source = {main:'Main camera', nightvision:'Night camera', screen:'Screen capture'}[clip.source] || 'Video';
+      const state = clip.sync_state === 'local_only' ? 'Saved on this laptop' : clip.sync_state === 'synced' ? 'Saved locally + in Supabase' : 'Saved locally · queued for Supabase';
       info.append(element('strong',clip.name),element('small',`${clip.created_at?dateTime(clip.created_at):'Date unavailable'} · ${(clip.size/1048576).toFixed(1)} MB · ${source}`),element('small',state));
       if(clip.sync_error) info.append(element('small',clip.sync_error));
       const link=element('a','Download MP4');link.href=clip.download_url;link.download=clip.name;row.append(info,link);$('recordingList').append(row);
     });
     recordingOffset+=data.recordings.length;show('loadMore',data.has_more);
     text('libraryStatus',recordingOffset?`${recordingOffset} local ${recordingOffset===1?'recording':'recordings'} loaded.`:'No local recordings yet. Stopping a recording saves it to this laptop.');
-    text('syncStatus',data.pending_count?`${data.pending_count} queued for Supabase. Internet is required; the app retries automatically while running.`:'All local recordings are synced to Supabase. Local files are kept on this laptop.');
+    text('syncStatus',data.pending_count?`${data.pending_count} queued for Supabase. Internet is required; the app retries automatically while running.`:'No camera clips are waiting for Supabase. Local files are kept on this laptop.');
   } catch(error){text('libraryStatus',error.message);}
   finally{libraryLoading=false;$('reloadRecordings').disabled=false;$('loadMore').disabled=false;}
 }
@@ -654,33 +876,125 @@ function recordingFilename(source, startedAt){
     timeZone:'Asia/Manila',calendar:'gregory',numberingSystem:'latn',
     year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'
   }).formatToParts(new Date(startedAt)).map(part=>[part.type,part.value]));
-  const camera=source==='nightvision'?'NightVision':'Main';
+  const camera = {main:'Main', nightvision:'NightVision', screen:'Screen'}[source];
   const suffix=crypto.randomUUID().replaceAll('-','').slice(0,8);
   return `BIMBot_${camera}_${parts.year}-${parts.month}-${parts.day}_${parts.hour}-${parts.minute}-${parts.second}_${suffix}.mp4`;
 }
-function finishRecordingUI(){clearInterval(drawTimer);clearInterval(clockTimer);recordingStream?.getTracks().forEach(track=>track.stop());recordingSource=null;show('recBadge',false);show('nvRecordBadge',false);show('stopBtn',false);$('recordBtn').disabled=!recordable()||!!pendingClip;selectFeed(selectedFeed);}
-$('recordBtn').onclick=()=>{
-  if(!recordable()||pendingClip||uploading||recorder?.state==='recording')return;
+function canBeginRecording() {
+  return !!session && !endingSession && !choosingScreen && !recordingSource && !pendingClip && !uploading;
+}
+function recordingMimeType(screen = false) {
+  if (!window.MediaRecorder) throw new Error('Recording is unavailable in this browser.');
+  const formats = screen ? ['video/mp4', 'video/mp4;codecs=avc1.424028'] : ['video/mp4;codecs=avc1.424028', 'video/mp4'];
+  const mime = formats.find(type => MediaRecorder.isTypeSupported(type));
+  if (!mime) throw new Error('This browser cannot record MP4 video. Try current Chrome, Edge, or Safari.');
+  return mime;
+}
+function finishRecordingUI() {
+  clearInterval(drawTimer);
+  clearInterval(clockTimer);
+  recordingStream?.getTracks().forEach(track => track.stop());
+  recordingStream = null;
+  recordingSource = null;
+  for (const key of ['recBadge', 'nvRecordBadge', 'stopBtn']) show(key, false);
+  if ($('screenRecordState')) show('screenRecordState', false);
+  selectFeed(selectedFeed);
+}
+function startCapture(stream, source, mimeType, drawFrame) {
+  recordingStream = stream;
+  recordingSource = source;
+  const capture = new MediaRecorder(stream, {mimeType, ...(source === 'screen' ? {videoBitsPerSecond: 1500000} : {})});
+  recorder = capture;
+  const chunks = [];
+  let bytes = 0;
+  const startedAt = Date.now(), name = recordingFilename(source, startedAt);
+  capture.ondataavailable = event => {
+    if (!event.data.size) return;
+    chunks.push(event.data);
+    bytes += event.data.size;
+    if (source === 'screen' && bytes >= 480 * 1024 * 1024 && capture.state === 'recording') {
+      notify('Screen recording reached the local size limit. Saving captured video.');
+      stopRecording();
+    }
+  };
+  capture.onstop = () => {
+    const blob = new Blob(chunks, {type: capture.mimeType});
+    if (blob.size) { savedClip = null; pendingClip = {blob, name, source}; }
+    finishRecordingUI();
+    if (!blob.size) { notify('No video was captured. Try recording again.'); return; }
+    show('discardBtn', false);
+    if (!$('saveDialog').open) $('saveDialog').showModal();
+    saveClip();
+  };
+  capture.onerror = () => {
+    notify('Recording stopped unexpectedly. Saving any captured footage.');
+    stopRecording();
+  };
+  capture.start(1000);
+  if (drawFrame) drawTimer = setInterval(() => {
+    try { drawFrame(); } catch { stopRecording(); notify('Camera frames became unavailable. Saving captured footage.'); }
+  }, 33);
+  const updateClock = () => {
+    const seconds = Math.floor((Date.now() - startedAt) / 1000);
+    const elapsed = `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
+    if (source === 'screen') text('screenRecordState', `Screen recording · ${elapsed} · laptop only`);
+    else text('recordTime', elapsed);
+  };
+  updateClock();
+  clockTimer = setInterval(updateClock, 1000);
+  show(source === 'screen' ? 'screenRecordState' : source === 'nightvision' ? 'nvRecordBadge' : 'recBadge', true);
+  show('stopBtn', true);
+  selectFeed(selectedFeed);
+  if (source !== 'screen') toggleServerRecording('start');
+  return capture;
+}
+$('recordBtn').onclick = () => {
+  if (!recordable() || !canBeginRecording()) return;
   try {
-    if(!window.MediaRecorder)throw new Error('Recording is not supported in this browser. Try a current Chrome, Edge, or Safari browser.');
-    const mime=['video/mp4;codecs=avc1.424028','video/mp4'].find(type=>MediaRecorder.isTypeSupported(type));
-    if(!mime)throw new Error('This browser cannot record MP4 video. Open BIM-BOT in an updated Safari, Chrome, or Edge browser to record and download MP4 backups.');
-    const source=selectedFeed;recordingSource=source;
-    const canvas=$('recordCanvas'),image=$(source==='nightvision'?'nvStream':'camStream');canvas.width=image.naturalWidth||image.width||640;canvas.height=image.naturalHeight||image.height||480;const ctx=canvas.getContext('2d');ctx.drawImage(image,0,0,canvas.width,canvas.height);
-    recordingStream=canvas.captureStream(30);
-    recorder=new MediaRecorder(recordingStream,{mimeType:mime});const chunks=[];
-    recorder.ondataavailable=event=>{if(event.data.size)chunks.push(event.data);};
-    const startedAt=Date.now(),name=recordingFilename(source,startedAt);
-    recorder.onstop=()=>{const blob=new Blob(chunks,{type:recorder.mimeType});finishRecordingUI();if(!blob.size){notify('No video was captured. Reconnect the camera and retry.');return;}savedClip=null;pendingClip={blob,name,source};$('recordBtn').disabled=true;show('discardBtn',false);if(!$('saveDialog').open)$('saveDialog').showModal();saveClip();};
-    recorder.onerror=()=>{notify('Recording stopped unexpectedly. Any captured footage will be saved.');stopRecording();};
-    recorder.start(1000);recordingStarted=startedAt;text('recordTime','00:00');
-    drawTimer=setInterval(()=>{try{ctx.drawImage(image,0,0,canvas.width,canvas.height);}catch{stopRecording();notify('Camera frames became unavailable. Saving captured footage.');}},33);
-    clockTimer=setInterval(()=>{const seconds=Math.floor((Date.now()-recordingStarted)/1000);text('recordTime',`${Math.floor(seconds/60).toString().padStart(2,'0')}:${(seconds%60).toString().padStart(2,'0')}`);},1000);
-    show(source==='nightvision'?'nvRecordBadge':'recBadge',true);show('recordBtn',false);show('stopBtn',true);toggleServerRecording('start');updateNightLight();
-  }catch(error){finishRecordingUI();notify(error.message);}
+    const mime = recordingMimeType(), source = selectedFeed;
+    const canvas = $('recordCanvas'), image = $(source === 'nightvision' ? 'nvStream' : 'camStream');
+    canvas.width = image.naturalWidth || image.width || 640;
+    canvas.height = image.naturalHeight || image.height || 480;
+    const ctx = canvas.getContext('2d');
+    const drawFrame = () => ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+    drawFrame();
+    startCapture(canvas.captureStream(30), source, mime, drawFrame);
+  } catch (error) { finishRecordingUI(); notify(error.message); }
 };
-function stopRecording(){if(recorder?.state==='recording'){recorder.stop();toggleServerRecording('stop');updateNightLight();}}
-$('stopBtn').onclick=stopRecording;
+$('recordScreenBtn')?.addEventListener('click', async () => {
+  if (!canBeginRecording() || !navigator.mediaDevices?.getDisplayMedia) return;
+  choosingScreen = true;
+  const activeSession = session;
+  let stream;
+  try {
+    const mime = recordingMimeType(true);
+    selectFeed(selectedFeed);
+    stream = await navigator.mediaDevices.getDisplayMedia({video: {displaySurface: 'monitor', frameRate: {ideal: 15}}, audio: false});
+    if (session !== activeSession || endingSession) throw new Error('Sign in before starting screen capture.');
+    const [video] = stream.getVideoTracks();
+    if (!video || video.readyState !== 'live') throw new Error('Choose a screen to record.');
+    for (const track of stream.getAudioTracks()) {
+      stream.removeTrack(track);
+      track.stop();
+    }
+    const capture = startCapture(stream, 'screen', mime);
+    video.addEventListener('ended', () => { if (recorder === capture) stopRecording(); }, {once: true});
+  } catch (error) {
+    stream?.getTracks().forEach(track => track.stop());
+    if (recordingSource === 'screen') finishRecordingUI();
+    notify(error.name === 'NotAllowedError' ? 'Screen capture was cancelled or permission was denied.' : error.message);
+  } finally {
+    choosingScreen = false;
+    selectFeed(selectedFeed);
+  }
+});
+function stopRecording() {
+  if (recorder?.state !== 'recording') return;
+  recorder.stop();
+  if (recordingSource !== 'screen') toggleServerRecording('stop');
+  updateNightLight();
+}
+$('stopBtn').onclick = stopRecording;
 async function saveClip(){
   if(!pendingClip||uploading)return;uploading=true;$('closeSave').disabled=true;show('retryUpload',false);show('discardBtn',false);text('saveTitle','Saving to this laptop');text('uploadStatus','Keep this page open until the local save finishes. Internet is not required.');
   const form=new FormData();form.append('video',pendingClip.blob,pendingClip.name);form.append('filename',pendingClip.name);form.append('source',pendingClip.source);
@@ -688,13 +1002,20 @@ async function saveClip(){
     const data=await api('/api/local-recordings',{method:'POST',body:form,signal:AbortSignal.timeout(120000)});
     if(!data.success||!data.recording?.download_url)throw new Error('The laptop did not confirm the local save.');
     savedClip=data.recording;pendingClip=null;text('saveTitle','Recording saved on this laptop');
-    text('uploadStatus',savedClip.sync_state==='synced'?'Saved locally and in Supabase. The local copy is kept.':'Queued for Supabase. You can continue offline; uploads retry while the app runs and internet is available.');
+    text('uploadStatus', savedClip.sync_state === 'local_only' ? 'Screen capture is saved on this laptop.' : savedClip.sync_state === 'synced' ? 'Saved locally and in Supabase. The local copy is kept.' : 'Queued for Supabase. Uploads retry while the app runs and internet is available.');
     $('closeSave').disabled=false;loadRecordings();
   }
   catch(error){text('saveTitle','Local save needs attention');text('uploadStatus',`${error.message} This clip is still held in this page. Retry or download an MP4 backup before leaving.`);show('retryUpload',true);show('discardBtn',true);}
   finally{uploading=false;selectFeed(selectedFeed);}
 }
 $('retryUpload').onclick=saveClip;
+function downloadFile(blob, name) {
+  const url = URL.createObjectURL(blob), link = element('a');
+  link.href = url;
+  link.download = name;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 $('downloadBtn').onclick=async()=>{
   const button=$('downloadBtn');button.disabled=true;
   try{
@@ -705,7 +1026,7 @@ $('downloadBtn').onclick=async()=>{
       if(!response.ok)throw new Error('Could not download the saved local file. Refresh the local library or sign in again if your session ended.');
       blob=await response.blob();name=savedClip.name;
     }
-    if(!blob)return;const url=URL.createObjectURL(blob),a=element('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    if (blob) downloadFile(blob, name);
   }catch(error){text('uploadStatus',error.message);}finally{button.disabled=false;}
 };
 function closeSave(){pendingClip=null;savedClip=null;$('saveDialog').close();selectFeed(selectedFeed);if(!session)window.location.assign('/login?reason=expired');}
@@ -714,6 +1035,64 @@ $('saveDialog').addEventListener('cancel',event=>{if(uploading||$('closeSave').d
 window.addEventListener('beforeunload',event=>{if(recorder?.state==='recording'||pendingClip||uploading){event.preventDefault();event.returnValue='';}});
 $('logoutBtn').onclick=async()=>{if(recorder?.state==='recording'||pendingClip||uploading){notify('Finish recording and save or download your clip before signing out.');return;}if(laptopSound?.active)laptopSound.stop('Stopped for sign out.');nvLightPaused=true;await updateNightLight();const result=await client.auth.signOut();if(result.error){notify(result.error.message);nvLightPaused=false;updateNightLight();}};
 let missionCommandPending = false;
+const excavationStates = {
+  unassessed: {label:'Not assessed', severity:'info', guidance:'Wait for the rescue lead’s on-site assessment before excavating.'},
+  cleared: {label:'Clearance reported', severity:'info', guidance:'Verify the area and follow the scope given by the rescue lead.'},
+  hold: {label:'Hold excavation', severity:'warning', guidance:'Wait for further instructions from the rescue lead.'},
+  danger: {label:'Extreme danger · do not excavate', severity:'alert', guidance:'Notify the rescue lead and follow the site’s emergency procedures.'}
+};
+let excavationAssessment = null;
+function renderExcavationAssessment() {
+  const notice = $('excavationNotice');
+  if (!notice) return;
+  const visible = !!session && !endingSession;
+  const cameraView = ['main', 'nightvision'].includes(selectedFeed);
+  popup('excavationNotice', visible && excavationAssessment ? String(excavationAssessment.at) : '');
+  show('cameraExcavationStatus', visible && cameraView);
+  if (!visible) return;
+  const state = excavationStates[excavationAssessment?.decision || 'unassessed'];
+  const title = `Excavation · ${state.label}`;
+  const reported = excavationAssessment
+    ? `${excavationAssessment.area} · Rescue lead: ${excavationAssessment.lead} · Recorded ${dateTime(excavationAssessment.at)}. `
+    : '';
+  notice.dataset.severity = state.severity;
+  $('excavationNoticeTitle').setAttribute('role', state.severity === 'alert' ? 'alert' : 'status');
+  text('excavationNoticeTitle', title);
+  const cameraLabel = excavationAssessment ? `${title} · ${excavationAssessment.area}` : title;
+  text('cameraExcavationStatus', cameraLabel);
+  $('cameraExcavationStatus').title = cameraLabel;
+  text('excavationNoticeDetails', reported + state.guidance);
+  $('clearExcavationDecision').disabled = !excavationAssessment;
+}
+$('excavationAssessment')?.addEventListener('submit', event => {
+  event.preventDefault();
+  if (!session || endingSession) return;
+  const area = $('excavationArea').value.trim();
+  const lead = $('excavationLead').value.trim();
+  const decision = $('excavationDecision').value;
+  if (!area || !lead || !Object.hasOwn(excavationStates, decision) || decision === 'unassessed') {
+    text('excavationAssessmentFeedback', 'Enter the area, rescue lead, and reported decision.');
+    return;
+  }
+  excavationAssessment = {area, lead, decision, at: Date.now() / 1000};
+  renderExcavationAssessment();
+  text('excavationAssessmentFeedback', 'Decision recorded for this dashboard session.');
+});
+$('excavationArea')?.addEventListener('input', () => {
+  if (!excavationAssessment || $('excavationArea').value.trim() === excavationAssessment.area) return;
+  excavationAssessment = null;
+  $('excavationDecision').value = '';
+  renderExcavationAssessment();
+  text('excavationAssessmentFeedback', 'Area changed. Record the rescue lead’s decision for this area.');
+});
+$('clearExcavationDecision')?.addEventListener('click', () => {
+  excavationAssessment = null;
+  $('excavationDecision').value = '';
+  renderExcavationAssessment();
+  text('excavationAssessmentFeedback', 'Decision cleared.');
+});
+$('excavationAssessmentLink')?.addEventListener('click', () => { $('missionTools').open = true; });
+$('cameraExcavationStatus')?.addEventListener('click', () => { $('missionTools').open = true; });
 function fetchPosition() {
   if (positionFlight) return positionFlight;
   if (!session || endingSession || !$('positionState')) return Promise.resolve();
@@ -765,6 +1144,7 @@ async function fetchMission() {
   try {
     const data = await api('/api/mission'), mission = data.mission;
     text('missionState', mission ? mission.state.replaceAll('_', ' ') : 'Idle');
+    if ($('missionReportArea')) text('missionReportArea', mission?.area_label || 'Area unavailable');
     $('missionStart').disabled = missionCommandPending || !data.can_start;
     $('missionStop').disabled = missionCommandPending || !mission || !['searching','command_uncertain'].includes(mission.state);
     $('missionArea').disabled = !!mission && ['searching','command_uncertain'].includes(mission.state);
@@ -781,10 +1161,57 @@ async function missionCommand(action) {
 }
 $('missionStart').onclick = () => missionCommand('start');
 $('missionStop').onclick = () => missionCommand('stop');
-$('downloadReport').onclick = async () => {
-  try { const report = await api('/api/situational-report'); const url = URL.createObjectURL(new Blob([JSON.stringify(report,null,2)],{type:'application/json'})); const link = element('a'); link.href=url; link.download=`bimbot_report_${Date.now()}.json`; link.click(); setTimeout(()=>URL.revokeObjectURL(url),1000); }
-  catch(error) { notify(error.message); }
-};
+let reportSaveRequest, loadingReports = false, savingReport = false;
+async function loadMissionReports() {
+  if (loadingReports || !session || !$('savedMissionReports')) return;
+  loadingReports = true;
+  const signedIn = session;
+  try {
+    const data = await api('/api/mission-reports');
+    if (session !== signedIn || endingSession) return;
+    const list = $('savedMissionReports');
+    list.replaceChildren();
+    if (!data.reports.length) list.append(element('li', 'No reports saved yet.', 'empty-row'));
+    for (const report of data.reports) {
+      const row = element('li'), info = element('div', undefined, 'clip-info');
+      info.append(element('strong', `Report saved ${dateTime(report.created_at)}`), element('small', report.message));
+      const link = element('a', 'Download JSON');
+      link.href = report.download_url;
+      link.download = report.name;
+      link.addEventListener('click', async event => {
+        event.preventDefault();
+        try {
+          const response = await fetch(report.download_url, {credentials:'same-origin', headers:cameraHeaders(),
+            cache:'no-store', signal:AbortSignal.timeout(4000)});
+          if (!response.ok) throw new Error('Could not download this report. Check your local session.');
+          downloadFile(await response.blob(), report.name);
+        } catch (error) { text('missionReportStatus', error.message); }
+      });
+      row.append(info, link);
+      list.append(row);
+    }
+  } catch (error) {
+    if (session === signedIn) $('savedMissionReports').replaceChildren(element('li', error.message, 'empty-row'));
+  } finally { loadingReports = false; }
+}
+$('saveMissionReport')?.addEventListener('click', async () => {
+  if (!session || savingReport) return;
+  const button = $('saveMissionReport');
+  savingReport = button.disabled = true;
+  reportSaveRequest ??= {
+    save_id: crypto.randomUUID().replaceAll('-', ''),
+    excavation_assessment: excavationAssessment ? {...excavationAssessment} : null
+  };
+  try {
+    const {report} = await api('/api/mission-reports', {method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(reportSaveRequest)});
+    reportSaveRequest = null;
+    text('missionReportStatus', report.message);
+    await loadMissionReports();
+  } catch (error) { text('missionReportStatus', `${error.message} Use Save Report again to retry this report.`); }
+  finally { savingReport = button.disabled = false; }
+});
+$('missionTools')?.addEventListener('toggle', () => { if ($('missionTools').open) loadMissionReports(); });
 let eventSignature = '';
 async function fetchSurvivorEvents() {
   try {
@@ -832,7 +1259,7 @@ function openGuidedTarget(){
   const view=new URLSearchParams(location.search).get('view');
   if(['main','nightvision','thermal','sound'].includes(view)&&view!==selectedFeed)selectFeed(view,false);
   let target='';try{target=decodeURIComponent(location.hash.slice(1));}catch{return;}
-  if(['survivorDetails','nightSurvivorDetails','communication','recordings','monitor'].includes(target)){
+  if(['survivorDetails','nightSurvivorDetails','excavationAssessment','communication','recordings','monitor'].includes(target)){
     const node=$(target);if(!node)return;const tools=node.closest('details');if(tools)tools.open=true;
     requestAnimationFrame(()=>node.scrollIntoView({block:'start'}));
   }
@@ -848,4 +1275,4 @@ function poll(fn,interval){
   setTimeout(run,typeof interval==='function'?interval():interval);
 }
 client.auth.onAuthStateChange((event,newSession)=>{session=newSession;if(!session)sessionEnded(event==='SIGNED_OUT'?'logout':'expired');});
-(async()=>{try{const result=await client.auth.getSession();session=result.data.session;if(!session){window.location.assign(result.error?'/login?reason=expired':'/login');return;}text('accountEmail',session.user.email||'Signed in');poll(fetchThermal,()=>selectedFeed==='thermal'?(monitoringProfile.thermal_view_poll_ms??1000):(monitoringProfile.thermal_summary_poll_ms??2000));Promise.allSettled([refreshAll(),loadRecordings()]);poll(fetchSensors,2000);poll(fetchDetections,1000);poll(fetchDevices,monitoringProfile.device_poll_ms??3000);poll(fetchHistory,10000);poll(fetchMission,2000);poll(fetchPosition,2000);poll(()=>movementPanel?.load(),1000);poll(fetchSurvivorEvents,10000);poll(loadRecordings,15000);setInterval(()=>{if(lastSoundAt&&Date.now()/1000-lastSoundAt>=10){soundUnavailable('Sound readings stale');remoteSoundAvailability='Waiting';updateSoundAvailability();text('soundStatus','Waiting for fresh sound readings');}if(lastSensorAt&&Date.now()/1000-lastSensorAt>10)sensorUnavailable(`Last reading: ${dateTime(lastSensorAt)}. Waiting for fresh data.`,'Stale');if(lastDetectionAt&&Date.now()/1000-lastDetectionAt>=2){renderSurvivors([],false);text('survivorCount','—');text('survivorConf','—');text('detectionState','Stale');text('survivorHint','Detection updates stopped. Check the camera connection.');$('survivorCard').classList.remove('is-alert');}},1000);}catch{notify('Could not initialize the dashboard. Reload the page to retry.');}})();
+(async()=>{try{const result=await client.auth.getSession();session=result.data.session;if(!session){window.location.assign(result.error?'/login?reason=expired':'/login');return;}text('accountEmail',session.user.email||'Signed in');renderExcavationAssessment();poll(fetchThermal,()=>selectedFeed==='thermal'?(monitoringProfile.thermal_view_poll_ms??1000):(monitoringProfile.thermal_summary_poll_ms??2000));Promise.allSettled([refreshAll(),loadRecordings()]);poll(fetchSensors,2000);poll(fetchDetections,1000);poll(fetchDevices,monitoringProfile.device_poll_ms??3000);poll(fetchHistory,10000);poll(fetchMission,2000);poll(()=>{if($('missionTools')?.open)loadMissionReports();},15000);poll(fetchPosition,2000);poll(()=>movementPanel?.load(),1000);poll(fetchSurvivorEvents,10000);poll(loadRecordings,15000);setInterval(()=>{if(lastSoundAt&&Date.now()/1000-lastSoundAt>=10){soundUnavailable('Sound readings stale');remoteSoundAvailability='Waiting';updateSoundAvailability();text('soundStatus','Waiting for fresh sound readings');}if(lastSensorAt&&Date.now()/1000-lastSensorAt>10)sensorUnavailable(`Last reading: ${dateTime(lastSensorAt)}. Waiting for fresh data.`,'Stale');if(lastDetectionAt&&Date.now()/1000-lastDetectionAt>=2){renderSurvivors([],false);text('survivorCount','—');text('survivorConf','—');text('detectionState','Stale');text('survivorHint','Detection updates stopped. Check the camera connection.');$('survivorCard').classList.remove('is-alert');}},1000);}catch{notify('Could not initialize the dashboard. Reload the page to retry.');}})();

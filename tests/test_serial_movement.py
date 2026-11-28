@@ -15,12 +15,12 @@ class SerialMovementTests(unittest.TestCase):
         self.now=100.0
         self.bridge=SerialMovementBridge(self.port,allow_return=True,clock=lambda:self.now)
 
-    def snapshot(self, *, full=True,count=2,state='S',complete=1,ready=1,command='-',counter=1,parts=None):
+    def snapshot(self, *, full=True,count=2,state='S',complete=1,ready=1,command='-',counter=1,parts=None,current='S'):
         self.bridge.pending=None;self.bridge.last_sent=-100;self.bridge.want_full=full
         self.bridge.query(force=True)
         nonce=self.bridge.pending['nonce']
         self.now+=.1
-        self.bridge.feed(f'M {nonce} {counter} {state} S 0 {count} 0 {complete} {ready} 0')
+        self.bridge.feed(f'M {nonce} {counter} {state} {current} 0 {count} 0 {complete} {ready} 0')
         self.bridge.feed(f'C {nonce} {command}')
         if full:
             for i,direction,duration in (parts if parts is not None else [(0,'F',1200),(1,'L',450)]):
@@ -28,6 +28,40 @@ class SerialMovementTests(unittest.TestCase):
         self.now+=.1
         self.bridge.feed(f'E {nonce}')
         return nonce
+
+    def test_observation_slowdown_requires_gate_fresh_forward_motion_and_matching_trace(self):
+        self.snapshot()
+        trace_id = self.bridge.snapshot()['trace_id']
+        command_id = 'b' * 32
+        self.port.write.reset_mock()
+        with self.assertRaisesRegex(BridgeError, 'disabled'):
+            self.bridge.command('observation_slowdown', command_id, trace_id, count=2)
+        self.port.write.assert_not_called()
+        self.bridge.allow_observation = True
+        with self.assertRaisesRegex(BridgeError, '1 to 4'):
+            self.bridge.command('observation_slowdown', command_id, trace_id, count=5)
+        self.now += 2
+        with self.assertRaisesRegex(BridgeError, 'fresh controller'):
+            self.bridge.command('observation_slowdown', command_id, trace_id, count=2)
+        self.port.write.assert_not_called()
+        self.snapshot()
+        with self.assertRaisesRegex(BridgeError, 'current forward motion'):
+            self.bridge.command('observation_slowdown', command_id, trace_id, count=2)
+        with self.assertRaisesRegex(BridgeError, 'Unsupported'):
+            self.bridge.command('observation_hold', command_id, trace_id, count=2)
+        self.snapshot(state='C', current='F', ready=0)
+
+        def echo_ack(raw):
+            verb, identifier, counter, nonce, count = raw.decode().strip().split()
+            self.assertEqual((verb, identifier, counter, count), ('SLOW', command_id, '1', '2'))
+            self.bridge.feed(f'A L {identifier} {nonce} C 1 {counter}')
+            return len(raw)
+
+        self.port.write.side_effect = echo_ack
+        result = self.bridge.command('observation_slowdown', command_id, trace_id, count=2)
+        self.assertTrue(result['acknowledged'])
+        self.assertEqual(result['trace_id'], trace_id)
+        self.assertEqual(result['state'], 'recording')
 
     def test_construction_opens_nothing_and_queries_never_move_motors(self):
         self.port.write.assert_not_called()

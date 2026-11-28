@@ -1,86 +1,53 @@
 # GY-MCU90640 thermal sensor beside the main camera
 
-Latest October29 restoration: Main/DHT andNightnowoperator-confirmedonrobotpower;
-Nightfirmwareretry/2,fresh/2,target8,thermalenabled/refresh3 retained. Restorethe
-previous4sensorleadswhilemasterOFF/USBabsent, preservingcamera5V/GNDpowerpair and
-originalPS→P5GND route. Exactcurrentmap andstageconstraints are recorded in
-[restoration evidence](verification/thermal_restore_ready_2026-10-29.json).
-DashboardPID17585/5050 now polls the alreadyidentifiedNight.2/thermal at1Hz; only
-validatedfreshdata canpopulate theview. Actualthermalframes remainPENDING. Use
-productioncachedsequence/freshnesshistory forinitialverification; do not run a
-secondpoller or secondvideo reader simultaneously. Earlierstandalone-first steps
-below describe prior workflows. No newfirmwareupload needed for thisrestore.
+## Check the running system
 
-Updated 2026-10-24, Asia/Manila.
+Use the combined [spare-camera sketch](../firmware/nightvision_camera/) for
+thermal readings. The October 30 capture recorded advancing thermal frames
+and fresh DHT readings during a short robot-network window. The operator
+reported on November 16 that the cameras and sensors worked on the intended
+robot supply without laptop USB power. Both duration and temperature accuracy
+still need separate tests. [October 30 verification](verification/thermal_restoration_result_2026-10-30.json)
 
-## Current status and resuming the live check
+The documented installed configuration used these connections. Check the
+printed labels against the actual robot before touching any wires.
 
-The October22 diagnostic did receive two real, advancing 24x32 thermal frames
-from the identified spare at last-known `192.168.4.2`: sequences1461/1464,
-ages157/774ms, scene ranges26.18–27.67C and26.22–27.67C. Installed spare firmware
-reported thermal enabled/fresh/ready and camera ready. Dashboard integration
-stopped at `production_telemetry_not_fresh`, with configuration unsaved and no
-decoded Night JPEG verified. This brief result does not establish sustained
-operation or temperature accuracy. See the [current project memory](../../Project%20Memory/README.md).
+| Source | Thermal module pin |
+| --- | --- |
+| Spare 3V3 | VIN |
+| Spare free labelled GND | GND |
+| Spare GPIO14 (yellow) | SDA |
+| Spare GPIO13 (blue) | SCL |
+| P5 GND, common with module ground | PS |
 
-The confirmed wiring is spare3V3→thermalVIN, spare free labelledGND→thermalGND,
-yellow thermalSDA→spareIO14, blue thermalSCL→spareIO13, and P5GND→thermalPS.
-The white P9GND→spareGND-beside5V jumper is the spare power ground.
-Do not change these connections or repeat the older firmware-OFF procedure
-solely to resume software testing. If wiring changed, resolve that before power.
+The recorded spare power pair runs from P9 to the spare 5V and adjacent GND.
+The PS lead is separate. Keep the original DHT wiring in place. The spare
+thermal pins GPIO14/13, camera SCCB pins GPIO26/27, and white LED GPIO4 are
+distinct. Main's DHT GPIO13 is on its own board.
 
-For the current debugging session, use the local-only check page at
-`http://localhost:5053`. Keep it open, join `ESP32_CAM`, then press **Check
-thermal and Night** when the page detects a robot-network address. Wait for
-**Done** before returning to home Wi-Fi. It runs locally without an internet
-connection or a pre-armed countdown, shows filtered results, and saves only
-independently verified public endpoints. The session launcher is
-`/private/tmp/bimbot-thermal-local-page.py`; the diagnostic runner is
-`/private/tmp/bimbot-direct-debug.py`. It pauses only the dashboard launched
-for this session after identifying the spare, so a direct Night JPEG check
-has no competing app reader, then restores that dashboard. Original firmware,
-wiring and motor controls are untouched. This temporary page is a diagnostic
-tool; its availability is independent of the dashboard on port5050.
-
-The firmware pin audit finds no conflict: spare thermal GPIO14/13, camera
-SCCB26/27 and flash4 are distinct; the original DHT's GPIO13 is on a separate
-board. The Oct22 frames support the mapping, but current connector contact,
-power and network state still require live evidence. An unconfigured thermal
-endpoint is an application setting, not a sensor pin diagnostic.
-
-For the command-line fallback:
-
-1. Confirm the wiring above is still intact. Keep the spare USB/base unplugged,
-   boards secured on an insulating support, and motors stopped.
-2. Start the integrated SAR dashboard on port5050 with its normal private
-   configuration. Sign in with Google while the Mac still has home internet;
-   the existing local session then supports robot-only Wi-Fi.
-3. Arm the checker before switching networks. From the integrated SAR checkout,
-   use the existing Python environment to run:
+1. Start Flask and sign in with Google while online. Join `ESP32_CAM` and open
+   the dashboard's **Thermal** tab. Use the existing firmware and wiring.
+2. Check freshness and confirm the grid responds to an ordinary warm target.
+   Keep the scene range separate from ambient DHT readings. Use the
+   [guided test page](http://localhost:5050/testing#sensors) to check all sources
+   and save a connection snapshot if needed.
+3. If a direct diagnostic is needed on macOS, stop any competing reader and
+   run the bundled checker from the project folder:
 
    ```sh
    python scripts/check_thermal_sensor.py --wait-network 180
    ```
 
-4. Power the unchanged robot normally and connect the Mac to `ESP32_CAM`.
-   The checker skips the laptop and original AP, identifies matching spare
-   firmware, and compares direct frames with the actual `Telemetry` class.
-   It changes no Wi-Fi, firmware, light, motor or application setting.
-5. Read the filtered result in `local_data/thermal_check.json`. `verified`
-   requires two fresh advancing real frames and a fresh production poll.
-   `configured:false` means this diagnostic has not saved the URL or verified
-   the authenticated dashboard. After a pass, save the verified endpoint as
-   `THERMAL_DATA_URL`, restart the owned dashboard, and check its Thermal tab.
-   Night video and sustained combined operation require separate verification.
+   Connect to `ESP32_CAM` within the wait window. Results are saved in
+   `local_data/thermal_check.json`. The checker requires two advancing fresh
+   frames and a fresh result through the normal telemetry class. It leaves
+   app settings unchanged. After identifying the endpoint, set
+   `THERMAL_DATA_URL=http://ACTUAL_SPARE_IP/thermal` if needed, restart Flask,
+   and check the authenticated Thermal tab.
 
-The checker reports only static error categories and numeric HTTP status codes;
-it does not print response bodies, exception messages or credentials. Return
-to home Wi-Fi to report the result if robot Wi-Fi has no internet. Stop and
-power off if the robot repeatedly resets or becomes unusually hot.
-
-The remaining sections retain historical setup notes. Their proposed wiring,
-thermal-OFF and unverified-reading statements describe earlier stages and are
-superseded by the current status above and the project memory.
+The dated wiring alternatives farther down record earlier bench trials.
+Use the verified connections above for the existing setup and disconnect all
+power before any wiring change.
 
 ## Identified hardware
 
@@ -109,9 +76,9 @@ Sources:
 - [Melexis MLX90640 product specification](https://www.melexis.com/en/product/MLX90640/far-infrared-thermal-sensor-array)
 - [Espressif Ai-Thinker camera pin map](https://github.com/espressif/arduino-esp32/blob/master/libraries/ESP32/examples/Camera/CameraWebServer/camera_pins.h)
 
-## Recommended next path: spare reads thermal, laptop combines sources
+## Earlier power and wiring checks
 
-### Current ordinary-jumper option, October 21
+### Ordinary-jumper option tested in stages, October 21
 
 The operator now confirms the spare is on its USB base and has ordinary jumper
 wires only, with no breadboard or ground splitter. The base occupies camera pins;
@@ -244,7 +211,7 @@ VDD is 3.3 V or that the spare regulator has current headroom. Check those
 remaining supply/pull-up conditions before adding SDA14/SCL13 or the PS mode
 connection. Keep `BIMBOT_THERMAL_ENABLED` at 0 during this power-only test.
 
-## Latest staged thermal-enabled upload, October21
+## Historical staged thermal-enabled upload, October 21
 
 The operator confirms the isolated spare on its USB base with robot power and
 all four thermal leads removed. Fresh USB discovery identifies the sole CH340
@@ -266,19 +233,14 @@ power testing. USB/base removal precedes restoring the same previous P9 pair.
 Last-known spare `.2` has not been verified in this run, and THERMAL_DATA_URL
 has not yet been configured from a working sensor endpoint.
 
-## Combined spare firmware and upload status
+## Combined spare firmware settings
 
 `firmware/nightvision_camera/nightvision_camera.ino` now includes thermal
 acquisition alongside stream port 81, control port 80 and GPIO4 light leases.
 It has been compiled for `esp32:esp32:esp32cam` with Arduino-ESP32 3.3.12 in both
-thermal-enabled and disabled modes using placeholder Wi-Fi settings. On
-2026-10-19 the operator then identified the USB-connected spare and requested
-upload: the canonical sketch compiled with existing local Wi-Fi settings kept
-private and was **uploaded with verification, thermal disabled**, to the only
-detected USB serial device `/dev/cu.usbserial-110`. Both commands exited 0.
-Filtered startup confirmed thermal disabled and Wi-Fi retries (reasons 201/36),
-with no new address within 35 seconds. Actual thermal acquisition remains
-untested; the enabled branch has only software/compile verification.
+thermal-enabled and disabled modes using placeholder Wi-Fi settings. The
+October 29 installed spare build enabled thermal with refresh code 3. Use
+the installed build for routine checks. [Upload record](verification/night_fresh2_upload_2026-10-29.json)
 
 Thermal acquisition is OFF by default in `firmware/nightvision_camera/thermal_config.h`:
 
@@ -288,14 +250,8 @@ Thermal acquisition is OFF by default in `firmware/nightvision_camera/thermal_co
 
 Change 0 to 1 only after confirming the spare board, unused/empty microSD slot,
 SDA14/SCL13, matching GY carrier mode and suitable power/pull-up levels. This
-switch is public nonsecret configuration. Do not change or display private Wi-Fi
-values. The operator reconfirmed on 2026-10-19 that the spare remains USB-powered
-because the robot-side output was then unmeasured; that does not confirm thermal
-wiring, thermal supply verification or the microSD condition.
-
-In the next reply, the operator confirmed microSD is unused and thermal
-connection/supply checks are still undone, tentatively planned for 2026-10-20.
-Keep `BIMBOT_THERMAL_ENABLED` at 0 until those remaining checks are complete.
+setting controls a new build. Keep private Wi-Fi settings in the ignored
+`wifi_secrets.h` header.
 
 The combined sketch bundles a pinned official Melexis calculation library under
 `src/mlx90640` and a bounded transport in `thermal_sensor.cpp`; it does not require
@@ -315,7 +271,7 @@ Failures invalidate the cache and retry initialization without waiting in camera
 light-lease or HTTP handlers. If spare power or streaming headroom is inadequate,
 a dedicated ESP32 sensor bridge is the fallback.
 
-### First live test after physical checks
+### First live test after a new spare firmware installation
 
 1. With power off, verify the label-to-label connections above. Keep the original
    camera/DHT wiring intact. Use the spare's existing USB power and keep the
@@ -326,9 +282,9 @@ a dedicated ESP32 sensor bridge is the fallback.
 3. At 115200 baud, look for `MLX90640 initialized` followed by `Thermal frame` with
    a 24x32 scene range. `Thermal acquisition disabled` means the switch is still
    off; `Thermal sensor unavailable` means no valid sensor initialization.
-4. Use the freshly printed IP on the laptop's robot network. Last-known example:
-   `http://192.168.4.3/status` and `http://192.168.4.3/thermal` (latest serial
-   address on 2026-10-19; DHCP can change it). The status object
+4. Use the freshly printed IP on the laptop's robot network. Open
+   `http://ACTUAL_SPARE_IP/status` and `http://ACTUAL_SPARE_IP/thermal`.
+   The status object
    reports `thermal.enabled`, `fresh` and `state`. `/thermal` returns HTTP 200
    only for a complete frame younger than 5000 ms, with `frame_age_ms`, `sequence`
    and `grid`; otherwise it returns HTTP 503 with no grid. Responses are not cached.

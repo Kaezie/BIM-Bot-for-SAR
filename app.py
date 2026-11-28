@@ -1,3 +1,4 @@
+import json
 import os
 import sqlite3
 import math
@@ -20,6 +21,8 @@ from features.missions import Missions
 from features.routes import register as register_feature_routes
 from features.nightvision import NightVision
 from features.person_analysis import PersonAnalysis, draw_people
+from features.detection_alerts import DetectionAlerts, DetectionSlowdown
+from features.heat_alerts import HEAT_ALERTS, classify_heat_band
 from features.live_camera import LiveCamera
 from features.person_tracking import PersonTracker, match_boxes, valid_box, usable_keypoints, person_region_motion
 from features.survivor_observations import SurvivorObservations
@@ -29,15 +32,13 @@ from features.robot_connection import SpareDiscovery
 from features.monitoring_profile import PROFILE as MONITORING_PROFILE
 from features.nightvision_illumination import NightVisionIllumination
 from features.offline_auth import OfflineSessions, same_origin_request, is_google_user, COOKIE_NAME
-from features.local_recordings import LocalRecordings
+from features.local_recordings import LocalRecordings, mission_report_text
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # Small JPEG/blur operations should not each start a second CPU thread pool
 # alongside both cameras' person/pose models.
 cv2.setNumThreads(1)
 
-# Load a .env file if python-dotenv is installed and one exists (optional —
-# you can also just export these as real environment variables).
 try:
     from dotenv import load_dotenv
     load_dotenv(os.path.join(BASE_DIR, '.env'))
@@ -71,20 +72,14 @@ def count_camera_responses(response):
 def recording_too_large(_error):
     return jsonify({'error': 'This request exceeds the 512 MB recording limit. Download the MP4 backup and record a shorter clip.'}), 413
 
-# =========================================================
-#  SUPABASE CONFIG
-#  See docs/SUPABASE_SETUP.md for where each of these comes from.
-# =========================================================
-
+# See docs/SUPABASE_SETUP.md for configuration.
 SUPABASE_URL = os.environ['SUPABASE_URL']
 SUPABASE_ANON_KEY = os.environ['SUPABASE_ANON_KEY']
 SUPABASE_SERVICE_ROLE_KEY = os.environ['SUPABASE_SERVICE_ROLE_KEY']
 SUPABASE_STORAGE_BUCKET = os.environ.get('SUPABASE_STORAGE_BUCKET', 'recordings')
 
-# Used to verify whatever access token the browser sends us on each request.
 supabase_auth_client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
-# Used server-side only, to read/write Storage regardless of the per-user
-# session — this key must never be sent to the browser.
+# Keep the Storage service-role key on the server.
 supabase_admin_client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 # SAR models and streams. The original processing functions below are authoritative.
@@ -191,6 +186,7 @@ def wifi_sensor_listener():
                     "temperature":    round(temp, 2),
                     "humidity":       round(hum, 2),
                     "heat_index":     round(hi, 2),
+                    "heat_band":      classify_heat_band(hi, risk_label),
                     "risk_level":     risk_label,
                     "risk_score":     risk_score,
                     "confidence":     round(confidence, 3),
@@ -290,7 +286,6 @@ def classify_survivor(box, frame_shape, keypoints, is_moving,
     pose          = classify_pose(keypoints) if keypoints is not None else "unknown"
     # Missing temporal evidence is not observed immobility. The existing
     # condition rules remain unvalidated estimates when motion is available.
-    consciousness = "Unknown" if is_moving is None else "Conscious" if is_moving else "Unconscious/Unresponsive"
     injury = "Unknown" if is_moving is None else classify_injury(keypoints, is_moving, pose, person_id, stationary_state)
 
     if is_moving is None:
@@ -311,7 +306,7 @@ def classify_survivor(box, frame_shape, keypoints, is_moving,
 
     return {
         "age":            age,
-        "consciousness":  consciousness,
+        "consciousness":  "Unknown",
         "injury":         injury,
         "trapped":        trapped,
         "pose":           pose,
@@ -359,6 +354,12 @@ def analyze_thermal(thermal_frame, detection_box):
 
 # ── CAMERA + YOLO ──
 main_analysis = PersonAnalysis(cv2, classify_survivor, 'main')
+detection_alerts = DetectionAlerts()
+
+
+def observe_main_light(frame, received_at):
+    # Sample raw video before overlays, independently of person inference.
+    detection_alerts.observe_light(received_at, frame[::8, ::8].mean() < 40)
 
 
 def analyze_main_frame(frame):
@@ -366,14 +367,27 @@ def analyze_main_frame(frame):
                                  thermal_frame=get_thermal_frame(), thermal_analyzer=analyze_thermal)
 
 
+def sensor_reading_is_fresh(reading, error_code):
+    updated_at = reading.get('updated_at')
+    return bool(updated_at and 0 <= time.time() - updated_at < 10 and
+                error_code in (None, 'timeout', 'transport_error'))
+
+
+def current_overlay_heat_risk():
+    reading = latest_sensor_data
+    return reading.get('heat_band') if sensor_reading_is_fresh(reading, sensor_health['error_code']) else None
+
+
 def render_main_frame(frame, detections, age):
-    return draw_people(cv2, frame, detections, age)
+    return draw_people(cv2, frame, detections, age, current_overlay_heat_risk())
 
 
 def clear_main_result():
     global latest_detections, last_detection_at
     latest_detections, last_detection_at = [], None
     main_analysis.reset()
+    # Model failures clear detections, but may leave the live video available.
+    detection_alerts.source_lost(clear_light=main_camera.updated_at is None)
 
 
 def accept_main_result(detections, received_at):
@@ -384,13 +398,14 @@ def accept_main_result(detections, received_at):
 
 main_camera = LiveCamera(CAMERA_URL, camera_http, cv2, np,
                          analyze=analyze_main_frame, render=render_main_frame,
-                         on_result=accept_main_result, on_clear=clear_main_result)
+                         on_result=accept_main_result, on_clear=clear_main_result,
+                         observe_frame=observe_main_light)
 nightvision = NightVision(
     NIGHTVISION_CAMERA_URL, nightvision_http, cv2, np,
     lambda: YOLO(os.path.join(BASE_DIR, os.environ.get('YOLO_MODEL_PATH', 'best.pt'))),
     detection=os.environ.get('NIGHTVISION_DETECTION_ENABLED', 'true').lower() == 'true',
     pose_factory=lambda: YOLO(os.path.join(BASE_DIR, os.environ.get('POSE_MODEL_PATH', 'yolo11s-pose.pt'))),
-    classifier=classify_survivor)
+    classifier=classify_survivor, heat_risk=current_overlay_heat_risk)
 
 
 def apply_spare_address(host, camera_enabled, thermal_enabled):
@@ -412,7 +427,6 @@ def generate_frames():
 HISTORY_DB = os.environ.get('HISTORY_DB', os.path.join(BASE_DIR, 'mission_history.sqlite3'))
 history_lock = threading.Lock()
 previous_risk = None
-previous_detection_count = 0
 
 
 @contextmanager
@@ -444,16 +458,17 @@ from features.movement import MovementControl
 movement = MovementControl(missions, telemetry, requests,
                            os.environ.get('MOVEMENT_COMMAND_URL', ''), os.environ.get('ROBOT_COMMAND_KEY', ''))
 missions.external_motion_busy = lambda: movement.busy
+observation_http = requests.Session()
+observation_http.trust_env = False
+detection_slowdown = DetectionSlowdown(
+    os.environ.get('DETECTION_SLOWDOWN_URL', os.environ.get('DETECTION_PAUSE_URL', ''))
+    if os.environ.get('DETECTION_SLOWDOWN_ENABLED', os.environ.get('DETECTION_PAUSE_ENABLED')) == 'true' else '',
+    os.environ.get('ROBOT_COMMAND_KEY', ''), observation_http, detection_alerts,
+)
 
 
-# =========================================================
-#  AUTH — Google-verified local sessions and existing Supabase access tokens
-#
-#  Google sign-in is verified online before this laptop receives an opaque,
-#  bounded local session. Local camera/API access then works without internet.
-#  Only session-token hashes are stored on disk, never Supabase refresh tokens.
-# =========================================================
-
+# Verify Google sign-in online before issuing a time-limited local session for offline use.
+# Store only local session token hashes on disk.
 LOCAL_DATA_DIR = os.environ.get('LOCAL_DATA_DIR') or os.path.join(BASE_DIR, 'local_data')
 offline_sessions = OfflineSessions(LOCAL_DATA_DIR)
 
@@ -461,17 +476,20 @@ offline_sessions = OfflineSessions(LOCAL_DATA_DIR)
 def upload_local_recording(owner_id, filename, path):
     # The queue supplies the verified owner and one immutable, unique filename.
     # Retrying that same path is idempotent. The local source is always retained.
+    bucket = supabase_admin_client.storage.from_(SUPABASE_STORAGE_BUCKET)
+    if path.suffix == '.json':
+        report = json.loads(path.read_bytes())
+        key = f'{owner_id}/reports/{filename.removesuffix(".json")}.txt'
+        bucket.upload(key, mission_report_text(report).encode('utf-8'),
+                      {'content-type': 'text/plain', 'upsert': 'true'})
+        return
     with open(path, 'rb') as recording:
-        supabase_admin_client.storage.from_(SUPABASE_STORAGE_BUCKET).upload(
-            f'{owner_id}/{filename}', recording,
-            {'content-type': 'video/mp4', 'upsert': 'true'},
-        )
+        bucket.upload(f'{owner_id}/{filename}', recording, {'content-type': 'video/mp4', 'upsert': 'true'})
 
 
 local_recordings = LocalRecordings(LOCAL_DATA_DIR, upload_local_recording)
 
-# Small cache so we're not hitting Supabase's Auth API on every single
-# 1-second poll from every employee's dashboard.
+# Cache token checks to limit Auth API calls during dashboard polling.
 _token_cache = {}
 TOKEN_CACHE_TTL_SECONDS = 30
 
@@ -535,12 +553,6 @@ sound_classifier = SoundClassifier(os.path.join(BASE_DIR, 'local_data', 'models'
 sound_classifier.register(app, require_auth)
 
 
-# =========================================================
-#  PAGES
-#  Pages render locally and use the server-verified device session before any
-#  cloud authentication call. API routes remain protected in both modes.
-# =========================================================
-
 @app.route('/login')
 def login_page():
     return render_template(
@@ -561,6 +573,7 @@ def dashboard():
         'dashboard.html',
         supabase_url=SUPABASE_URL,
         supabase_anon_key=SUPABASE_ANON_KEY,
+        night_light_auto_on=True,
     )
 
 
@@ -568,10 +581,6 @@ def dashboard():
 def testing_guide():
     return render_template('testing.html', supabase_url=SUPABASE_URL, supabase_anon_key=SUPABASE_ANON_KEY)
 
-
-# =========================================================
-#  RECORDINGS → SUPABASE STORAGE
-# =========================================================
 
 @app.route('/api/upload-to-storage', methods=['POST'])
 @require_auth
@@ -583,7 +592,6 @@ def upload_to_storage():
     filename = request.form.get('filename') or f'bimbot_{uuid4().hex}.webm'
     if '/' in filename or '\\' in filename or not filename.endswith(('.webm', '.mp4')):
         return jsonify({'error': 'Invalid recording filename.'}), 400
-    # One folder per employee inside the bucket, named by their Supabase user id.
     storage_path = f"{g.user.id}/{filename}"
 
     try:
@@ -593,8 +601,7 @@ def upload_to_storage():
             file_bytes,
             {"content-type": video_file.mimetype or "video/webm", "upsert": "true"},
         )
-        # Bucket is private, so hand back a time-limited link rather than a
-        # public URL. 7 days is plenty to review/download a recording.
+        # Private recordings use a signed link valid for seven days.
         signed = supabase_admin_client.storage.from_(SUPABASE_STORAGE_BUCKET).create_signed_url(
             storage_path, 60 * 60 * 24 * 7
         )
@@ -659,15 +666,19 @@ def publish_sensor_reading():
 
 
 def publish_survivor_reading(captured_at=None, detections=None):
-    global last_detection_at, previous_detection_count
+    global last_detection_at
     if captured_at is None:
         last_detection_at = time.time()
     evidence = latest_detections if detections is None else detections
     missions.observe(evidence, latest_sensor_data)
-    count = len(evidence)
-    if count > 0 and count != previous_detection_count:
-        add_alert('detection', f'{count} possible survivor(s) detected. Verify in the camera feed.')
-    previous_detection_count = count
+    if captured_at is not None and captured_at != last_detection_at:
+        return  # the camera changed or cleared while this result was being published
+    alert = detection_alerts.observe(evidence, time.time() if captured_at is None else captured_at)
+    if alert:
+        n = alert['count']
+        label = 'person' if n == 1 else 'people'
+        cue = ' '.join(alert['cues']) or 'Verify in the Main camera feed.'
+        add_alert('detection', f'{n} possible {label} detected on Main camera. {cue}')
 
 
 def authorized_camera_frames(frames):
@@ -743,6 +754,10 @@ def camera_frame(source):
         response = Response(status=204)
     else:
         _capture_on_camera_request()
+        stream_id = request.headers.get('X-Camera-Stream-Id')
+        if stream_id is not None and stream_id != camera.stream_id:
+            # A restarted service has new counters, which can match the old cursor.
+            cursor = [-1, -1]
         snapshot = camera.snapshot(viewer, sequence=cursor[0], generation=cursor[1])
         if getattr(g.user, 'local', False):
             # Recheck after the wait, just as open MJPEG streams check their
@@ -756,6 +771,7 @@ def camera_frame(source):
         state = snapshot['state']
         if state == 'frame':
             response = Response(snapshot['jpeg'], mimetype='image/jpeg')
+            response.headers['X-Camera-Stream-Id'] = camera.stream_id
             response.headers['X-Camera-Sequence'] = str(snapshot['sequence'])
             response.headers['X-Camera-Generation'] = str(snapshot['generation'])
             response.headers['X-Camera-Received-At'] = f"{snapshot['received_at']:.6f}"
@@ -800,11 +816,12 @@ def survivors():
 @app.route('/api/sensor-data')
 @require_auth
 def sensor_data():
-    retrying = sensor_health['error_code'] in ('timeout', 'transport_error')
-    fresh = bool(latest_sensor_data.get('updated_at') and
-                 0 <= time.time() - latest_sensor_data['updated_at'] < 10 and
-                 (not sensor_health['error_code'] or retrying))
-    response = jsonify({**latest_sensor_data, **sensor_health, 'fresh': fresh, 'retrying': retrying,
+    reading, health = latest_sensor_data, sensor_health.copy()
+    retrying = health['error_code'] in ('timeout', 'transport_error')
+    fresh = sensor_reading_is_fresh(reading, health['error_code'])
+    heat_alert = HEAT_ALERTS.get(reading.get('heat_band') if fresh else None, HEAT_ALERTS['unavailable'])
+    response = jsonify({**reading, **health, 'fresh': fresh, 'retrying': retrying,
+                        'heat_alert': heat_alert,
                         'message': 'Retrying DHT connection; showing the last recent reading.' if retrying and fresh else
                         'Fresh DHT readings.' if fresh else 'Waiting for the robot sensor. Check ESP32_CAM connectivity and robot power.'})
     response.headers['Cache-Control'] = 'no-store'
@@ -978,7 +995,32 @@ def detection_snapshot():
     fresh = bool(detection_model is not None and last_detection_at and 0 <= time.time()-last_detection_at < LiveCamera.RESULT_TTL)
     return {'available': fresh, 'updated_at': last_detection_at,
             'survivors_found': len(latest_detections) if fresh else None,
-            'detections': list(latest_detections) if fresh else []}
+            'detections': list(latest_detections) if fresh else [],
+            'detection_slowdown': detection_slowdown.status, **detection_alerts.snapshot(time.time())}
+
+
+@app.post('/api/person-consciousness')
+@require_auth
+def report_person_consciousness():
+    if not same_origin_request():
+        return jsonify(error='Use the local dashboard to record an assessment.'), 403
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify(error='An assessment and a live camera track are required.'), 400
+    source, track_id, value = (data.get(key) for key in ('source', 'track_id', 'status'))
+    if source not in ('main', 'nightvision') or not isinstance(track_id, str) or not track_id or value not in (
+        'Conscious', 'Unconscious', 'Unknown'
+    ):
+        return jsonify(error='Choose a valid assessment for a live camera track.'), 400
+    camera, analysis = (main_camera, main_analysis) if source == 'main' else (nightvision, nightvision.person_analysis)
+    with camera.condition:
+        if analysis is None or not any(person.get('track_id') == track_id for person in camera.status()['detections']):
+            return jsonify(error='That track is no longer live. Choose a person in the current view.'), 409
+        if value == 'Unknown':
+            analysis.reported_consciousness.pop(track_id, None)
+        else:
+            analysis.reported_consciousness[track_id] = (value, time.monotonic())
+    return jsonify(consciousness=value)
 
 
 register_feature_routes(app, require_auth, missions, telemetry,
@@ -986,7 +1028,7 @@ register_feature_routes(app, require_auth, missions, telemetry,
                         lambda: {'detector_loaded': detection_model is not None, 'pose_loaded': pose_model is not None,
                                  'person_class_id': 14,
                                  'condition_classifier': 'sar_heuristics',
-                                 'preprocessing': False}, movement=movement)
+                                 'preprocessing': False}, movement=movement, evidence_store=local_recordings)
 
 
 def mission_listener():
@@ -999,17 +1041,26 @@ def mission_listener():
         time.sleep(1)
 
 
+def detection_slowdown_listener():
+    while True:
+        trace = telemetry.get('movement')
+        camera = main_camera.status()
+        frame_at = camera['updated_at']
+        live = (robot_network()['robot_subnet'] and camera['connected'] and frame_at is not None and
+                0 <= time.time() - frame_at < 1.5)
+        detection_slowdown.tick(trace, live)
+        time.sleep(.25)
+
+
 def start_workers():
     spare_discovery.start()
     telemetry.start()
     local_recordings.start(interval=30)
     for worker in (wifi_sensor_listener, mission_listener):
         threading.Thread(target=worker, daemon=True).start()
+    if detection_slowdown.configured:
+        threading.Thread(target=detection_slowdown_listener, daemon=True).start()
 
-
-# =========================================================
-#  MAIN
-# =========================================================
 
 if __name__ == '__main__':
     start_workers()

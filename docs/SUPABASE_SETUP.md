@@ -1,95 +1,78 @@
-# Setting Up Supabase for BIM-Bot
+# Supabase setup for BIM-Bot
 
-BIM-Bot now uses Supabase for two things:
-1. **Auth** — employees sign in with Google, handled by Supabase Auth
-2. **Storage** — recordings save to this laptop first, then queue for a private
-   Supabase Storage bucket when internet is available
+Supabase Auth handles Google sign-in. Recordings save to the laptop first and
+sync to a private Supabase Storage bucket when internet is available.
 
-You still need a Google Cloud OAuth client for the "Sign in with Google" button — Supabase hosts
-the login flow, but Google is still who actually authenticates the employee. The difference from
-before is that your Flask app never talks to Google directly anymore; Supabase sits in between.
+## Project and Google sign-in
 
-## Part A — Create the Supabase project
+1. Open the team's Supabase project. For a separate installation, create a
+   project in the [Supabase Dashboard](https://supabase.com/dashboard).
+2. On the Supabase **Google** sign-in provider page, copy the project's callback
+   URL. On a standard hosted project it is
+   `https://YOUR-PROJECT-REF.supabase.co/auth/v1/callback`.
+3. In Google Cloud, configure the OAuth consent screen and create a **Web
+   application** OAuth client. Add the Supabase callback to **Authorized
+   redirect URIs**. If Google restricts access to approved testers, check the
+   app's audience settings.
+4. Enable Google in Supabase and enter the Google client ID and client secret in
+   the provider settings. [Supabase Google sign-in guide](https://supabase.com/docs/guides/auth/social-sign-in/auth-google)
 
-1. Go to https://supabase.com/ → **New project**
-2. Pick an organization, name it (e.g. `bimbot-sar`), set a database password (you won't need
-   to touch the database directly for this feature, but Supabase requires one), choose a region
-3. Wait for it to finish provisioning (~2 minutes)
+## Local app redirect
 
-## Part B — Google Cloud OAuth client (for the Google button)
+Set `PORT=5050` in the app's local `.env` to match the examples in these
+guides. In Supabase **Authentication → URL Configuration**, add the exact
+`http://localhost:5050/` to **Redirect URLs**. The app requests the current
+browser origin followed by `/` after Google sign-in. If Flask uses a different
+port or hostname, allow that exact address with the trailing slash.
 
-1. Go to https://console.cloud.google.com/ → create a project (or reuse one)
-2. **APIs & Services → OAuth consent screen** → set it up (External is fine; add your
-   employees' Gmail addresses as test users while unverified)
-3. **APIs & Services → Credentials → + Create Credentials → OAuth client ID**
-   - Application type: **Web application**
-   - **Authorized redirect URIs** — this is the important part: it must be **Supabase's**
-     callback URL, not your app's:
-     ```
-     https://YOUR-PROJECT-REF.supabase.co/auth/v1/callback
-     ```
-     (find `YOUR-PROJECT-REF` in your Supabase project's URL / Settings → API)
-4. Click **Create** → copy the **Client ID** and **Client Secret** (you'll paste these into
-   Supabase next, not into your app)
+For a project used only with this local installation, use the same address as its
+**Site URL**. For a shared project with a production Site URL, keep that default
+and add the local address to the redirect list. [Supabase redirect URLs](https://supabase.com/docs/guides/auth/redirect-urls)
 
-## Part C — Enable Google in Supabase Auth
+## Storage and local configuration
 
-1. In your Supabase project: **Authentication → Providers → Google**
-2. Toggle it on, paste in the **Client ID** and **Client Secret** from Part B
-3. **Authentication → URL Configuration**:
-   - **Site URL**: `http://localhost:5000` (or wherever you actually run the app)
-   - **Redirect URLs**: add `http://localhost:5000/*` so Supabase is allowed to send the
-     browser back to your app after login
+Create or reuse a private Storage bucket named `recordings`, or set
+`SUPABASE_STORAGE_BUCKET` to its actual name. Flask uploads and signs links
+using its server-side key. Camera clips use `<user-id>/<filename>.mp4` and
+mission reports use `<user-id>/reports/<filename>.txt`. If the private bucket
+restricts file types, allow `text/plain` alongside the existing video
+types. [Supabase bucket restrictions](https://supabase.com/docs/guides/storage/buckets/creating-buckets)
 
-## Part D — Create the Storage bucket
+**Save Report** in Mission tools writes JSON to the laptop first. The local
+queue renders the saved content as plain text and retries the Supabase upload
+when internet returns. The saved reports list shows upload confirmation and
+lets the signed-in owner download the laptop JSON.
 
-1. **Storage → New bucket**
-2. Name it `recordings` (or whatever you set `SUPABASE_STORAGE_BUCKET` to)
-3. Leave it **private** (not public) — the Flask backend uses your service role key to read and
-   write it directly, and hands employees a time-limited signed link to their own file. No
-   Storage policies are required for this to work, since the service role key bypasses them.
+**Record screen** captures the display selected in the browser picker. Choose
+**Entire Screen** and keep the dashboard visible to include detection banners.
+Screen capture is video-only, continues across camera waiting states, and saves
+to the laptop. Use **Stop** or the browser's stop-sharing control to finish.
 
-## Part E — Get your keys
+Copy `.env.example` to `.env` on a new checkout. Use values from the same
+Supabase project.
 
-In Supabase: **Settings → API**. You need three values:
-- **Project URL** → `SUPABASE_URL`
-- **anon / public key** → `SUPABASE_ANON_KEY` (safe to expose to the browser — it's what the
-  frontend uses to talk to Supabase Auth)
-- **service_role key** → `SUPABASE_SERVICE_ROLE_KEY` (**secret** — this bypasses all access
-  rules; it must only ever live on the server, never sent to the browser or committed to git)
+| Local variable | Value |
+| --- | --- |
+| `SUPABASE_URL` | Project URL from the Connect dialog |
+| `SUPABASE_ANON_KEY` | Public `anon` key in Settings → API Keys |
+| `SUPABASE_SERVICE_ROLE_KEY` | Privileged `service_role` key in Settings → API Keys |
+| `SUPABASE_STORAGE_BUCKET` | Private bucket name, default `recordings` |
+| `PORT` | `5050` for the examples in this guide |
 
-Copy `.env.example` to `.env` and fill these in:
+This checkout's verified setup uses the legacy key pair. Supabase is
+deprecating those keys. Keep the privileged key in the server's ignored
+`.env` and use Supabase's rotation guidance if a key is exposed.
+[Supabase API keys](https://supabase.com/docs/guides/getting-started/api-keys)
 
-```bash
-cp .env.example .env
-# then edit .env with the values above
-```
+## Verify sign-in and recording
 
-## Part F — Run it
+1. Follow [local setup](../README.md#run-locally) to start Flask.
+2. While online, open `http://localhost:5050/login` and sign in with Google.
+   Confirm the dashboard shows the signed-in account before joining robot Wi-Fi.
+3. Follow the [offline workflow](OFFLINE_RECORDING.md) to verify a clip saves
+   locally, remains downloadable and syncs when internet returns. Earlier
+   cloud-only clips require internet and use signed links valid for one hour.
 
-```bash
-pip install -r requirements.txt
-python app.py
-```
-
-Visit `http://localhost:5050` (the configured port on this Mac) → you'll land on `/login` → click **Sign in with Google**. First
-time any employee does that, Supabase creates their account automatically. Recordings saved
-afterward save locally and queue for the `recordings` bucket, organized as
-`recordings/<employee-id>/...`. Add `http://localhost:5050/` to your allowed
-Supabase redirect URLs if you use this port. See [Offline recording](OFFLINE_RECORDING.md).
-
-## Notes / things to know
-
-- Because the service role key can read and write *anything* in your Supabase project, keep
-  `.env` out of version control (add it to `.gitignore`) and never send that key to the browser.
-- Google sign-in is freshly verified online before issuing a fixed local session
-  of up to 12 hours. Offline API access uses that opaque cookie without contacting
-  Supabase. Cloud account revocation takes effect for that local session when it
-  expires or is signed out locally. Legacy Bearer verification still has a
-  30-second cache and requires a verified Google-linked user.
-- To restrict who's allowed to sign in at all (beyond Google's own test-user list while
-  unverified), you'd check `g.user.email` against an allow-list inside `require_auth` in
-  `app.py` and reject anyone not on it.
-- The local recording library downloads files from this laptop and works offline.
-  Earlier cloud-only clips use signed links that expire after 1 hour. The legacy
-  direct-upload API returns a 7-day link. These links require internet.
+The local session lasts up to 12 hours. Sign out on the laptop to revoke it
+immediately. While offline, an existing session cannot check for cloud account
+revocation and may remain usable until it expires.

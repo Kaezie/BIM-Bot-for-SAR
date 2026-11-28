@@ -1,13 +1,37 @@
 <section id="mission" class="card mission-card" aria-labelledby="missionTitle">
-  <div class="card-top"><div><p class="eyebrow">ROBOT EXPLORATION</p><h2 id="missionTitle">Mission controls</h2></div><span class="pill" id="missionState">Checking</span></div>
+  <div class="card-top">
+    <h2 id="missionTitle">Mission report</h2>
+    <button type="button" id="saveMissionReport" class="primary">Save Report</button>
+  </div>
+  <p class="muted" id="missionReportStatus" role="status">Save a snapshot to this laptop and queue its Supabase copy.</p>
+  <div class="camera-controls"><span class="pill" id="missionState">Checking</span><span id="missionReportArea">Area unavailable</span></div>
   <label for="missionArea">Observation area label</label>
   <input id="missionArea" maxlength="120" placeholder="e.g. Test course A, ground floor" autocomplete="off">
-  <div class="camera-controls"><button id="missionStart" class="primary" disabled>Start mission</button><button id="missionStop" class="danger-btn" disabled>Stop mission</button><button id="downloadReport">Download situational report</button></div>
+  <div class="camera-controls"><button id="missionStart" class="primary" disabled>Start mission</button><button id="missionStop" class="danger-btn" disabled>Stop mission</button></div>
   <p id="missionHint" class="muted" role="status">Checking robot readiness.</p>
   <p class="muted">The area label applies to this mission. It does not provide survivor coordinates.</p>
-</section>
-<section id="survivorRecords" class="card" aria-labelledby="survivorRecordsTitle">
-  <div class="card-top"><h2 id="survivorRecordsTitle">Detection records &amp; verification</h2><span class="pill" id="survivorEventCount">Checking</span></div>
+  <form id="excavationAssessment" class="excavation-assessment" aria-labelledby="excavationAssessmentTitle">
+    <h3 id="excavationAssessmentTitle">Excavation assessment</h3>
+    <p class="muted">Record the rescue lead’s on-site decision for the named area. The entry stays active for this dashboard session. Save Report includes the decision and time. Clear the entry if the area or conditions change.</p>
+    <div class="excavation-fields">
+      <label>Assessed area<input id="excavationArea" maxlength="120" required autocomplete="off" placeholder="e.g. Test course A, east bay"></label>
+      <label>Rescue lead name or call sign<input id="excavationLead" maxlength="120" required autocomplete="off"></label>
+      <label>Decision from the rescue lead<select id="excavationDecision" required>
+        <option value="">Choose the reported decision</option>
+        <option value="cleared">Clearance reported</option>
+        <option value="hold">Hold excavation</option>
+        <option value="danger">Extreme danger · do not excavate</option>
+      </select></label>
+    </div>
+    <div class="camera-controls">
+      <button type="submit" class="primary">Record excavation decision</button>
+      <button type="button" id="clearExcavationDecision" disabled>Clear decision</button>
+    </div>
+    <p id="excavationAssessmentFeedback" class="muted" role="status"></p>
+  </form>
+  <div class="card-top" id="survivorRecords"><h3 id="survivorRecordsTitle">Detection records &amp; verification</h3><span class="pill" id="survivorEventCount">Checking</span></div>
   <p class="muted">Mission detections include environmental context and the observation area. Condition assessments remain unknown until reviewed by an operator.</p>
   <ul class="event-list" id="survivorEventList"><li class="empty-row">Waiting for mission records.</li></ul>
+  <h3>Saved reports</h3>
+  <ul class="recording-list" id="savedMissionReports"><li class="empty-row">Open Mission tools to see saved reports.</li></ul>
 </section>

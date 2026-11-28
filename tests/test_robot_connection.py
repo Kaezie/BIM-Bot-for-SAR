@@ -1,9 +1,11 @@
 """Address changes must never select this Mac, the original AP or unknown firmware."""
 import json
+import socket
 import unittest
 from unittest.mock import MagicMock, patch
 
 from features.robot_connection import SpareDiscovery
+from features.system_diagnostics import robot_network
 from features.telemetry import Telemetry
 from requests import Response
 
@@ -25,6 +27,29 @@ class SpareDiscoveryTests(unittest.TestCase):
         self.assertNotIn('192.168.4.2', targets)
         callback.assert_called_once_with('192.168.4.3', True, True)
         self.assertEqual(discovery.status()['state'], 'verified')
+
+    def test_default_discovery_uses_the_route_to_the_original_camera(self):
+        callback = MagicMock()
+        discovery = SpareDiscovery('http://192.168.4.2:81/stream', '', callback)
+        with patch('features.system_diagnostics.socket') as make_socket, \
+             patch.object(discovery, '_identify', side_effect=lambda host: host == '192.168.4.3') as identify:
+            route = make_socket.return_value.__enter__.return_value
+            route.getsockname.return_value = ('192.168.4.2', 49152)
+            discovery.check()
+        make_socket.assert_called_with(socket.AF_INET, socket.SOCK_DGRAM)
+        route.connect.assert_called_with(('192.168.4.1', 81))
+        route.send.assert_not_called()
+        route.sendto.assert_not_called()
+        self.assertNotIn('192.168.4.2', {call.args[0] for call in identify.call_args_list})
+        callback.assert_called_once_with('192.168.4.3', True, False)
+
+    def test_route_check_distinguishes_home_network_from_unavailable_route(self):
+        with patch('features.system_diagnostics.socket') as make_socket:
+            route = make_socket.return_value.__enter__.return_value
+            route.getsockname.return_value = ('192.168.68.73', 49152)
+            self.assertEqual(robot_network(), {'ipv4': '192.168.68.73', 'robot_subnet': False})
+            route.connect.side_effect = OSError
+            self.assertEqual(robot_network(), {'ipv4': None, 'robot_subnet': False})
 
     def test_home_network_and_custom_disabled_targets_are_never_scanned(self):
         for own, camera, thermal in [('192.168.68.73', 'http://192.168.4.2:81/stream', ''),

@@ -342,6 +342,35 @@ class LiveCameraTests(unittest.TestCase):
         self.assertEqual(drawn, [200])
         self.assertEqual(camera.frame, jpeg(100))
 
+    def test_missed_person_box_is_held_for_display_without_renewing_detection_evidence(self):
+        drawn = []
+        last_seen = {'track_id': 'first', 'box': [1, 2, 12, 20]}
+        visible = {'track_id': 'second', 'box': [18, 2, 30, 20]}
+        analyze = MagicMock(side_effect=[[last_seen, visible], [visible]])
+        def render(frame, detections, age):
+            drawn.append(detections)
+            return frame
+        camera = self.make(analyze=analyze, render=render)
+        camera.INFERENCE_INTERVAL = 0
+        camera.publish(jpeg(30), infer=True)
+        self.wait_result(camera)
+        seen_at = camera.detected_at
+        camera.publish(jpeg(50), infer=True)
+        with camera.condition:
+            self.assertTrue(camera.condition.wait_for(lambda: camera.detected_at != seen_at, timeout=1))
+        camera.publish(jpeg(100))
+        self.assertEqual(camera.status()['detections'], [visible])
+        self.assertEqual(drawn[-1][0], visible)
+        self.assertEqual(drawn[-1][1]['track_id'], 'first')
+        self.assertGreaterEqual(drawn[-1][1]['last_seen_seconds'], 0)
+        self.assertNotIn('last_seen_seconds', last_seen)
+
+        renders = len(drawn)
+        with patch('features.live_camera.time.time', return_value=camera.detected_at + camera.BOX_HOLD_TTL + .01):
+            camera.publish(jpeg(200))
+        self.assertEqual(len(drawn), renders)
+        self.assertEqual(camera.frame, jpeg(200))
+
     def test_failed_inference_does_not_mark_good_video_offline(self):
         def fail(frame): raise ValueError('model error')
         camera = self.make(analyze=fail)
